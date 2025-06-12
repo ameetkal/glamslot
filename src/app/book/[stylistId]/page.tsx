@@ -1,10 +1,11 @@
+'use client'
+
+import { useParams } from 'next/navigation'
 import StylistBookingClient from './StylistBookingClient'
 
-type PageProps = {
-  params: { stylistId: string }
-}
+export default function StylistBookingPage() {
+  const params = useParams()
+  const stylistId = params.stylistId as string
 
-export default async function StylistBookingPage({ params }: PageProps) {
-  // In a real app, you might fetch data here
-  return <StylistBookingClient stylistId={params.stylistId} />
+  return <StylistBookingClient stylistId={stylistId} />
 } 
