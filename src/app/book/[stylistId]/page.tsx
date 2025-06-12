@@ -74,7 +74,12 @@ const bookingSchema = yup.object().shape({
 
 type BookingFormData = yup.InferType<typeof bookingSchema>
 
-export default function StylistBookingPage({ params }: { params: { stylistId: string } }) {
+// Add proper type for the page component
+type PageProps = {
+  params: { stylistId: string }
+}
+
+export default function StylistBookingPage({ params }: PageProps) {
   const [selectedSlot, setSelectedSlot] = useState<typeof stylistData.lastMinuteSlots[0] | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
