@@ -52,11 +52,18 @@ const availableSlots = [
   { id: 3, date: 'Tomorrow', time: '3:00 PM - 4:30 PM', service: 'Color Service' },
 ]
 
+type SlotFormData = {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  serviceType: 'any' | 'haircut' | 'color' | 'styling';
+}
+
 export default function DashboardPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [slots, setSlots] = useState(availableSlots)
 
-  const handleAddSlot = (data: unknown) => {
+  const handleAddSlot = (data: SlotFormData) => {
     // In a real app, this would make an API call
     const newSlot = {
       id: slots.length + 1,

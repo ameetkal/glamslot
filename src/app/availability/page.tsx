@@ -40,13 +40,20 @@ const generateCalendarData = () => {
 
 const calendarData = generateCalendarData()
 
+type SlotData = {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  serviceType: string;
+}
+
 export default function AvailabilityPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  const handleAddSlot = (data: unknown) => {
+  const handleAddSlot = (data: SlotData) => {
     // In a real app, this would make an API call
     console.log('Adding slot:', data)
     setIsAddingSlot(false)
