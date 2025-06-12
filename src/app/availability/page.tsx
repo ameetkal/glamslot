@@ -47,6 +47,13 @@ type SlotData = {
   serviceType: string;
 }
 
+type SlotFormData = {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  serviceType: string;
+}
+
 export default function AvailabilityPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -206,15 +213,22 @@ export default function AvailabilityPage() {
         title={isEditing ? 'Edit Time Slot' : 'Add Time Slot'}
       >
         <AddSlotForm
-          onSubmit={handleAddSlot}
+          onSubmit={(data) => {
+            handleAddSlot({
+              ...data,
+              date: new Date(data.date)  // Convert string to Date
+            })
+            setIsEditing(false)
+            setSelectedDate(null)
+            setSelectedTime(null)
+          }}
           onCancel={() => {
-            setIsAddingSlot(false)
             setIsEditing(false)
             setSelectedDate(null)
             setSelectedTime(null)
           }}
           initialData={isEditing && selectedDate && selectedTime ? {
-            date: selectedDate.toISOString().split('T')[0],
+            date: selectedDate,  // Pass the Date object directly
             startTime: selectedTime,
             endTime: timeSlots[timeSlots.indexOf(selectedTime) + 1] || selectedTime,
             serviceType: 'any'

@@ -8,7 +8,11 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 
 const schema = yup.object({
-  date: yup.date().required('Date is required').min(new Date(), 'Date must be in the future'),
+  date: yup.string().required('Date is required').test(
+    'is-future',
+    'Date must be in the future',
+    (value) => new Date(value) > new Date()
+  ),
   startTime: yup.string().required('Start time is required'),
   endTime: yup.string().required('End time is required'),
   serviceType: yup.string().required('Service type is required'),
@@ -24,9 +28,9 @@ const serviceTypes = [
 ]
 
 interface AddSlotFormProps {
-  onSubmit: (data: FormData) => void
+  onSubmit: (data: Omit<FormData, 'date'> & { date: Date }) => void
   onCancel: () => void
-  initialData?: Partial<FormData>
+  initialData?: Partial<Omit<FormData, 'date'> & { date: Date }>
 }
 
 export default function AddSlotForm({ onSubmit, onCancel, initialData }: AddSlotFormProps) {
@@ -36,11 +40,21 @@ export default function AddSlotForm({ onSubmit, onCancel, initialData }: AddSlot
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: yupResolver(schema),
-    defaultValues: initialData,
+    defaultValues: initialData && initialData.date ? {
+      ...initialData,
+      date: initialData.date.toISOString().split('T')[0],
+    } : undefined,
   })
 
+  const handleFormSubmit = (data: FormData) => {
+    onSubmit({
+      ...data,
+      date: new Date(data.date),
+    })
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div>
         <Input
           type="date"
