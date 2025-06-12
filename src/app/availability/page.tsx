@@ -47,13 +47,6 @@ type SlotData = {
   serviceType: string;
 }
 
-type SlotFormData = {
-  date: Date;
-  startTime: string;
-  endTime: string;
-  serviceType: string;
-}
-
 export default function AvailabilityPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -237,4 +230,4 @@ export default function AvailabilityPage() {
       </Modal>
     </div>
   )
-} 
+}
