@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  CalendarIcon,
-  ClockIcon,
   PlusIcon,
   TrashIcon,
   PencilIcon,
@@ -48,7 +46,7 @@ export default function AvailabilityPage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  const handleAddSlot = (data: any) => {
+  const handleAddSlot = (data: unknown) => {
     // In a real app, this would make an API call
     console.log('Adding slot:', data)
     setIsAddingSlot(false)

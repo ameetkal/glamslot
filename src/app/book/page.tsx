@@ -7,12 +7,10 @@ import {
   UserIcon,
   PhoneIcon,
   EnvelopeIcon,
-  TagIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
@@ -108,7 +106,7 @@ export default function BookingPage() {
               Last-Minute Appointments
             </h1>
             <p className="mt-4 text-lg text-gray-500">
-              Grab these discounted slots before they're gone!
+              Grab these discounted slots before they&apos;re gone!
             </p>
           </div>
 
@@ -240,7 +238,7 @@ export default function BookingPage() {
                         Book Now - ${selectedSlot.discountPrice}
                       </Button>
                       <p className="mt-2 text-center text-xs text-gray-500">
-                        You'll receive a confirmation email once the stylist approves your request
+                        You&apos;ll receive a confirmation email once the stylist approves your request
                       </p>
                     </div>
                   </form>

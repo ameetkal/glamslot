@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import Image from 'next/image'
 import { 
   UserIcon,
   PhoneIcon,
@@ -10,7 +9,6 @@ import {
   MapPinIcon,
   ClockIcon,
   BellIcon,
-  CreditCardIcon,
   LinkIcon,
   TagIcon,
   PlusIcon,
@@ -18,7 +16,6 @@ import {
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
 
 // Mock data for the prototype
 const initialProfileData = {

@@ -179,7 +179,7 @@ export default function StylistBookingPage({ params }: { params: { stylistId: st
               Last-Minute Appointments with {stylistData.name}
             </h2>
             <p className="mt-2 text-lg text-gray-500">
-              Grab these discounted slots before they're gone!
+              Grab these discounted slots before they&apos;re gone!
             </p>
           </div>
 
@@ -311,7 +311,7 @@ export default function StylistBookingPage({ params }: { params: { stylistId: st
                         Book Now - ${selectedSlot.discountPrice}
                       </Button>
                       <p className="mt-2 text-center text-xs text-gray-500">
-                        You'll receive a confirmation email once {stylistData.name} approves your request
+                        You&apos;ll receive a confirmation email once {stylistData.name} approves your request
                       </p>
                     </div>
                   </form>

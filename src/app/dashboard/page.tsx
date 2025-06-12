@@ -25,7 +25,7 @@ const metrics = [
 const recentRequests = [
   {
     id: 1,
-    clientName: 'Sarah Johnson',
+    clientName: 'Omar Hamoui',
     service: 'Haircut & Color',
     time: 'Today, 2:00 PM',
     status: 'pending',
@@ -56,7 +56,7 @@ export default function DashboardPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [slots, setSlots] = useState(availableSlots)
 
-  const handleAddSlot = (data: any) => {
+  const handleAddSlot = (data: unknown) => {
     // In a real app, this would make an API call
     const newSlot = {
       id: slots.length + 1,
