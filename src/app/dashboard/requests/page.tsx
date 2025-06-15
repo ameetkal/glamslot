@@ -113,10 +113,10 @@ export default function BookingRequestsPage() {
           {/* Requests List */}
           <div className="space-y-4">
             {requests.map((request) => (
-              <motion.button
+              <motion.div
                 key={request.id}
                 onClick={() => setSelectedRequest(request)}
-                className={`w-full rounded-lg border p-4 text-left transition-all ${
+                className={`w-full rounded-lg border p-4 text-left transition-all cursor-pointer ${
                   selectedRequest?.id === request.id
                     ? 'border-accent-500 bg-accent-50'
                     : 'border-gray-200 bg-white hover:border-accent-300'
@@ -186,7 +186,7 @@ export default function BookingRequestsPage() {
                     )}
                   </div>
                 </div>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
 
