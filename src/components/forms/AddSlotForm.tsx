@@ -15,7 +15,7 @@ const schema = yup.object({
   ),
   startTime: yup.string().required('Start time is required'),
   endTime: yup.string().required('End time is required'),
-  serviceType: yup.string().required('Service type is required'),
+  serviceType: yup.string().oneOf(['any', 'haircut', 'color', 'styling']).required('Service type is required'),
 }).required()
 
 type FormData = yup.InferType<typeof schema>
@@ -25,7 +25,7 @@ const serviceTypes = [
   { value: 'haircut', label: 'Haircut Only' },
   { value: 'color', label: 'Color Service' },
   { value: 'styling', label: 'Styling Only' },
-]
+] as const
 
 interface AddSlotFormProps {
   onSubmit: (data: Omit<FormData, 'date'> & { date: Date }) => void
