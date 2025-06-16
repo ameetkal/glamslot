@@ -11,20 +11,58 @@ const navigation = [
   { name: 'Settings', href: '/dashboard/settings' },
 ]
 
-export default function Navbar() {
+interface NavbarProps {
+  className?: string
+}
+
+export default function Navbar({ className = '' }: NavbarProps) {
   const pathname = usePathname()
 
   return (
-    <nav className="bg-white shadow-sm">
+    <nav className={clsx('bg-white shadow-sm', className)}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between">
+        {/* Mobile header - always visible */}
+        <div className="flex h-14 items-center justify-center sm:hidden">
+          <div className="text-center">
+            <Link href="/" className="text-xl font-bold text-gray-900">
+              LastMinute
+            </Link>
+            <div className="text-xs text-gray-500">
+              by{' '}
+              <a
+                href="https://glammatic.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-600 hover:text-accent-500"
+              >
+                Glammatic
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop navigation - hidden on mobile */}
+        <div className="hidden h-16 sm:flex sm:justify-between">
           <div className="flex">
             <div className="flex flex-shrink-0 items-center">
-              <Link href="/" className="text-xl font-bold text-accent-600">
-                LastMinute
-              </Link>
+              <div>
+                <Link href="/" className="text-xl font-bold text-gray-900 hover:text-accent-600">
+                  LastMinute
+                </Link>
+                <div className="text-xs text-gray-500">
+                  by{' '}
+                  <a
+                    href="https://glammatic.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-600 hover:text-accent-500"
+                  >
+                    Glammatic
+                  </a>
+                </div>
+              </div>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <div className="ml-6 flex space-x-8">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
@@ -41,7 +79,7 @@ export default function Navbar() {
               ))}
             </div>
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="ml-6 flex items-center">
             <button
               type="button"
               className="rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"

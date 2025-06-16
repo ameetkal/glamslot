@@ -1,89 +1,80 @@
-'use client'
+"use client"
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { 
-  CalendarIcon, 
-  ClockIcon, 
-  UserGroupIcon, 
-  CheckCircleIcon,
-  XCircleIcon,
-  PlusIcon,
-  ClipboardDocumentIcon
+  CalendarIcon,
+  UserGroupIcon,
+  CurrencyDollarIcon,
+  ClockIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
-import Modal from '@/components/ui/Modal'
-import AddSlotForm from '@/components/forms/AddSlotForm'
 
 // Mock data for the prototype
 const metrics = [
-  { name: 'Open Slots', value: '3', icon: CalendarIcon, change: '+2', changeType: 'positive' },
-  { name: 'Pending Requests', value: '5', icon: ClockIcon, change: '+1', changeType: 'negative' },
-  { name: 'Total Clients', value: '124', icon: UserGroupIcon, change: '+12', changeType: 'positive' },
-  { name: 'Fill Rate', value: '85%', icon: CheckCircleIcon, change: '+5%', changeType: 'positive' },
+  { 
+    name: 'Pending Requests', 
+    value: '5', 
+    icon: ClockIcon,
+    href: '/dashboard/requests',
+    change: '+2',
+    changeType: 'increase' as const
+  },
+  { 
+    name: 'Appointments Today', 
+    value: '5', 
+    icon: CalendarIcon,
+    href: '/dashboard/appointments',
+    change: '-2',
+    changeType: 'decrease' as const
+  },
+  { 
+    name: 'Total Clients', 
+    value: '24', 
+    icon: UserGroupIcon,
+    href: '/dashboard/clients',
+    change: '+12%',
+    changeType: 'increase' as const
+  },
+  { 
+    name: 'Total Revenue', 
+    value: '$2,400', 
+    icon: CurrencyDollarIcon,
+    href: '/dashboard/revenue',
+    change: '+8%',
+    changeType: 'increase' as const
+  },
 ]
 
-const recentRequests = [
+const recentAppointments = [
   {
     id: 1,
-    clientName: 'Omar Hamoui',
+    clientName: 'Sarah Johnson',
     service: 'Haircut & Color',
-    time: 'Today, 2:00 PM',
-    status: 'pending',
+    time: '2:00 PM',
+    status: 'confirmed' as const,
   },
   {
     id: 2,
-    clientName: 'Mike Smith',
-    service: 'Beard Trim',
-    time: 'Tomorrow, 11:30 AM',
-    status: 'approved',
+    clientName: 'Michael Chen',
+    service: 'Haircut Only',
+    time: '3:30 PM',
+    status: 'confirmed' as const,
   },
   {
     id: 3,
     clientName: 'Emma Davis',
-    service: 'Full Highlights',
-    time: 'Tomorrow, 3:00 PM',
-    status: 'declined',
+    service: 'Color Service',
+    time: '4:45 PM',
+    status: 'confirmed' as const,
   },
 ]
 
-const availableSlots = [
-  { id: 1, date: 'Today', time: '2:00 PM - 3:00 PM', service: 'Any Service' },
-  { id: 2, date: 'Tomorrow', time: '11:30 AM - 12:30 PM', service: 'Haircut Only' },
-  { id: 3, date: 'Tomorrow', time: '3:00 PM - 4:30 PM', service: 'Color Service' },
-]
-
-type SlotFormData = {
-  date: Date;
-  startTime: string;
-  endTime: string;
-  serviceType: 'any' | 'haircut' | 'color' | 'styling';
-}
-
 export default function DashboardPage() {
-  const [isAddingSlot, setIsAddingSlot] = useState(false)
-  const [slots, setSlots] = useState(availableSlots)
   const [copied, setCopied] = useState(false)
-  // TODO: Replace with actual user's booking URL when available
   const bookingUrl = "https://lastminute.app/booking/your-slug"
-
-  const handleAddSlot = (data: SlotFormData) => {
-    // In a real app, this would make an API call
-    const newSlot = {
-      id: slots.length + 1,
-      date: new Date(data.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
-      time: `${data.startTime} - ${data.endTime}`,
-      service: data.serviceType === 'any' ? 'Any Service' : 
-               data.serviceType === 'haircut' ? 'Haircut Only' :
-               data.serviceType === 'color' ? 'Color Service' : 'Styling Only',
-    }
-    setSlots([...slots, newSlot])
-    setIsAddingSlot(false)
-  }
-
-  const handleRemoveSlot = (id: number) => {
-    setSlots(slots.filter(slot => slot.id !== id))
-  }
 
   const copyBookingUrl = () => {
     navigator.clipboard.writeText(bookingUrl).then(() => {
@@ -97,10 +88,14 @@ export default function DashboardPage() {
       <div className="py-6">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        </div>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
           {/* Booking URL Section */}
-          <div className="rounded-lg bg-white p-4 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-8 rounded-lg bg-white p-4 shadow-sm"
+          >
             <h2 className="text-lg font-semibold text-gray-900">Your Booking URL</h2>
             <p className="mt-1 text-sm text-gray-500">
               Share this link with your clients so they can request appointments
@@ -122,154 +117,94 @@ export default function DashboardPage() {
             {copied && (
               <p className="mt-1 text-xs text-green-600">Copied to clipboard!</p>
             )}
-          </div>
+          </motion.div>
 
           {/* Metrics */}
-          <div className="mt-8">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {metrics.map((metric) => (
-                <motion.div
-                  key={metric.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden rounded-lg bg-white px-4 pb-12 pt-5 shadow sm:px-6 sm:pt-6"
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {metrics.map((metric) => (
+              <motion.div
+                key={metric.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Link
+                  href={metric.href}
+                  className="block overflow-hidden rounded-lg bg-white shadow hover:shadow-md transition-shadow"
                 >
-                  <dt>
-                    <div className="absolute rounded-md bg-accent-50 p-3">
-                      <metric.icon className="h-6 w-6 text-accent-600" aria-hidden="true" />
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <metric.icon className="h-6 w-6 text-accent-600" aria-hidden="true" />
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="truncate text-sm font-medium text-gray-500">{metric.name}</dt>
+                          <dd>
+                            <div className="text-lg font-medium text-gray-900">{metric.value}</div>
+                          </dd>
+                        </dl>
+                      </div>
                     </div>
-                    <p className="ml-16 truncate text-sm font-medium text-gray-500">{metric.name}</p>
-                  </dt>
-                  <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                    <p className="text-2xl font-semibold text-gray-900">{metric.value}</p>
-                    <p
-                      className={`ml-2 flex items-baseline text-sm font-semibold ${
-                        metric.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {metric.change}
-                    </p>
-                  </dd>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="mt-4">
+                      <div className={`inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium ${
+                        metric.changeType === 'increase' 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {metric.change}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Main content */}
-          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-            {/* Available Slots */}
+          {/* Recent Appointments */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">Today's Appointments</h2>
+              <Link
+                href="/dashboard/appointments"
+                className="text-sm font-medium text-accent-600 hover:text-accent-500"
+              >
+                View all
+                <span aria-hidden="true"> &rarr;</span>
+              </Link>
+            </div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="overflow-hidden rounded-lg bg-white shadow"
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="mt-4 overflow-hidden rounded-lg bg-white shadow"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold leading-6 text-gray-900">Available Slots</h2>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsAddingSlot(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Add Slot
-                  </Button>
-                </div>
-                <div className="mt-6 flow-root">
-                  <ul role="list" className="-my-5 divide-y divide-gray-200">
-                    {slots.map((slot) => (
-                      <li key={slot.id} className="py-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-gray-900">{slot.date}</p>
-                            <p className="truncate text-sm text-gray-500">{slot.time}</p>
-                          </div>
-                          <div>
-                            <span className="inline-flex items-center rounded-full bg-tan-50 px-2 py-1 text-xs font-medium text-tan-700 ring-1 ring-inset ring-tan-600/20">
-                              {slot.service}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSlot(slot.id)}
-                            className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                          >
-                            Remove
-                          </button>
+              <ul role="list" className="divide-y divide-gray-200">
+                {recentAppointments.map((appointment) => (
+                  <li key={appointment.id} className="p-4 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex min-w-0 flex-1 items-center">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {appointment.clientName}
+                          </p>
+                          <p className="truncate text-sm text-gray-500">{appointment.service}</p>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Recent Requests */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="overflow-hidden rounded-lg bg-white shadow"
-            >
-              <div className="p-6">
-                <h2 className="text-base font-semibold leading-6 text-gray-900">Recent Requests</h2>
-                <div className="mt-6 flow-root">
-                  <ul role="list" className="-my-5 divide-y divide-gray-200">
-                    {recentRequests.map((request) => (
-                      <li key={request.id} className="py-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-gray-900">{request.clientName}</p>
-                            <p className="truncate text-sm text-gray-500">{request.service}</p>
-                            <p className="truncate text-sm text-gray-500">{request.time}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {request.status === 'pending' && (
-                              <>
-                                <Button size="sm" variant="primary">
-                                  Approve
-                                </Button>
-                                <Button size="sm" variant="outline">
-                                  Decline
-                                </Button>
-                              </>
-                            )}
-                            {request.status === 'approved' && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                <CheckCircleIcon className="h-4 w-4" />
-                                Approved
-                              </span>
-                            )}
-                            {request.status === 'declined' && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
-                                <XCircleIcon className="h-4 w-4" />
-                                Declined
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                      </div>
+                      <div className="ml-4 flex flex-shrink-0 items-center space-x-4">
+                        <div className="text-sm text-gray-500">{appointment.time}</div>
+                        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                          {appointment.status}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </motion.div>
           </div>
         </div>
       </div>
-
-      {/* Add Slot Modal */}
-      <Modal
-        isOpen={isAddingSlot}
-        onClose={() => setIsAddingSlot(false)}
-        title="Add Available Slot"
-      >
-        <AddSlotForm
-          onSubmit={handleAddSlot}
-          onCancel={() => setIsAddingSlot(false)}
-        />
-      </Modal>
     </div>
   )
 } 
