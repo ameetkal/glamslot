@@ -10,7 +10,6 @@ import {
   ClockIcon,
   ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline'
-import Button from '@/components/ui/Button'
 
 // Mock data for the prototype
 const metrics = [
@@ -164,7 +163,7 @@ export default function DashboardPage() {
           {/* Recent Appointments */}
           <div className="mt-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Today's Appointments</h2>
+              <h2 className="text-lg font-medium text-gray-900">Today&apos;s Appointments</h2>
               <Link
                 href="/dashboard/appointments"
                 className="text-sm font-medium text-accent-600 hover:text-accent-500"

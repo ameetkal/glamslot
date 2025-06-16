@@ -23,7 +23,7 @@ const initialProfileData = {
   email: 'jane@example.com',
   phone: '(555) 123-4567',
   location: 'Downtown Salon',
-  bio: 'Specializing in modern cuts and balayage. 5+ years of experience in creating personalized looks.',
+  bio: "Specializing in modern cuts and balayage. 5+ years of experience in creating personalized looks.",
   instagram: '@janedoestylist',
   services: [
     { id: 1, name: 'Haircut & Style', duration: 45, price: 85 },
