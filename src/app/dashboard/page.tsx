@@ -8,7 +8,8 @@ import {
   UserGroupIcon, 
   CheckCircleIcon,
   XCircleIcon,
-  PlusIcon
+  PlusIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -62,6 +63,9 @@ type SlotFormData = {
 export default function DashboardPage() {
   const [isAddingSlot, setIsAddingSlot] = useState(false)
   const [slots, setSlots] = useState(availableSlots)
+  const [copied, setCopied] = useState(false)
+  // TODO: Replace with actual user's booking URL when available
+  const bookingUrl = "https://lastminute.app/booking/your-slug"
 
   const handleAddSlot = (data: SlotFormData) => {
     // In a real app, this would make an API call
@@ -81,6 +85,13 @@ export default function DashboardPage() {
     setSlots(slots.filter(slot => slot.id !== id))
   }
 
+  const copyBookingUrl = () => {
+    navigator.clipboard.writeText(bookingUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="py-6">
@@ -88,6 +99,31 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
         </div>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Booking URL Section */}
+          <div className="rounded-lg bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">Your Booking URL</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Share this link with your clients so they can request appointments
+            </p>
+            <div className="mt-2 flex items-center">
+              <input
+                readOnly
+                value={bookingUrl}
+                className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+              />
+              <button
+                onClick={copyBookingUrl}
+                className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
+                aria-label="Copy booking URL"
+              >
+                <ClipboardDocumentIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {copied && (
+              <p className="mt-1 text-xs text-green-600">Copied to clipboard!</p>
+            )}
+          </div>
+
           {/* Metrics */}
           <div className="mt-8">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
