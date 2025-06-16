@@ -14,7 +14,6 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
-import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
 // Mock data for the prototype
@@ -210,13 +209,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button
-                    variant="primary"
+                  <button
+                    type="button"
                     onClick={handleSaveProfile}
-                    isLoading={isSaving}
+                    disabled={isSaving}
+                    className="inline-flex items-center rounded-md bg-accent-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Save Changes
-                  </Button>
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -242,14 +242,13 @@ export default function SettingsPage() {
                               {service.duration} min • ${service.price}
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:bg-red-50"
+                          <button
+                            type="button"
                             onClick={() => handleRemoveService(service.id)}
+                            className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50"
                           >
                             <TrashIcon className="h-4 w-4" />
-                          </Button>
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -284,14 +283,14 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Button
-                      variant="outline"
+                    <button
+                      type="button"
                       onClick={handleAddService}
-                      className="flex items-center gap-2"
+                      className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                     >
                       <PlusIcon className="h-4 w-4" />
                       Add Service
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </motion.div>
