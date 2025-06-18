@@ -20,7 +20,6 @@ const providerServices = [
 ]
 
 type Provider = typeof providers[number]
-type Service = typeof services[number]
 type ProviderService = typeof providerServices[number]
 
 type Step = 1 | 2 | 3 | 4 | 5
@@ -287,7 +286,7 @@ export default function BookingPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
               <p className="text-gray-600 mb-6">
-                Your appointment request has been sent to the salon. We'll get back to you soon!
+                Your appointment request has been sent to the salon. We&apos;ll get back to you soon!
               </p>
             </div>
             

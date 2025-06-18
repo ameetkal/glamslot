@@ -5,12 +5,7 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { 
   ClockIcon,
-  UserIcon,
-  PhoneIcon,
-  EnvelopeIcon,
   SparklesIcon,
-  StarIcon,
-  MapPinIcon,
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
