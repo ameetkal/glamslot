@@ -11,19 +11,19 @@ import {
 
 const navItems = [
   {
-    name: "Dashboard",
-    href: "/dashboard",
+    name: "Requests",
+    href: "/dashboard/requests",
     icon: HomeIcon,
   },
   {
-    name: "Availability",
-    href: "/availability",
-    icon: CalendarIcon,
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: ClipboardDocumentListIcon,
   },
   {
-    name: "Requests",
-    href: "/dashboard/requests",
-    icon: ClipboardDocumentListIcon,
+    name: "Availability",
+    href: "/dashboard/availability",
+    icon: CalendarIcon,
   },
   {
     name: "Settings",

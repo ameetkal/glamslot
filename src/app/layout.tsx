@@ -1,8 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/ui/Footer'
-import BottomNav from '@/components/layout/BottomNav'
+import ConditionalNav from '@/components/layout/ConditionalNav'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -19,16 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-gray-50">
       <body className={`${inter.className} h-full flex flex-col`}>
-        <div className="min-h-full flex flex-col pb-16 sm:pb-0">
-          <Navbar />
-          <main className="flex-grow">
-            <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
-              {children}
-            </div>
-          </main>
-          <Footer />
-          <BottomNav />
-        </div>
+        <ConditionalNav>
+          {children}
+        </ConditionalNav>
       </body>
     </html>
   )

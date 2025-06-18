@@ -12,10 +12,11 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   label?: string
   error?: string
   options: readonly SelectOption[]
+  multiple?: boolean
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, options, ...props }, ref) => {
+  ({ className, label, error, options, multiple, ...props }, ref) => {
     return (
       <div>
         {label && (
@@ -30,6 +31,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             error && 'ring-red-300 focus:ring-red-500',
             className
           )}
+          multiple={multiple}
           {...props}
         >
           {options.map((option) => (

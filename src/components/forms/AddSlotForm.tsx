@@ -16,6 +16,7 @@ const schema = yup.object({
   startTime: yup.string().required('Start time is required'),
   endTime: yup.string().required('End time is required'),
   serviceType: yup.string().oneOf(['any', 'haircut', 'color', 'styling']).required('Service type is required'),
+  providers: yup.array().of(yup.string()).min(1, 'Select at least one provider').required('Provider is required'),
 }).required()
 
 type FormData = yup.InferType<typeof schema>
@@ -26,6 +27,14 @@ const serviceTypes = [
   { value: 'color', label: 'Color Service' },
   { value: 'styling', label: 'Styling Only' },
 ] as const
+
+// Mock provider options for now
+const providerOptions = [
+  { value: 'any', label: 'Any Provider' },
+  { value: 'alice', label: 'Alice' },
+  { value: 'bob', label: 'Bob' },
+  { value: 'carol', label: 'Carol' },
+]
 
 interface AddSlotFormProps {
   onSubmit: (data: Omit<FormData, 'date'> & { date: Date }) => void
@@ -89,6 +98,16 @@ export default function AddSlotForm({ onSubmit, onCancel, initialData }: AddSlot
           options={serviceTypes}
           error={errors.serviceType?.message}
           {...register('serviceType')}
+        />
+      </div>
+
+      <div>
+        <Select
+          label="Service Provider(s)"
+          options={providerOptions}
+          multiple
+          error={errors.providers?.message}
+          {...register('providers')}
         />
       </div>
 

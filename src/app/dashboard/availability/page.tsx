@@ -176,7 +176,7 @@ export default function AvailabilityPage() {
               <Button
                 variant="primary"
                 onClick={() => setIsAddingSlot(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-accent-600 hover:bg-accent-700 text-black font-semibold shadow-md border-none"
               >
                 <PlusIcon className="h-4 w-4" />
                 Add Time Slot
@@ -351,11 +351,13 @@ export default function AvailabilityPage() {
               date: new Date(data.date)  // Convert string to Date
             })
             setIsEditing(false)
+            setIsAddingSlot(false)
             setSelectedDate(null)
             setSelectedTime(null)
           }}
           onCancel={() => {
             setIsEditing(false)
+            setIsAddingSlot(false)
             setSelectedDate(null)
             setSelectedTime(null)
           }}

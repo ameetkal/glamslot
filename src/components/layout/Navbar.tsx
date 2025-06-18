@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard' },
-  { name: 'Availability', href: '/availability' },
   { name: 'Booking Requests', href: '/dashboard/requests' },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Availability', href: '/dashboard/availability' },
   { name: 'Settings', href: '/dashboard/settings' },
 ]
 

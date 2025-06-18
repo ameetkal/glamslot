@@ -7,10 +7,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   label?: string
   error?: string
   icon?: React.ComponentType<{ className?: string }>
+  description?: string
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon: Icon, ...props }, ref) => {
+  ({ className, label, error, icon: Icon, description, ...props }, ref) => {
     return (
       <div>
         {label && (
@@ -35,6 +36,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
         </div>
+        {description && (
+          <p className="mt-2 text-sm text-gray-500">{description}</p>
+        )}
         {error && (
           <p className="mt-2 text-sm text-red-600">{error}</p>
         )}
