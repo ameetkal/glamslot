@@ -189,6 +189,35 @@ const declineReasons: DeclineReason[] = [
   }
 ]
 
+// Type definitions for update data
+interface ServiceDurationData {
+  serviceId: number
+  currentDuration?: number
+  previousDuration?: number
+  suggestedDuration?: number
+  newDuration?: number
+}
+
+interface ServicePricingData {
+  serviceId: number
+  currentPrice?: number
+  previousPrice?: number
+  requestedPrice?: number
+  newPrice?: number
+}
+
+interface ConsultationData {
+  serviceId: number
+  alreadyRequiresConsultation?: boolean
+  requiresConsultation?: boolean
+}
+
+interface ProviderMappingData {
+  serviceId: number
+  action: string
+  providerId?: number
+}
+
 export default function BookingRequestsPage() {
   const [requests, setRequests] = useState(bookingRequests)
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
@@ -198,7 +227,7 @@ export default function BookingRequestsPage() {
   const [declineReason, setDeclineReason] = useState('')
   const [customReason, setCustomReason] = useState('')
   const [systemUpdates, setSystemUpdates] = useState<SystemUpdate[]>([])
-  const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({})
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, string | number | boolean>>>({})
 
   const feedbackProcessor = FeedbackProcessor.getInstance()
 
@@ -232,7 +261,7 @@ export default function BookingRequestsPage() {
         setDeclineStep('system-update')
       }
     }
-  }, [declineReason, selectedRequest, declineStep, customReason])
+  }, [declineReason, selectedRequest, declineStep, customReason, feedbackProcessor])
 
   const handleRequestAction = async (requestId: number, action: 'accept' | 'decline') => {
     if (action === 'decline') {
@@ -270,16 +299,6 @@ export default function BookingRequestsPage() {
     }
   }
 
-  const handleDeclineWithReason = async () => {
-    if (!selectedRequest || !declineReason) return
-
-    // If we're still in the reason step and no updates were found, decline immediately
-    if (declineStep === 'reason' && systemUpdates.length === 0) {
-      await actuallyDeclineRequest()
-    }
-    // If we're in system-update step, the user will choose to apply or skip updates
-  }
-
   const actuallyDeclineRequest = async () => {
     if (!selectedRequest) return
 
@@ -315,22 +334,24 @@ export default function BookingRequestsPage() {
       if (key.startsWith('duration_')) {
         const serviceId = parseInt(key.replace('duration_', ''))
         const newDuration = changes.duration
-        if (newDuration) {
+        if (newDuration && typeof newDuration === 'number') {
           // Update service duration in the feedback processor
           feedbackProcessor.updateServiceDuration(serviceId, newDuration)
         }
       } else if (key.startsWith('price_')) {
         const serviceId = parseInt(key.replace('price_', ''))
         const newPrice = changes.price
-        if (newPrice) {
+        if (newPrice && typeof newPrice === 'number') {
           // Update service pricing in the feedback processor
           feedbackProcessor.updateServicePricing(serviceId, newPrice)
         }
       } else if (key.startsWith('consultation_')) {
         const serviceId = parseInt(key.replace('consultation_', ''))
         const requiresConsultation = changes.requiresConsultation
-        // Update consultation requirement in the feedback processor
-        feedbackProcessor.updateConsultationRequirement(serviceId, requiresConsultation)
+        if (typeof requiresConsultation === 'boolean') {
+          // Update consultation requirement in the feedback processor
+          feedbackProcessor.updateConsultationRequirement(serviceId, requiresConsultation)
+        }
       }
     })
     
@@ -345,7 +366,7 @@ export default function BookingRequestsPage() {
     alert('Request declined successfully!')
   }
 
-  const handleUpdateValue = (updateId: string, field: string, value: any) => {
+  const handleUpdateValue = (updateId: string, field: string, value: string | number | boolean) => {
     setPendingChanges(prev => ({
       ...prev,
       [updateId]: {
@@ -694,17 +715,17 @@ export default function BookingRequestsPage() {
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-4 text-sm">
                                           <span className="text-gray-500">Current:</span>
-                                          <span className="font-medium">{(update.data as any).currentDuration || (update.data as any).previousDuration} minutes</span>
+                                          <span className="font-medium">{(update.data as unknown as ServiceDurationData).currentDuration || (update.data as unknown as ServiceDurationData).previousDuration} minutes</span>
                                           <span className="text-gray-500">Requested:</span>
-                                          <span className="font-medium">{(update.data as any).suggestedDuration || (update.data as any).newDuration} minutes</span>
+                                          <span className="font-medium">{(update.data as unknown as ServiceDurationData).suggestedDuration || (update.data as unknown as ServiceDurationData).newDuration} minutes</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <label className="text-sm font-medium text-gray-700">New Duration:</label>
                                           <input
                                             type="number"
                                             className="w-20 px-2 py-1 text-sm border rounded"
-                                            defaultValue={(update.data as any).suggestedDuration || (update.data as any).newDuration}
-                                            onChange={(e) => handleUpdateValue(`duration_${(update.data as any).serviceId}`, 'duration', parseInt(e.target.value))}
+                                            defaultValue={(update.data as unknown as ServiceDurationData).suggestedDuration || (update.data as unknown as ServiceDurationData).newDuration}
+                                            onChange={(e) => handleUpdateValue(`duration_${(update.data as unknown as ServiceDurationData).serviceId}`, 'duration', parseInt(e.target.value))}
                                           />
                                           <span className="text-sm text-gray-500">minutes</span>
                                         </div>
@@ -716,9 +737,9 @@ export default function BookingRequestsPage() {
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-4 text-sm">
                                           <span className="text-gray-500">Current:</span>
-                                          <span className="font-medium">${(update.data as any).currentPrice || (update.data as any).previousPrice}</span>
+                                          <span className="font-medium">${(update.data as unknown as ServicePricingData).currentPrice || (update.data as unknown as ServicePricingData).previousPrice}</span>
                                           <span className="text-gray-500">Requested:</span>
-                                          <span className="font-medium">${(update.data as any).requestedPrice || (update.data as any).newPrice}</span>
+                                          <span className="font-medium">${(update.data as unknown as ServicePricingData).requestedPrice || (update.data as unknown as ServicePricingData).newPrice}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <label className="text-sm font-medium text-gray-700">New Price:</label>
@@ -726,8 +747,8 @@ export default function BookingRequestsPage() {
                                           <input
                                             type="number"
                                             className="w-20 px-2 py-1 text-sm border rounded"
-                                            defaultValue={(update.data as any).requestedPrice || (update.data as any).newPrice}
-                                            onChange={(e) => handleUpdateValue(`price_${(update.data as any).serviceId}`, 'price', parseFloat(e.target.value))}
+                                            defaultValue={(update.data as unknown as ServicePricingData).requestedPrice || (update.data as unknown as ServicePricingData).newPrice}
+                                            onChange={(e) => handleUpdateValue(`price_${(update.data as unknown as ServicePricingData).serviceId}`, 'price', parseFloat(e.target.value))}
                                           />
                                         </div>
                                       </div>
@@ -738,17 +759,17 @@ export default function BookingRequestsPage() {
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-4 text-sm">
                                           <span className="text-gray-500">Current:</span>
-                                          <span className="font-medium">{(update.data as any).alreadyRequiresConsultation ? 'Required' : 'Not Required'}</span>
+                                          <span className="font-medium">{(update.data as unknown as ConsultationData).alreadyRequiresConsultation ? 'Required' : 'Not Required'}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <input
                                             type="checkbox"
-                                            id={`consultation_${(update.data as any).serviceId}`}
-                                            defaultChecked={(update.data as any).requiresConsultation}
-                                            onChange={(e) => handleUpdateValue(`consultation_${(update.data as any).serviceId}`, 'requiresConsultation', e.target.checked)}
+                                            id={`consultation_${(update.data as unknown as ConsultationData).serviceId}`}
+                                            defaultChecked={(update.data as unknown as ConsultationData).requiresConsultation}
+                                            onChange={(e) => handleUpdateValue(`consultation_${(update.data as unknown as ConsultationData).serviceId}`, 'requiresConsultation', e.target.checked)}
                                             className="h-4 w-4 text-accent-600 focus:ring-accent-500"
                                           />
-                                          <label htmlFor={`consultation_${(update.data as any).serviceId}`} className="text-sm font-medium text-gray-700">
+                                          <label htmlFor={`consultation_${(update.data as unknown as ConsultationData).serviceId}`} className="text-sm font-medium text-gray-700">
                                             Require consultation for this service
                                           </label>
                                         </div>
@@ -759,9 +780,9 @@ export default function BookingRequestsPage() {
                                     {update.type === 'provider_mapping' && (
                                       <div className="space-y-2">
                                         <div className="text-sm text-gray-600">
-                                          {(update.data as any).action === 'removed' && 'Provider service mapping has been removed.'}
-                                          {(update.data as any).action === 'mark_specialty' && 'Service has been marked as specialty for all providers.'}
-                                          {(update.data as any).action === 'remove_provider' && 'All service mappings for this provider have been removed.'}
+                                          {(update.data as unknown as ProviderMappingData).action === 'removed' && 'Provider service mapping has been removed.'}
+                                          {(update.data as unknown as ProviderMappingData).action === 'mark_specialty' && 'Service has been marked as specialty for all providers.'}
+                                          {(update.data as unknown as ProviderMappingData).action === 'remove_provider' && 'All service mappings for this provider have been removed.'}
                                         </div>
                                         <div className="text-xs text-gray-500">
                                           This change has been applied automatically.
