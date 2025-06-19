@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useParams } from 'next/navigation'
 
 // Mock data for services, providers, and mappings
 const services = [
