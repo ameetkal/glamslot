@@ -37,7 +37,6 @@ function getMapping(providerId: number, serviceId: number): ProviderService | un
 
 export default function BookingPage() {
   const params = useParams()
-  const salonSlug = params.slug as string
   
   const [step, setStep] = useState<Step>(1)
   const [selectedService, setSelectedService] = useState<number | null>(null)
