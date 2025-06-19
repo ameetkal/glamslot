@@ -73,7 +73,7 @@ const recentAppointments = [
 
 export default function DashboardPage() {
   const [copied, setCopied] = useState(false)
-  const bookingUrl = "https://lastminute.app/booking/your-slug"
+  const bookingUrl = "https://last-minute-app.vercel.app/booking/test"
 
   const copyBookingUrl = () => {
     navigator.clipboard.writeText(bookingUrl).then(() => {
