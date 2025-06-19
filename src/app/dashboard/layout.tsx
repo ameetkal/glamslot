@@ -1,0 +1,169 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { 
+  Cog6ToothIcon,
+  HomeIcon,
+  ChatBubbleLeftRightIcon,
+  UserGroupIcon,
+  WrenchScrewdriverIcon,
+  BellIcon,
+  ChartBarIcon,
+  CalendarIcon,
+  Bars3Icon,
+  XMarkIcon
+} from '@heroicons/react/24/outline'
+import { useState } from 'react'
+
+const settingsSubItems = [
+  { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
+  { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
+  { name: 'Availability', href: '/dashboard/settings/availability', icon: CalendarIcon },
+  { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
+  { name: 'Analytics', href: '/dashboard/settings/analytics', icon: ChartBarIcon },
+  { name: 'Appointments', href: '/dashboard/settings/appointments', icon: CalendarIcon },
+  { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
+]
+
+const navigation = [
+  { name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems },
+]
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const pathname = usePathname()
+  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'))
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <button
+          type="button"
+          className="bg-white p-2 rounded-md shadow-md border border-gray-200"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? (
+            <XMarkIcon className="h-6 w-6 text-gray-600" />
+          ) : (
+            <Bars3Icon className="h-6 w-6 text-gray-600" />
+          )}
+        </button>
+      </div>
+
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full">
+          <div className="flex items-center flex-shrink-0 px-4 py-6">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Elegant Cuts Salon</h1>
+              <p className="text-sm text-gray-500 mt-1">by Glammatic</p>
+            </div>
+          </div>
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+            {navigation.map((item) => {
+              if (!item.subItems) {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-accent-100 text-accent-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <item.icon
+                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                        isActive ? 'text-accent-500' : 'text-gray-400 group-hover:text-gray-500'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </Link>
+                )
+              }
+              // Settings group with sub-items
+              const isSettingsActive = pathname.startsWith('/dashboard/settings')
+              return (
+                <div key={item.name}>
+                  <button
+                    type="button"
+                    className={`group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md focus:outline-none transition-colors ${
+                      isSettingsActive
+                        ? 'bg-accent-100 text-accent-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                    onClick={() => setSettingsOpen((open) => !open)}
+                    aria-expanded={settingsOpen}
+                  >
+                    <item.icon
+                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                        isSettingsActive ? 'text-accent-500' : 'text-gray-400 group-hover:text-gray-500'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                    <svg
+                      className={`ml-auto h-4 w-4 transition-transform ${settingsOpen ? 'rotate-90' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  {settingsOpen && (
+                    <div className="ml-6 mt-1 space-y-1">
+                      {item.subItems.map((sub) => {
+                        const isSubActive = pathname === sub.href
+                        return (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                              isSubActive
+                                ? 'bg-accent-50 text-accent-700 border border-accent-200'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            }`}
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <sub.icon className="h-4 w-4 mr-2" />
+                            {sub.name}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        <main className="min-h-screen pt-16 lg:pt-0">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+} 

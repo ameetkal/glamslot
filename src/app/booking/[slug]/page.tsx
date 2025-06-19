@@ -22,7 +22,7 @@ const providerServices = [
 type Provider = typeof providers[number]
 type ProviderService = typeof providerServices[number]
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 const OTHER_SERVICE_ID = 9999
 const OTHER_PROVIDER_ID = 9999
@@ -60,6 +60,7 @@ export default function BookingPage() {
     else if (step === 2 && (selectedProvider || (providerOptions.length === 0 && otherProvider.trim()))) setStep(3)
     else if (step === 3 && form.dateTimePreference) setStep(4)
     else if (step === 4 && form.name && form.phone && form.email) setStep(5)
+    else if (step === 5) setStep(6)
   }
   function handleBack() {
     if (step > 1) setStep((s) => (s - 1) as Step)
@@ -67,22 +68,41 @@ export default function BookingPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     // TODO: Submit booking request to backend
-    setStep(5)
+    setStep(6)
+  }
+
+  // Helper function to get service name
+  const getServiceName = () => {
+    if (selectedService === OTHER_SERVICE_ID || !selectedService) return otherService
+    return services.find(s => s.id === selectedService)?.name || otherService
+  }
+
+  // Helper function to get provider name
+  const getProviderName = () => {
+    if (selectedProvider === 'any') return 'Any stylist'
+    if (selectedProvider === OTHER_PROVIDER_ID) return otherProvider
+    return providers.find(p => p.id === selectedProvider)?.name || otherProvider
   }
 
   return (
-    <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-4 sm:mt-8 mx-4 sm:mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
+      {/* Salon Name Header */}
+      <div className="text-center mb-4 sm:mb-6 pb-4 border-b border-gray-200">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elegant Cuts Salon</h1>
+        <p className="text-sm text-gray-600 mt-1">Professional Hair & Beauty Services</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Step 1: Service Selection */}
         {step === 1 && (
           <>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Request an Appointment</h1>
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Request an Appointment</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Service</label>
               {services.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Please describe the service you want"
                   value={otherService}
                   onChange={e => setOtherService(e.target.value)}
@@ -91,7 +111,7 @@ export default function BookingPage() {
               ) : (
                 <>
                   <select
-                    className="w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedService ?? ''}
                     onChange={e => {
                       const val = Number(e.target.value)
@@ -110,7 +130,7 @@ export default function BookingPage() {
                   {selectedService === OTHER_SERVICE_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Please describe the service you want"
                       value={otherService}
                       onChange={e => setOtherService(e.target.value)}
@@ -123,7 +143,7 @@ export default function BookingPage() {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 type="button"
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base min-h-[44px]"
+                className="px-4 sm:px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base min-h-[44px] w-full sm:w-auto"
                 onClick={handleNext}
                 disabled={
                   (services.length === 0 && !otherService.trim()) ||
@@ -143,7 +163,7 @@ export default function BookingPage() {
               {providerOptions.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter stylist preference (optional)"
                   value={otherProvider}
                   onChange={e => setOtherProvider(e.target.value)}
@@ -151,7 +171,7 @@ export default function BookingPage() {
               ) : (
                 <>
                   <select
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedProvider}
                     onChange={e => {
                       if (e.target.value === 'any') setSelectedProvider('any')
@@ -169,7 +189,7 @@ export default function BookingPage() {
                   {selectedProvider === OTHER_PROVIDER_ID && (
                     <input
                       type="text"
-                      className="mt-2 w-full border rounded px-3 py-2"
+                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter stylist preference (optional)"
                       value={otherProvider}
                       onChange={e => setOtherProvider(e.target.value)}
@@ -186,10 +206,10 @@ export default function BookingPage() {
               </div>
             )}
             <div className="flex justify-between gap-2 mt-4">
-              <button type="button" className="px-4 py-2 bg-gray-700 text-white font-semibold rounded shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
               <button
                 type="button"
-                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none"
                 onClick={handleNext}
                 disabled={
                   (providerOptions.length === 0 && !otherProvider.trim()) ||
@@ -205,33 +225,35 @@ export default function BookingPage() {
         {step === 3 && (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Date & Time</label>
-              <input
-                type="text"
-                className="w-full border rounded px-3 py-2"
+              <label className="block text-sm font-medium text-gray-700 mb-2">Preferred date(s) & time(s) for your appointment</label>
+              <p className="text-sm text-gray-600 mb-3">
+                Please note that we cannot guarantee your date/time but we will do our best to match your preferences and will reach out to confirm details.
+              </p>
+              <textarea
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y"
                 value={form.dateTimePreference}
                 onChange={e => setForm({ ...form, dateTimePreference: e.target.value })}
-                placeholder="Share appointment time windows you'd prefer"
+                placeholder="e.g., 'Weekdays after 5pm', 'Saturday mornings', 'Any time next week', 'Prefer Tuesday or Thursday evenings'"
                 required
               />
             </div>
             <div className="flex justify-between gap-2 mt-4">
-              <button type="button" className="px-4 py-2 bg-gray-700 text-white font-semibold rounded shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400" onClick={handleBack}>Back</button>
-              <button type="button" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400" onClick={handleNext} disabled={!form.dateTimePreference}>
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext} disabled={!form.dateTimePreference}>
                 Next
               </button>
             </div>
           </>
         )}
-        {/* Step 4: Contact Info & Waitlist */}
+        {/* Step 4: Contact Info */}
         {step === 4 && (
           <>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Request Appointment</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Contact Information</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
               <input
                 type="text"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 required
@@ -241,7 +263,7 @@ export default function BookingPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
               <input
                 type="tel"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
                 required
@@ -251,32 +273,96 @@ export default function BookingPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
               <input
                 type="email"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 required
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <input
                 type="checkbox"
                 id="waitlistOptIn"
                 checked={form.waitlistOptIn}
                 onChange={e => setForm({ ...form, waitlistOptIn: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
+                className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500 mt-1"
               />
               <label htmlFor="waitlistOptIn" className="text-sm text-gray-700">
                 Include me in the waitlist for future appointment gaps that open up in my preferred window
               </label>
             </div>
             <div className="flex justify-between gap-2 mt-4">
-              <button type="button" className="px-4 py-2 bg-gray-700 text-white font-semibold rounded shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400" onClick={handleBack}>Back</button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">Request Appointment</button>
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext} disabled={!form.name || !form.phone || !form.email}>
+                Next
+              </button>
             </div>
           </>
         )}
-        {/* Step 5: Confirmation */}
+        {/* Step 5: Review Request */}
         {step === 5 && (
+          <>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Review Your Request</h2>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="space-y-3">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Service:</span>
+                  <span className="ml-2 text-sm text-gray-900">{getServiceName()}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Stylist Preference:</span>
+                  <span className="ml-2 text-sm text-gray-900">{getProviderName()}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Preferred Date/Time:</span>
+                  <span className="ml-2 text-sm text-gray-900">{form.dateTimePreference}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Name:</span>
+                  <span className="ml-2 text-sm text-gray-900">{form.name}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Phone:</span>
+                  <span className="ml-2 text-sm text-gray-900">{form.phone}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Email:</span>
+                  <span className="ml-2 text-sm text-gray-900">{form.email}</span>
+                </div>
+                {form.waitlistOptIn && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Waitlist:</span>
+                    <span className="ml-2 text-sm text-gray-900">Yes, include me on waitlist</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Important:</strong> This is a booking request, not a confirmed appointment. The salon will review your request and contact you to confirm details and finalize your appointment.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between gap-2 mt-4">
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="submit" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none">
+                Submit Request
+              </button>
+            </div>
+          </>
+        )}
+        {/* Step 6: Confirmation */}
+        {step === 6 && (
           <div className="text-center">
             <div className="mb-6">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
@@ -284,20 +370,20 @@ export default function BookingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
               <p className="text-gray-600 mb-6">
-                Your appointment request has been sent to the salon. We&apos;ll get back to you soon!
+                Your appointment request has been sent to the salon. We'll review your preferences and contact you soon to confirm details and finalize your appointment.
               </p>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Want to guarantee your booking?</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">Don't want to wait?</h3>
               <p className="text-blue-800 mb-4">
-                Call us directly to finalize your appointment right away:
+                Call us directly to discuss availability and book your appointment right away:
               </p>
               <a 
                 href="tel:+1234567890" 
-                className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="inline-flex items-center justify-center px-4 sm:px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full sm:w-auto"
               >
                 <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />

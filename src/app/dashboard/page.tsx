@@ -1,74 +1,46 @@
 "use client"
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { CalendarIcon, UserGroupIcon, ClockIcon, XMarkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
-import { 
-  CalendarIcon,
-  UserGroupIcon,
-  CurrencyDollarIcon,
-  ClockIcon,
-  ClipboardDocumentIcon,
-} from '@heroicons/react/24/outline'
+import { useState } from 'react'
 
-// Mock data for the prototype
-const metrics = [
-  { 
-    name: 'Pending Requests', 
-    value: '5', 
-    icon: ClockIcon,
-    href: '/dashboard/requests',
-    change: '+2',
-    changeType: 'increase' as const
-  },
-  { 
-    name: 'Appointments Today', 
-    value: '5', 
-    icon: CalendarIcon,
-    href: '/dashboard/appointments',
-    change: '-2',
-    changeType: 'decrease' as const
-  },
-  { 
-    name: 'Total Clients', 
-    value: '24', 
-    icon: UserGroupIcon,
-    href: '/dashboard/clients',
-    change: '+12%',
-    changeType: 'increase' as const
-  },
-  { 
-    name: 'Total Revenue', 
-    value: '$2,400', 
-    icon: CurrencyDollarIcon,
-    href: '/dashboard/revenue',
-    change: '+8%',
-    changeType: 'increase' as const
-  },
-]
+// Mock data for dashboard metrics
+const dashboardStats = {
+  appointmentsCreated: 47,
+  requestedNotFulfilled: 12,
+  totalClients: 156,
+  averageResponseTime: '2.3 hours'
+}
 
-const recentAppointments = [
+const recentActivity = [
   {
     id: 1,
-    clientName: 'Sarah Johnson',
-    service: 'Haircut & Color',
-    time: '2:00 PM',
-    status: 'confirmed' as const,
+    type: 'booking_request',
+    message: 'New booking request from Sarah Johnson',
+    time: '2 minutes ago',
+    status: 'pending'
   },
   {
     id: 2,
-    clientName: 'Michael Chen',
-    service: 'Haircut Only',
-    time: '3:30 PM',
-    status: 'confirmed' as const,
+    type: 'appointment_booked',
+    message: 'Appointment booked for Mike Chen',
+    time: '15 minutes ago',
+    status: 'completed'
   },
   {
     id: 3,
-    clientName: 'Emma Davis',
-    service: 'Color Service',
-    time: '4:45 PM',
-    status: 'confirmed' as const,
+    type: 'appointment_not_booked',
+    message: 'Appointment not booked for Emily Rodriguez',
+    time: '1 hour ago',
+    status: 'completed'
   },
+  {
+    id: 4,
+    type: 'booking_request',
+    message: 'New booking request from David Kim',
+    time: '2 hours ago',
+    status: 'pending'
+  }
 ]
 
 export default function DashboardPage() {
@@ -83,124 +55,262 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="py-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-
-          {/* Booking URL Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-8 rounded-lg bg-white p-4 shadow-sm"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">Your Booking URL</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Share this link with your clients so they can request appointments
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Overview of your salon&apos;s booking activity and performance
             </p>
-            <div className="mt-2 flex items-center">
-              <input
-                readOnly
-                value={bookingUrl}
-                className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
-              />
-              <button
-                onClick={copyBookingUrl}
-                className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
-                aria-label="Copy booking URL"
-              >
-                <ClipboardDocumentIcon className="h-5 w-5" />
-              </button>
-            </div>
-            {copied && (
-              <p className="mt-1 text-xs text-green-600">Copied to clipboard!</p>
-            )}
-          </motion.div>
+          </div>
+        </div>
 
-          {/* Metrics */}
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((metric) => (
-              <motion.div
-                key={metric.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+        {/* Booking URL Section */}
+        <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Share this link with your clients so they can request appointments
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={bookingUrl}
+              className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
+            />
+            <button
+              onClick={copyBookingUrl}
+              className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
+              aria-label="Copy booking URL"
+            >
+              <ClipboardDocumentIcon className="h-5 w-5" />
+            </button>
+          </div>
+          {copied && (
+            <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
+          )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CalendarIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Appointments Created
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {dashboardStats.appointmentsCreated}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <XMarkIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Requested but not Fulfilled
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {dashboardStats.requestedNotFulfilled}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <UserGroupIcon className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Total Clients
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {dashboardStats.totalClients}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ClockIcon className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Avg Response Time
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {dashboardStats.averageResponseTime}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-8">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Link
+              href="/dashboard/requests"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-accent-50 text-accent-700 ring-4 ring-white">
+                  <CalendarIcon className="h-6 w-6" />
+                </span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Review Booking Requests
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Check and respond to new booking requests from clients
+                </p>
+              </div>
+              <span
+                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                aria-hidden="true"
               >
-                <Link
-                  href={metric.href}
-                  className="block overflow-hidden rounded-lg bg-white shadow hover:shadow-md transition-shadow"
-                >
-                  <div className="p-5">
-                    <div className="flex items-center">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
+                </svg>
+              </span>
+            </Link>
+
+            <Link
+              href="/dashboard/settings/providers"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-blue-50 text-blue-700 ring-4 ring-white">
+                  <UserGroupIcon className="h-6 w-6" />
+                </span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Manage Providers
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Update provider information, services, and availability
+                </p>
+              </div>
+              <span
+                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                aria-hidden="true"
+              >
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
+                </svg>
+              </span>
+            </Link>
+
+            <Link
+              href="/dashboard/settings/availability"
+              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <div>
+                <span className="rounded-lg inline-flex p-3 bg-green-50 text-green-700 ring-4 ring-white">
+                  <ClockIcon className="h-6 w-6" />
+                </span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-medium">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  Set Availability
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Configure business hours and provider schedules
+                </p>
+              </div>
+              <span
+                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                aria-hidden="true"
+              >
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
+                </svg>
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="mt-8">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {recentActivity.map((activity) => (
+                <li key={activity.id}>
+                  <div className="px-4 py-4 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          {activity.type === 'booking_request' && (
+                            <CalendarIcon className="h-5 w-5 text-blue-500" />
+                          )}
+                          {activity.type === 'appointment_booked' && (
+                            <CalendarIcon className="h-5 w-5 text-green-500" />
+                          )}
+                          {activity.type === 'appointment_not_booked' && (
+                            <XMarkIcon className="h-5 w-5 text-red-500" />
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-900">
+                            {activity.message}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {activity.time}
+                          </p>
+                        </div>
+                      </div>
                       <div className="flex-shrink-0">
-                        <metric.icon className="h-6 w-6 text-accent-600" aria-hidden="true" />
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="truncate text-sm font-medium text-gray-500">{metric.name}</dt>
-                          <dd>
-                            <div className="text-lg font-medium text-gray-900">{metric.value}</div>
-                          </dd>
-                        </dl>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <div className={`inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium ${
-                        metric.changeType === 'increase' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {metric.change}
+                        {activity.status === 'pending' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        )}
+                        {activity.status === 'completed' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Completed
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Recent Appointments */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Today&apos;s Appointments</h2>
-              <Link
-                href="/dashboard/appointments"
-                className="text-sm font-medium text-accent-600 hover:text-accent-500"
-              >
-                View all
-                <span aria-hidden="true"> &rarr;</span>
-              </Link>
-            </div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="mt-4 overflow-hidden rounded-lg bg-white shadow"
-            >
-              <ul role="list" className="divide-y divide-gray-200">
-                {recentAppointments.map((appointment) => (
-                  <li key={appointment.id} className="p-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex min-w-0 flex-1 items-center">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-gray-900">
-                            {appointment.clientName}
-                          </p>
-                          <p className="truncate text-sm text-gray-500">{appointment.service}</p>
-                        </div>
-                      </div>
-                      <div className="ml-4 flex flex-shrink-0 items-center space-x-4">
-                        <div className="text-sm text-gray-500">{appointment.time}</div>
-                        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                          {appointment.status}
-                        </span>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

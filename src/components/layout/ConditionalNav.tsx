@@ -8,6 +8,12 @@ import BottomNav from '@/components/layout/BottomNav';
 export default function ConditionalNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isBookingPage = pathname.startsWith('/booking');
+  const isDashboardPage = pathname.startsWith('/dashboard');
+
+  // For dashboard pages, render children directly without any navigation or padding
+  if (isDashboardPage) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-full flex flex-col pb-16 sm:pb-0">

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 interface SalonNotifications {
   email: boolean;
   sms: boolean;
-  reminders: boolean;
 }
 
 interface ClientNotifications {
@@ -27,23 +26,22 @@ interface ClientNotifications {
 const initialSalonNotifications: SalonNotifications = {
   email: true,
   sms: false,
-  reminders: false,
 };
 
 const initialClientNotifications: ClientNotifications = {
   bookingAccepted: {
     sms: false,
-    email: true,
+    email: false,
   },
   bookingDeclined: {
     sms: false,
-    email: true,
+    email: false,
   },
   appointmentReminders: {
-    enabled: true,
+    enabled: false,
     hoursBefore: 24,
     sms: false,
-    email: true,
+    email: false,
   },
 };
 
@@ -134,22 +132,6 @@ export default function NotificationsPage() {
                   type="checkbox"
                   checked={salonNotifications.sms}
                   onChange={() => handleSalonToggle('sms')}
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-gray-900">Reminder Notifications</div>
-                <div className="mt-1 text-sm text-gray-500">Receive reminders for upcoming appointments and tasks</div>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={salonNotifications.reminders}
-                  onChange={() => handleSalonToggle('reminders')}
                   className="peer sr-only"
                 />
                 <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
