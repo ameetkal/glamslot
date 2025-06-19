@@ -1,13 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SmsService } from '@/lib/smsService'
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const data = await req.json()
+    const body = await request.json()
+    
+    // Extract booking data
+    const {
+      service,
+      stylist,
+      dateTimePreference,
+      name,
+      phone,
+      email,
+      notes,
+      waitlistOptIn
+    } = body
+
     // TODO: Save booking request to database
-    console.log('Received booking request:', data)
-    return NextResponse.json({ success: true })
+    console.log('New booking request received:', {
+      service,
+      stylist,
+      dateTimePreference,
+      name,
+      phone,
+      email,
+      notes,
+      waitlistOptIn
+    })
+
+    // Send SMS notification to salon
+    try {
+      const smsService = SmsService.getInstance()
+      await smsService.sendBookingRequestNotification()
+    } catch (smsError) {
+      console.error('Failed to send SMS notification:', smsError)
+      // Don't fail the booking request if SMS fails
+    }
+
+    // TODO: Send email notification if configured
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Booking request submitted successfully' 
+    })
   } catch (error) {
-    console.error('Booking API error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to submit booking request' }, { status: 500 })
+    console.error('Error processing booking request:', error)
+    return NextResponse.json(
+      { success: false, message: 'Failed to process booking request' },
+      { status: 500 }
+    )
   }
 } 

@@ -123,7 +123,7 @@ export default function ClientsPage() {
       <div className="mb-6">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
           </div>
           <input
             type="text"
@@ -147,11 +147,11 @@ export default function ClientsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    <UserIcon className="h-8 w-8 text-gray-400" />
+                    <UserIcon className="h-8 w-8 text-gray-500" />
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">{client.name}</h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <EnvelopeIcon className="h-4 w-4 mr-1" />
                         {client.email}
@@ -165,15 +165,15 @@ export default function ClientsPage() {
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">Last request</div>
+                    <div className="text-sm text-gray-600">Last request</div>
                     <div className="text-sm font-medium text-gray-900">
                       {formatDate(client.lastRequestDate)}
                     </div>
                   </div>
                   {expandedClient === client.id ? (
-                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                   ) : (
-                    <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                    <ChevronRightIcon className="h-5 w-5 text-gray-500" />
                   )}
                 </div>
               </div>
@@ -188,19 +188,19 @@ export default function ClientsPage() {
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Booking Statistics</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Total Requests:</span>
+                        <span className="text-gray-700">Total Requests:</span>
                         <span className="font-medium">{client.totalRequests}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Successfully Booked:</span>
+                        <span className="text-gray-700">Successfully Booked:</span>
                         <span className="font-medium text-green-600">{client.totalBooked}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Not Booked:</span>
+                        <span className="text-gray-700">Not Booked:</span>
                         <span className="font-medium text-red-600">{client.totalRequests - client.totalBooked}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Waitlist Requests:</span>
+                        <span className="text-gray-700">Waitlist Requests:</span>
                         <span className="font-medium text-orange-600">{client.waitlistRequests}</span>
                       </div>
                     </div>
@@ -211,7 +211,7 @@ export default function ClientsPage() {
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Services Requested</h4>
                     <div className="space-y-1">
                       {[...new Set(client.servicesRequested)].map((service, index) => (
-                        <div key={index} className="text-sm text-gray-600">
+                        <div key={index} className="text-sm text-gray-700">
                           • {service}
                         </div>
                       ))}
@@ -223,7 +223,7 @@ export default function ClientsPage() {
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Stylists Requested</h4>
                     <div className="space-y-1">
                       {[...new Set(client.stylistsRequested)].map((stylist, index) => (
-                        <div key={index} className="text-sm text-gray-600">
+                        <div key={index} className="text-sm text-gray-700">
                           • {stylist}
                         </div>
                       ))}
@@ -235,7 +235,7 @@ export default function ClientsPage() {
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ClockIcon className="h-5 w-5 text-gray-400 mr-2" />
+                      <ClockIcon className="h-5 w-5 text-gray-500 mr-2" />
                       <span className="text-sm font-medium text-gray-900">Waitlist Status</span>
                     </div>
                     {client.isOnWaitlist ? (
@@ -244,7 +244,7 @@ export default function ClientsPage() {
                         <span className="text-sm font-medium">On Waitlist</span>
                       </div>
                     ) : (
-                      <div className="flex items-center text-gray-500">
+                      <div className="flex items-center text-gray-600">
                         <CheckIcon className="h-4 w-4 mr-1" />
                         <span className="text-sm">Not on waitlist</span>
                       </div>
@@ -260,9 +260,9 @@ export default function ClientsPage() {
       {/* Empty State */}
       {sortedClients.length === 0 && (
         <div className="text-center py-12">
-          <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <UserIcon className="mx-auto h-12 w-12 text-gray-500" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No clients found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-600">
             {searchTerm ? 'Try adjusting your search terms.' : 'Clients will appear here once they request appointments.'}
           </p>
         </div>

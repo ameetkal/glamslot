@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useParams } from 'next/navigation'
 
 // Mock data for services, providers, and mappings
 const services = [
@@ -22,7 +23,7 @@ const providerServices = [
 type Provider = typeof providers[number]
 type ProviderService = typeof providerServices[number]
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 const OTHER_SERVICE_ID = 9999
 const OTHER_PROVIDER_ID = 9999
@@ -35,6 +36,9 @@ function getMapping(providerId: number, serviceId: number): ProviderService | un
 }
 
 export default function BookingPage() {
+  const params = useParams()
+  const salonSlug = params.slug as string
+  
   const [step, setStep] = useState<Step>(1)
   const [selectedService, setSelectedService] = useState<number | null>(null)
   const [otherService, setOtherService] = useState('')
@@ -45,8 +49,11 @@ export default function BookingPage() {
     phone: '',
     email: '',
     dateTimePreference: '',
+    notes: '',
     waitlistOptIn: false,
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   // Providers for the selected service
   const providerOptions = selectedService && selectedService !== OTHER_SERVICE_ID ? getProvidersForService(selectedService) : providers
@@ -61,14 +68,56 @@ export default function BookingPage() {
     else if (step === 3 && form.dateTimePreference) setStep(4)
     else if (step === 4 && form.name && form.phone && form.email) setStep(5)
     else if (step === 5) setStep(6)
+    else if (step === 6) setStep(7)
   }
   function handleBack() {
     if (step > 1) setStep((s) => (s - 1) as Step)
   }
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    // TODO: Submit booking request to backend
-    setStep(6)
+    setIsSubmitting(true)
+    setSubmitError('')
+
+    try {
+      // Prepare booking data
+      const bookingData = {
+        service: getServiceName(),
+        stylist: getProviderName(),
+        dateTimePreference: form.dateTimePreference,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        notes: form.notes,
+        waitlistOptIn: form.waitlistOptIn
+      }
+
+      // Submit to API
+      const response = await fetch('/api/booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit booking request')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setStep(7)
+      } else {
+        throw new Error(result.message || 'Failed to submit booking request')
+      }
+    } catch (error) {
+      console.error('Booking submission error:', error)
+      setSubmitError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Helper function to get service name
@@ -89,7 +138,7 @@ export default function BookingPage() {
       {/* Salon Name Header */}
       <div className="text-center mb-4 sm:mb-6 pb-4 border-b border-gray-200">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elegant Cuts Salon</h1>
-        <p className="text-sm text-gray-600 mt-1">Professional Hair & Beauty Services</p>
+        <p className="text-sm text-gray-700 mt-1">Professional Hair & Beauty Services</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -299,10 +348,52 @@ export default function BookingPage() {
             </div>
           </>
         )}
-        {/* Step 5: Review Request */}
+        {/* Step 5: Notes */}
         {step === 5 && (
           <>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Any additional notes or preferences?</label>
+              <p className="text-sm text-gray-600 mb-3">
+                Feel free to share any special requests, allergies, previous experiences, or other information that might help us better serve you.
+              </p>
+              <textarea
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y"
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                placeholder="e.g., 'I have sensitive skin', 'This is for a special occasion', 'I prefer natural products', 'I'm a returning client', etc."
+              />
+            </div>
+            <div className="flex justify-between gap-2 mt-4">
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
+                Next
+              </button>
+            </div>
+          </>
+        )}
+        {/* Step 6: Review Request */}
+        {step === 6 && (
+          <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Review Your Request</h2>
+            
+            {submitError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">
+                      <strong>Error:</strong> {submitError}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div className="space-y-3">
                 <div>
@@ -329,6 +420,12 @@ export default function BookingPage() {
                   <span className="text-sm font-medium text-gray-700">Email:</span>
                   <span className="ml-2 text-sm text-gray-900">{form.email}</span>
                 </div>
+                {form.notes && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Additional Notes:</span>
+                    <span className="ml-2 text-sm text-gray-900">{form.notes}</span>
+                  </div>
+                )}
                 {form.waitlistOptIn && (
                   <div>
                     <span className="text-sm font-medium text-gray-700">Waitlist:</span>
@@ -355,14 +452,14 @@ export default function BookingPage() {
             
             <div className="flex justify-between gap-2 mt-4">
               <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
-              <button type="submit" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none">
-                Submit Request
+              <button type="submit" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
               </button>
             </div>
           </>
         )}
-        {/* Step 6: Confirmation */}
-        {step === 6 && (
+        {/* Step 7: Confirmation */}
+        {step === 7 && (
           <div className="text-center">
             <div className="mb-6">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">

@@ -60,9 +60,24 @@ export default function DashboardPage() {
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
             <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-700">
+            <p className="mt-2 text-sm text-gray-700 mb-4">
               Overview of your salon&apos;s booking activity and performance
             </p>
+          </div>
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <div className="flex rounded-md shadow-sm">
+              <input
+                type="text"
+                placeholder="Search..."
+                className="block w-full rounded-l-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-accent-600 sm:text-sm sm:leading-6"
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
+              >
+                Search
+              </button>
+            </div>
           </div>
         </div>
 
@@ -101,7 +116,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-700 truncate">
                       Appointments Created
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -121,7 +136,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-700 truncate">
                       Requested but not Fulfilled
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -141,7 +156,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-700 truncate">
                       Total Clients
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -161,7 +176,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-sm font-medium text-gray-700 truncate">
                       Avg Response Time
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
@@ -192,12 +207,12 @@ export default function DashboardPage() {
                   <span className="absolute inset-0" aria-hidden="true" />
                   Review Booking Requests
                 </h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-gray-600">
                   Check and respond to new booking requests from clients
                 </p>
               </div>
               <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
                 aria-hidden="true"
               >
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -220,12 +235,12 @@ export default function DashboardPage() {
                   <span className="absolute inset-0" aria-hidden="true" />
                   Manage Providers
                 </h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-gray-600">
                   Update provider information, services, and availability
                 </p>
               </div>
               <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
                 aria-hidden="true"
               >
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -248,12 +263,12 @@ export default function DashboardPage() {
                   <span className="absolute inset-0" aria-hidden="true" />
                   Set Availability
                 </h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-gray-600">
                   Configure business hours and provider schedules
                 </p>
               </div>
               <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-300 group-hover:text-gray-400"
+                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
                 aria-hidden="true"
               >
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -289,12 +304,12 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium text-gray-900">
                             {activity.message}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-600">
                             {activity.time}
                           </p>
                         </div>
                       </div>
-                      <div className="flex-shrink-0">
+                      <div className="flex items-center">
                         {activity.status === 'pending' && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                             Pending

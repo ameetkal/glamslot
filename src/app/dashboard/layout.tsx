@@ -91,7 +91,7 @@ export default function DashboardLayout({
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive ? 'text-accent-500' : 'text-gray-400 group-hover:text-gray-500'
+                        isActive ? 'text-accent-500' : 'text-gray-500 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
@@ -115,7 +115,7 @@ export default function DashboardLayout({
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isSettingsActive ? 'text-accent-500' : 'text-gray-400 group-hover:text-gray-500'
+                        isSettingsActive ? 'text-accent-500' : 'text-gray-500 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
