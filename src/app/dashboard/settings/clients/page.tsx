@@ -5,13 +5,11 @@ import {
   UserIcon, 
   EnvelopeIcon, 
   PhoneIcon, 
-  CalendarIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
-  CheckIcon,
-  XMarkIcon
+  CheckIcon
 } from '@heroicons/react/24/outline'
 
 // Mock data - in real app this would come from booking requests history
@@ -84,7 +82,7 @@ const sampleClients = [
 ]
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState(sampleClients)
+  const [clients] = useState(sampleClients)
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedClient, setExpandedClient] = useState<number | null>(null)
 

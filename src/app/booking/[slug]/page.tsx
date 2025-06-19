@@ -372,12 +372,12 @@ export default function BookingPage() {
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
               <p className="text-gray-600 mb-6">
-                Your appointment request has been sent to the salon. We'll review your preferences and contact you soon to confirm details and finalize your appointment.
+                Your appointment request has been sent to the salon. We&apos;ll review your preferences and contact you soon to confirm details and finalize your appointment.
               </p>
             </div>
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Don't want to wait?</h3>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">Don&apos;t want to wait?</h3>
               <p className="text-blue-800 mb-4">
                 Call us directly to discuss availability and book your appointment right away:
               </p>
