@@ -3,7 +3,7 @@ import Link from 'next/link';
 const settingsNav = [
   { name: 'Providers', href: '/dashboard/settings/providers' },
   { name: 'Services', href: '/dashboard/settings/services' },
-  { name: 'Provider-Service Mapping', href: '/dashboard/settings/mapping' },
+  { name: 'Analytics', href: '/dashboard/settings/analytics' },
   { name: 'Notifications', href: '/dashboard/settings/notifications' },
 ];
 
