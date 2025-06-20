@@ -1,6 +1,7 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import ConditionalNav from '@/components/layout/ConditionalNav'
+import { AuthProvider } from '@/lib/auth'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-gray-50">
       <body className={`${inter.className} h-full flex flex-col`}>
-        <ConditionalNav>
-          {children}
-        </ConditionalNav>
+        <AuthProvider>
+          <ConditionalNav>
+            {children}
+          </ConditionalNav>
+        </AuthProvider>
       </body>
     </html>
   )

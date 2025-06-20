@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { 
   Cog6ToothIcon,
   HomeIcon,
@@ -12,9 +12,12 @@ import {
   ChartBarIcon,
   CalendarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { useAuth } from '@/lib/auth'
+import AuthGuard from '@/components/auth/AuthGuard'
 
 const settingsSubItems = [
   { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
@@ -32,14 +35,21 @@ const navigation = [
   { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems },
 ]
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user, logout } = useAuth()
+  const router = useRouter()
   const pathname = usePathname()
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'))
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,6 +84,26 @@ export default function DashboardLayout({
               <p className="text-sm text-gray-500 mt-1">by Glammatic</p>
             </div>
           </div>
+
+          {/* User info */}
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 rounded-full bg-accent-100 flex items-center justify-center">
+                  <span className="text-sm font-medium text-accent-700">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.email}
+                </p>
+                <p className="text-xs text-gray-500">Salon Owner</p>
+              </div>
+            </div>
+          </div>
+
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               if (!item.subItems) {
@@ -155,6 +185,17 @@ export default function DashboardLayout({
               )
             })}
           </nav>
+
+          {/* Logout button */}
+          <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+            >
+              <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-gray-600 group-hover:text-gray-700" />
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 
@@ -165,5 +206,17 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <AuthGuard>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </AuthGuard>
   )
 } 

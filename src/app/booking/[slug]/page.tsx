@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, use } from 'react'
 
 // Mock data for services, providers, and mappings
 const services = [
@@ -34,7 +34,8 @@ function getMapping(providerId: number, serviceId: number): ProviderService | un
   return providerServices.find((ps) => ps.providerId === providerId && ps.serviceId === serviceId)
 }
 
-export default function BookingPage() {
+export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [step, setStep] = useState<Step>(1)
   const [selectedService, setSelectedService] = useState<number | null>(null)
   const [otherService, setOtherService] = useState('')
@@ -85,7 +86,8 @@ export default function BookingPage() {
         phone: form.phone,
         email: form.email,
         notes: form.notes,
-        waitlistOptIn: form.waitlistOptIn
+        waitlistOptIn: form.waitlistOptIn,
+        salonSlug: slug
       }
 
       // Submit to API

@@ -1,151 +1,127 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import Button from '@/components/ui/Button'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth'
+import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { 
+  CalendarIcon, 
   UserIcon, 
-  EnvelopeIcon, 
   PhoneIcon, 
-  ClockIcon, 
-  ChatBubbleLeftIcon,
+  EnvelopeIcon,
+  ClockIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline'
 
-// Mock data for booking requests
-const bookingRequests = [
-  {
-    id: 1,
-    clientName: 'Sarah Johnson',
-    email: 'sarah.johnson@email.com',
-    phone: '555-123-4567',
-    service: 'Haircut & Style',
-    date: '2024-01-15',
-    time: '2:00 PM',
-    duration: '60 minutes',
-    price: 85,
-    notes: 'First time client, wants a consultation about color options',
-    status: 'pending',
-    requestedAt: '2 hours ago'
-  },
-  {
-    id: 2,
-    clientName: 'Mike Chen',
-    email: 'mike.chen@email.com',
-    phone: '555-987-6543',
-    service: 'Beard Trim',
-    date: '2024-01-16',
-    time: '10:30 AM',
-    duration: '30 minutes',
-    price: 25,
-    notes: 'Regular client, prefers Bob',
-    status: 'pending',
-    requestedAt: '1 hour ago'
-  },
-  {
-    id: 3,
-    clientName: 'Emily Rodriguez',
-    email: 'emily.rodriguez@email.com',
-    phone: '555-456-7890',
-    service: 'Full Color Treatment',
-    date: '2024-01-17',
-    time: '3:30 PM',
-    duration: '120 minutes',
-    price: 150,
-    notes: 'Wants to go from brunette to blonde, needs consultation',
-    status: 'pending',
-    requestedAt: '30 minutes ago'
-  }
-]
+interface BookingRequest {
+  id: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  service: string
+  stylistPreference: string
+  dateTimePreference: string
+  waitlistOptIn: boolean
+  status: 'pending' | 'booked' | 'not-booked'
+  salonId: string
+  createdAt: any
+  updatedAt: any
+}
 
-type BookingRequest = typeof bookingRequests[0]
-
-export default function BookingRequestsPage() {
-  const [requests, setRequests] = useState<BookingRequest[]>(bookingRequests)
+export default function RequestsPage() {
+  const { user } = useAuth()
+  const [requests, setRequests] = useState<BookingRequest[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [notBookedReason, setNotBookedReason] = useState('')
-  const [showReasonForm, setShowReasonForm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
-  const handleRequestAction = async (requestId: number, action: 'booked' | 'not-booked') => {
-    if (action === 'not-booked') {
-      setShowReasonForm(true)
-      return
-    }
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!user) return
 
-    setIsProcessing(true)
-    try {
-      // In a real app, this would make an API call
-      console.log(`Marking appointment as ${action}:`, requestId)
-      
-      // Update the request status
-      setRequests(requests.map(request => 
-        request.id === requestId 
-          ? { ...request, status: action === 'booked' ? 'booked' : 'not-booked' }
-          : request
-      ))
-
-      // If there was a selected request, update it
-      if (selectedRequest?.id === requestId) {
-        setSelectedRequest(prev => prev ? {
-          ...prev,
-          status: action === 'booked' ? 'booked' : 'not-booked'
-        } : null)
+      try {
+        const requestsQuery = query(
+          collection(db, 'bookingRequests'),
+          where('salonId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        )
+        const snapshot = await getDocs(requestsQuery)
+        
+        const requestsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as BookingRequest[]
+        
+        setRequests(requestsData)
+      } catch (error) {
+        console.error('Error fetching requests:', error)
+      } finally {
+        setLoading(false)
       }
-
-      // Show success message
-      alert(`Appointment marked as ${action === 'booked' ? 'booked' : 'not booked'} successfully!`)
-    } catch (error) {
-      console.error(`Error updating appointment status:`, error)
-      alert(`Failed to update appointment status. Please try again.`)
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleNotBookedSubmit = async () => {
-    if (!selectedRequest || !notBookedReason.trim()) {
-      alert('Please provide a reason why the appointment was not booked.')
-      return
     }
 
-    setIsProcessing(true)
+    fetchRequests()
+  }, [user])
+
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked') => {
     try {
-      // In a real app, this would make an API call with the reason
-      console.log(`Marking appointment as not booked with reason:`, notBookedReason)
+      await updateDoc(doc(db, 'bookingRequests', requestId), {
+        status,
+        updatedAt: new Date().toISOString()
+      })
       
-      // Update the request status
-      setRequests(requests.map(request => 
-        request.id === selectedRequest.id 
-          ? { ...request, status: 'not-booked', notes: `${request.notes || ''}\n\nNot Booked Reason: ${notBookedReason}` }
-          : request
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === requestId ? { ...req, status, updatedAt: new Date().toISOString() } : req
       ))
-
-      // Update selected request
-      setSelectedRequest(prev => prev ? {
-        ...prev,
-        status: 'not-booked',
-        notes: `${prev.notes || ''}\n\nNot Booked Reason: ${notBookedReason}`
-      } : null)
-
-      // Reset form
-      setNotBookedReason('')
-      setShowReasonForm(false)
-
-      // Show success message
-      alert('Appointment marked as not booked successfully!')
+      
+      // Close modal if open
+      setShowModal(false)
+      setSelectedRequest(null)
     } catch (error) {
-      console.error(`Error updating appointment status:`, error)
-      alert(`Failed to update appointment status. Please try again.`)
-    } finally {
-      setIsProcessing(false)
+      console.error('Error updating request status:', error)
     }
   }
 
-  const handleCancelNotBooked = () => {
-    setNotBookedReason('')
-    setShowReasonForm(false)
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'Unknown date'
+    
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'booked':
+        return 'bg-green-100 text-green-800'
+      case 'not-booked':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading requests...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -155,259 +131,190 @@ export default function BookingRequestsPage() {
           <div className="sm:flex-auto">
             <h1 className="text-2xl font-semibold text-gray-900">Booking Requests</h1>
             <p className="mt-2 text-sm text-gray-700">
-              Review and manage incoming booking requests from clients
+              Manage and respond to client booking requests
             </p>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Requests List */}
-          <div className="space-y-4">
-            {requests.map((request) => (
-              <motion.div
-                key={request.id}
-                onClick={() => setSelectedRequest(request)}
-                className={`w-full rounded-lg border p-4 text-left transition-all cursor-pointer ${
-                  selectedRequest?.id === request.id
-                    ? 'border-accent-500 bg-accent-50'
-                    : 'border-gray-200 bg-white hover:border-accent-300'
-                }`}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-5 w-5 text-gray-400" />
-                      <span className="font-medium text-gray-900">
-                        {request.clientName}
-                      </span>
-                      {request.status === 'booked' && (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                          Booked
-                        </span>
-                      )}
-                      {request.status === 'not-booked' && (
-                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                          Not Booked
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>{request.date} at {request.time}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>${request.price}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">
-                      {request.requestedAt}
-                    </div>
-                    {request.status === 'pending' && (
-                      <div className="mt-1 flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-green-600 hover:bg-green-50"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            handleRequestAction(request.id, 'booked')
-                          }}
-                          disabled={isProcessing}
-                        >
-                          <CheckIcon className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            handleRequestAction(request.id, 'not-booked')
-                          }}
-                          disabled={isProcessing}
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Request Details */}
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h2 className="text-lg font-medium text-gray-900">Request Details</h2>
-            {selectedRequest ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700">Client Information</h3>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <UserIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-900">{selectedRequest.clientName}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <EnvelopeIcon className="h-4 w-4 text-gray-400" />
-                        <a href={`mailto:${selectedRequest.email}`} className="text-accent-600 hover:text-accent-500">
-                          {selectedRequest.email}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <PhoneIcon className="h-4 w-4 text-gray-400" />
-                        <a href={`tel:${selectedRequest.phone}`} className="text-accent-600 hover:text-accent-500">
-                          {selectedRequest.phone}
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700">Appointment Details</h3>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <ClockIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-900">
-                          {selectedRequest.date} at {selectedRequest.time} ({selectedRequest.duration})
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-900">Service:</span> <span className="text-gray-900">{selectedRequest.service}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-900">Price:</span> <span className="text-gray-900">${selectedRequest.price}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedRequest.notes && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-700">Notes</h3>
-                      <div className="mt-2 flex items-start gap-2 text-sm">
-                        <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400" />
-                        <p className="text-gray-900 whitespace-pre-wrap">{selectedRequest.notes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRequest.status === 'pending' && (
-                    <div className="mt-6">
-                      {!showReasonForm ? (
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            className="flex-1 bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700 focus:ring-green-500"
-                            onClick={() => handleRequestAction(selectedRequest.id, 'booked')}
-                            disabled={isProcessing}
-                          >
-                            Appointment Booked
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleRequestAction(selectedRequest.id, 'not-booked')}
-                            disabled={isProcessing}
-                          >
-                            Not Booked
-                          </Button>
+        <div className="mt-8">
+          {requests.length > 0 ? (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {requests.map((request) => (
+                  <li key={request.id}>
+                    <div className="px-4 py-4 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-accent-100 flex items-center justify-center">
+                              <UserIcon className="h-5 w-5 text-accent-600" />
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium text-gray-900">
+                                {request.clientName}
+                              </p>
+                              <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                                {request.status}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center text-sm text-gray-500">
+                              <EnvelopeIcon className="mr-1 h-4 w-4" />
+                              {request.clientEmail}
+                            </div>
+                            <div className="mt-1 flex items-center text-sm text-gray-500">
+                              <CalendarIcon className="mr-1 h-4 w-4" />
+                              {request.service} • {request.dateTimePreference}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Why was the appointment not booked?
-                            </label>
-                            <textarea
-                              value={notBookedReason}
-                              onChange={(e) => setNotBookedReason(e.target.value)}
-                              className="w-full border rounded-md px-3 py-2 text-sm placeholder:text-gray-600"
-                              rows={3}
-                              placeholder="Please provide details about why this appointment was not booked..."
-                            />
-                          </div>
-                          <div className="flex gap-3">
-                            <Button
-                              variant="outline"
-                              onClick={handleCancelNotBooked}
-                              className="flex-1"
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              variant={notBookedReason.trim() ? "primary" : "outline"}
-                              onClick={handleNotBookedSubmit}
-                              className={`flex-1 ${notBookedReason.trim() ? 'bg-red-600 hover:bg-red-700 text-white' : 'text-gray-500'}`}
-                              disabled={isProcessing || !notBookedReason.trim()}
-                            >
-                              {isProcessing ? 'Submitting...' : 'Submit'}
-                            </Button>
-                          </div>
-                          {!notBookedReason.trim() && (
-                            <p className="text-sm text-gray-500 text-center">
-                              Please provide a reason before submitting
-                            </p>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(request)
+                              setShowModal(true)
+                            }}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                          >
+                            <EyeIcon className="h-4 w-4 mr-1" />
+                            View
+                          </button>
+                          {request.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => updateRequestStatus(request.id, 'booked')}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                              >
+                                <CheckIcon className="h-4 w-4 mr-1" />
+                                Book
+                              </button>
+                              <button
+                                onClick={() => updateRequestStatus(request.id, 'not-booked')}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              >
+                                <XMarkIcon className="h-4 w-4 mr-1" />
+                                Decline
+                              </button>
+                            </>
                           )}
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {selectedRequest.status === 'booked' && (
-                    <div className="mt-6 rounded-md bg-green-50 p-4">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <CheckIcon className="h-5 w-5 text-green-400" />
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-green-800">Appointment Booked</h3>
-                          <div className="mt-2 text-sm text-green-700">
-                            <p>
-                              This appointment has been successfully booked in your system.
-                            </p>
-                          </div>
-                        </div>
                       </div>
                     </div>
-                  )}
-
-                  {selectedRequest.status === 'not-booked' && (
-                    <div className="mt-6 rounded-md bg-red-50 p-4">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <XMarkIcon className="h-5 w-5 text-red-400" />
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-red-800">Appointment Not Booked</h3>
-                          <div className="mt-2 text-sm text-red-700">
-                            <p>
-                              This appointment was not booked. The client has been notified.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ) : (
-              <div className="mt-4 text-center text-gray-500">
-                <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2">Select a request to view details</p>
-              </div>
-            )}
-          </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No booking requests</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by sharing your booking URL with clients.
+              </p>
+            </div>
+          )}
         </div>
+
+        {/* Request Details Modal */}
+        {showModal && selectedRequest && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)}></div>
+              
+              <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div>
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                      Booking Request Details
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Client Information</h4>
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <UserIcon className="h-4 w-4 mr-2" />
+                            {selectedRequest.clientName}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <EnvelopeIcon className="h-4 w-4 mr-2" />
+                            {selectedRequest.clientEmail}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <PhoneIcon className="h-4 w-4 mr-2" />
+                            {selectedRequest.clientPhone}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900">Booking Details</h4>
+                        <div className="mt-2 space-y-2">
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Service:</span> {selectedRequest.service}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Stylist Preference:</span> {selectedRequest.stylistPreference || 'No preference'}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Preferred Date/Time:</span> {selectedRequest.dateTimePreference}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Waitlist Opt-in:</span> {selectedRequest.waitlistOptIn ? 'Yes' : 'No'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900">Request Information</h4>
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <ClockIcon className="h-4 w-4 mr-2" />
+                            Submitted: {formatDate(selectedRequest.createdAt)}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Status:</span>{' '}
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
+                              {selectedRequest.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                  {selectedRequest.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => updateRequestStatus(selectedRequest.id, 'booked')}
+                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm"
+                      >
+                        Book Appointment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateRequestStatus(selectedRequest.id, 'not-booked')}
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                      >
+                        Decline Request
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 sm:mt-0 sm:text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { bookingRequestService, salonService } from '@/lib/firebase/services'
 import { SmsService } from '@/lib/smsService'
 
 export async function POST(request: NextRequest) {
@@ -14,20 +15,42 @@ export async function POST(request: NextRequest) {
       phone,
       email,
       notes,
-      waitlistOptIn
+      waitlistOptIn,
+      salonSlug
     } = body
 
-    // TODO: Save booking request to database
-    console.log('New booking request received:', {
+    // Validate required fields
+    if (!service || !dateTimePreference || !name || !phone || !email || !salonSlug) {
+      return NextResponse.json(
+        { success: false, message: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Get salon by slug
+    const salon = await salonService.getSalonBySlug(salonSlug)
+    if (!salon) {
+      return NextResponse.json(
+        { success: false, message: 'Salon not found' },
+        { status: 404 }
+      )
+    }
+
+    // Create booking request
+    const bookingRequest = {
+      clientName: name,
+      clientEmail: email,
+      clientPhone: phone,
       service,
-      stylist,
+      stylistPreference: stylist || 'Any stylist',
       dateTimePreference,
-      name,
-      phone,
-      email,
-      notes,
-      waitlistOptIn
-    })
+      notes: notes || '',
+      waitlistOptIn: waitlistOptIn || false,
+      status: 'pending' as const,
+      salonId: salon.id
+    }
+
+    const requestId = await bookingRequestService.createBookingRequest(bookingRequest)
 
     // Send SMS notification to salon
     try {
@@ -40,14 +63,15 @@ export async function POST(request: NextRequest) {
 
     // TODO: Send email notification if configured
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Booking request submitted successfully' 
+    return NextResponse.json({
+      success: true,
+      message: 'Booking request submitted successfully',
+      requestId
     })
   } catch (error) {
-    console.error('Error processing booking request:', error)
+    console.error('Error creating booking request:', error)
     return NextResponse.json(
-      { success: false, message: 'Failed to process booking request' },
+      { success: false, message: 'Internal server error' },
       { status: 500 }
     )
   }

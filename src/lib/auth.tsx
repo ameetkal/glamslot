@@ -1,0 +1,125 @@
+'use client'
+
+import { createContext, useContext, useEffect, useState } from 'react'
+import { 
+  User, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { auth, db } from './firebase'
+
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  login: (email: string, password: string) => Promise<void>
+  signup: (email: string, password: string, userData: any) => Promise<void>
+  logout: () => Promise<void>
+  loginWithGoogle: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [])
+
+  const login = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  }
+
+  const signup = async (email: string, password: string, userData: any) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // Get app URL from environment or use fallback
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+
+      // Create salon document with user ID as the document ID
+      const salonData = {
+        id: user.uid,
+        name: userData.businessName,
+        slug: userData.businessName.toLowerCase().replace(/\s+/g, '-'),
+        bookingUrl: `${appUrl}/booking/${userData.businessName.toLowerCase().replace(/\s+/g, '-')}`,
+        ownerName: userData.name,
+        ownerEmail: email,
+        businessType: userData.businessType,
+        settings: {
+          notifications: {
+            email: true,
+            sms: false
+          },
+          booking: {
+            requireConsultation: false,
+            allowWaitlist: true
+          }
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      await setDoc(doc(db, 'salons', user.uid), salonData)
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await signOut(auth)
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  }
+
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider()
+      await signInWithPopup(auth, provider)
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  }
+
+  const value = {
+    user,
+    loading,
+    login,
+    signup,
+    logout,
+    loginWithGoogle
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+} 
