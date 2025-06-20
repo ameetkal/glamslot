@@ -252,11 +252,11 @@ export default function BookingRequestsPage() {
               >
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Client Information</h3>
+                    <h3 className="text-sm font-medium text-gray-700">Client Information</h3>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <UserIcon className="h-4 w-4 text-gray-400" />
-                        <span>{selectedRequest.clientName}</span>
+                        <span className="text-gray-900">{selectedRequest.clientName}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <EnvelopeIcon className="h-4 w-4 text-gray-400" />
@@ -274,29 +274,29 @@ export default function BookingRequestsPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Appointment Details</h3>
+                    <h3 className="text-sm font-medium text-gray-700">Appointment Details</h3>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <ClockIcon className="h-4 w-4 text-gray-400" />
-                        <span>
+                        <span className="text-gray-900">
                           {selectedRequest.date} at {selectedRequest.time} ({selectedRequest.duration})
                         </span>
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Service:</span> {selectedRequest.service}
+                        <span className="font-medium text-gray-900">Service:</span> <span className="text-gray-900">{selectedRequest.service}</span>
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Price:</span> ${selectedRequest.price}
+                        <span className="font-medium text-gray-900">Price:</span> <span className="text-gray-900">${selectedRequest.price}</span>
                       </div>
                     </div>
                   </div>
 
                   {selectedRequest.notes && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Notes</h3>
+                      <h3 className="text-sm font-medium text-gray-700">Notes</h3>
                       <div className="mt-2 flex items-start gap-2 text-sm">
                         <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400" />
-                        <p className="text-gray-600 whitespace-pre-wrap">{selectedRequest.notes}</p>
+                        <p className="text-gray-900 whitespace-pre-wrap">{selectedRequest.notes}</p>
                       </div>
                     </div>
                   )}
@@ -331,7 +331,7 @@ export default function BookingRequestsPage() {
                             <textarea
                               value={notBookedReason}
                               onChange={(e) => setNotBookedReason(e.target.value)}
-                              className="w-full border rounded-md px-3 py-2 text-sm"
+                              className="w-full border rounded-md px-3 py-2 text-sm placeholder:text-gray-600"
                               rows={3}
                               placeholder="Please provide details about why this appointment was not booked..."
                             />

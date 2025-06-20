@@ -208,7 +208,7 @@ export default function ProvidersPage() {
                 </div>
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <button 
-                    className="text-accent-600 hover:text-accent-900 text-sm"
+                    className="text-accent-700 hover:text-accent-900 text-sm"
                     onClick={() => openEditModal(provider)}
                   >
                     Edit
@@ -220,7 +220,7 @@ export default function ProvidersPage() {
                     Delete
                   </button>
                   <button 
-                    className="text-gray-600 hover:text-gray-900 text-sm"
+                    className="text-gray-700 hover:text-gray-900 text-sm"
                     onClick={() => toggleProviderExpansion(provider.id)}
                   >
                     {expandedProvider === provider.id ? '▼' : '▶'} Services
@@ -280,7 +280,8 @@ export default function ProvidersPage() {
                                   onChange={(e) => updateProviderService(provider.id, service.id, {
                                     duration: parseInt(e.target.value) || service.defaultDuration
                                   })}
-                                  className="w-full border rounded px-2 py-1 text-sm"
+                                  className="w-full border rounded px-2 py-1 text-sm placeholder:text-gray-600"
+                                  placeholder="Duration"
                                 />
                               </div>
                               <div className="flex items-center gap-2">
@@ -334,9 +335,10 @@ export default function ProvidersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
                   value={editing.name}
                   onChange={e => setEditing({ ...editing, name: e.target.value })}
+                  placeholder="Enter provider name"
                   required
                 />
               </div>
@@ -344,9 +346,10 @@ export default function ProvidersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
                   value={editing.email}
                   onChange={e => setEditing({ ...editing, email: e.target.value })}
+                  placeholder="Enter email address"
                   required
                 />
               </div>
@@ -354,9 +357,10 @@ export default function ProvidersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input
                   type="tel"
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
                   value={editing.phone}
                   onChange={e => setEditing({ ...editing, phone: e.target.value })}
+                  placeholder="Enter phone number"
                   required
                 />
               </div>

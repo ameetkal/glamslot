@@ -40,7 +40,7 @@ export default function ServicesPage() {
                   {service.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-accent-600 hover:text-accent-900 mr-4 transition-colors">
+                  <button className="text-accent-700 hover:text-accent-900 mr-4 transition-colors">
                     Edit
                   </button>
                   <button className="text-red-600 hover:text-red-900 transition-colors">

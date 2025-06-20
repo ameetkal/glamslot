@@ -64,21 +64,6 @@ export default function DashboardPage() {
               Overview of your salon&apos;s booking activity and performance
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <div className="flex rounded-md shadow-sm">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="block w-full rounded-l-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-accent-600 sm:text-sm sm:leading-6"
-              />
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
-              >
-                Search
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Booking URL Section */}
@@ -186,96 +171,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Link
-              href="/dashboard/requests"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-accent-50 text-accent-700 ring-4 ring-white">
-                  <CalendarIcon className="h-6 w-6" />
-                </span>
-              </div>
-              <div className="mt-8">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Review Booking Requests
-                </h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  Check and respond to new booking requests from clients
-                </p>
-              </div>
-              <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              >
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
-                </svg>
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/settings/providers"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-blue-50 text-blue-700 ring-4 ring-white">
-                  <UserGroupIcon className="h-6 w-6" />
-                </span>
-              </div>
-              <div className="mt-8">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Manage Providers
-                </h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  Update provider information, services, and availability
-                </p>
-              </div>
-              <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              >
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
-                </svg>
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/settings/availability"
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-500 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <div>
-                <span className="rounded-lg inline-flex p-3 bg-green-50 text-green-700 ring-4 ring-white">
-                  <ClockIcon className="h-6 w-6" />
-                </span>
-              </div>
-              <div className="mt-8">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  Set Availability
-                </h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  Configure business hours and provider schedules
-                </p>
-              </div>
-              <span
-                className="pointer-events-none absolute top-6 right-6 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              >
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
-                </svg>
-              </span>
-            </Link>
           </div>
         </div>
 

@@ -215,7 +215,9 @@ export default function AnalyticsPage() {
                 {Object.entries(analytics.categoryBreakdown).map(([category, count]) => (
                   <div key={category} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {getCategoryIcon(category)}
+                      <div className="text-gray-600">
+                        {getCategoryIcon(category)}
+                      </div>
                       <span className="text-sm font-medium text-gray-900 capitalize">
                         {category} Issues
                       </span>
@@ -229,7 +231,7 @@ export default function AnalyticsPage() {
                           }}
                         />
                       </div>
-                      <span className="text-sm text-gray-500 w-8">{count}</span>
+                      <span className="text-sm text-gray-700 w-8">{count}</span>
                     </div>
                   </div>
                 ))}
@@ -274,7 +276,7 @@ export default function AnalyticsPage() {
                 {analytics.suggestedImprovements.map((improvement, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-accent-50 rounded-lg">
                     <LightBulbIcon className="h-5 w-5 text-accent-600 mt-0.5" />
-                    <p className="text-sm text-accent-900">{improvement}</p>
+                    <p className="text-sm text-gray-900">{improvement}</p>
                   </div>
                 ))}
               </div>
@@ -390,6 +392,21 @@ export default function AnalyticsPage() {
                 >
                   Test Consultation Requirement
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Test Automated Updates */}
+        <div className="mt-8 bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Test Automated Updates
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <LightBulbIcon className="h-5 w-5 text-gray-600 mt-0.5" />
+                <p className="text-sm text-gray-900">Test automated update functionality</p>
               </div>
             </div>
           </div>

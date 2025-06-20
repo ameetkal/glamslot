@@ -147,7 +147,7 @@ export default function BookingPage() {
               {services.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
                   placeholder="Please describe the service you want"
                   value={otherService}
                   onChange={e => setOtherService(e.target.value)}
@@ -166,7 +166,7 @@ export default function BookingPage() {
                     }}
                     required
                   >
-                    <option value="" disabled>Select a service</option>
+                    <option value="" disabled className="text-gray-600">Select a service</option>
                     {services.map((service) => (
                       <option key={service.id} value={service.id}>{service.name}</option>
                     ))}
@@ -175,7 +175,7 @@ export default function BookingPage() {
                   {selectedService === OTHER_SERVICE_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
                       placeholder="Please describe the service you want"
                       value={otherService}
                       onChange={e => setOtherService(e.target.value)}
@@ -208,7 +208,7 @@ export default function BookingPage() {
               {providerOptions.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
                   placeholder="Enter stylist preference (optional)"
                   value={otherProvider}
                   onChange={e => setOtherProvider(e.target.value)}
@@ -225,7 +225,7 @@ export default function BookingPage() {
                     }}
                     required
                   >
-                    <option value="any">Any</option>
+                    <option value="any" className="text-gray-600">Any</option>
                     {providerOptions.map((provider) => (
                       <option key={provider.id} value={provider.id}>{provider.name}</option>
                     ))}
@@ -234,7 +234,7 @@ export default function BookingPage() {
                   {selectedProvider === OTHER_PROVIDER_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
                       placeholder="Enter stylist preference (optional)"
                       value={otherProvider}
                       onChange={e => setOtherProvider(e.target.value)}
@@ -275,7 +275,7 @@ export default function BookingPage() {
                 Please note that we cannot guarantee your date/time but we will do our best to match your preferences and will reach out to confirm details.
               </p>
               <textarea
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y"
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-600"
                 value={form.dateTimePreference}
                 onChange={e => setForm({ ...form, dateTimePreference: e.target.value })}
                 placeholder="e.g., 'Weekdays after 5pm', 'Saturday mornings', 'Any time next week', 'Prefer Tuesday or Thursday evenings'"
@@ -354,7 +354,7 @@ export default function BookingPage() {
                 Feel free to share any special requests, allergies, previous experiences, or other information that might help us better serve you.
               </p>
               <textarea
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y"
+                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-600"
                 value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
                 placeholder="e.g., 'I have sensitive skin', 'This is for a special occasion', 'I prefer natural products', 'I'm a returning client', etc."

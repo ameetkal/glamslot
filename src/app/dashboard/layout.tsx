@@ -77,7 +77,7 @@ export default function DashboardLayout({
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               if (!item.subItems) {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                const isActive = pathname === item.href
                 return (
                   <Link
                     key={item.name}
@@ -85,13 +85,13 @@ export default function DashboardLayout({
                     className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       isActive
                         ? 'bg-accent-100 text-accent-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive ? 'text-accent-500' : 'text-gray-500 group-hover:text-gray-700'
+                        isActive ? 'text-accent-500' : 'text-gray-600 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
@@ -108,14 +108,14 @@ export default function DashboardLayout({
                     className={`group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md focus:outline-none transition-colors ${
                       isSettingsActive
                         ? 'bg-accent-100 text-accent-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                     onClick={() => setSettingsOpen((open) => !open)}
                     aria-expanded={settingsOpen}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isSettingsActive ? 'text-accent-500' : 'text-gray-500 group-hover:text-gray-700'
+                        isSettingsActive ? 'text-accent-500' : 'text-gray-600 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
@@ -140,7 +140,7 @@ export default function DashboardLayout({
                             className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               isSubActive
                                 ? 'bg-accent-50 text-accent-700 border border-accent-200'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                             }`}
                             onClick={() => setMobileMenuOpen(false)}
                           >

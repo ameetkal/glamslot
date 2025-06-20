@@ -89,7 +89,7 @@ export default function ClientsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search clients by name, email, or phone..."
-              className="block w-full rounded-md border-0 py-1.5 pl-4 pr-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-accent-600 sm:text-sm sm:leading-6"
+              className="block w-full rounded-md border-0 py-1.5 pl-4 pr-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-accent-600 sm:text-sm sm:leading-6"
             />
           </div>
         </div>
@@ -110,14 +110,14 @@ export default function ClientsPage() {
                 whileTap={{ scale: 0.99 }}
               >
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <UserIcon className="h-5 w-5 text-gray-400" />
-                      <span className="font-medium text-gray-900">
+                      <UserIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      <span className="font-medium text-gray-900 truncate">
                         {client.name}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
+                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-700">
                       <div className="flex items-center gap-1">
                         <CalendarIcon className="h-4 w-4" />
                         <span>{client.completedAppointments} completed</span>
@@ -128,8 +128,8 @@ export default function ClientsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <div className="text-sm text-gray-700">
                       Last visit: {new Date(client.lastAppointment).toLocaleDateString()}
                     </div>
                   </div>
@@ -139,7 +139,7 @@ export default function ClientsPage() {
           </div>
 
           {/* Client Details */}
-          <div className="rounded-lg bg-white p-6 shadow">
+          <div className="rounded-lg bg-white p-4 sm:p-6 shadow">
             <h2 className="text-lg font-medium text-gray-900">Client Details</h2>
             {selectedClient ? (
               <motion.div
@@ -149,20 +149,20 @@ export default function ClientsPage() {
               >
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Contact Information</h3>
+                    <h3 className="text-sm font-medium text-gray-700">Contact Information</h3>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <UserIcon className="h-4 w-4 text-gray-400" />
-                        <span>{selectedClient.name}</span>
+                        <UserIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-900">{selectedClient.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <EnvelopeIcon className="h-4 w-4 text-gray-400" />
-                        <a href={`mailto:${selectedClient.email}`} className="text-accent-600 hover:text-accent-500">
+                        <EnvelopeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <a href={`mailto:${selectedClient.email}`} className="text-accent-600 hover:text-accent-500 truncate">
                           {selectedClient.email}
                         </a>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <PhoneIcon className="h-4 w-4 text-gray-400" />
+                        <PhoneIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         <a href={`tel:${selectedClient.phone}`} className="text-accent-600 hover:text-accent-500">
                           {selectedClient.phone}
                         </a>
@@ -171,31 +171,31 @@ export default function ClientsPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Appointment History</h3>
+                    <h3 className="text-sm font-medium text-gray-700">Appointment History</h3>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <CalendarIcon className="h-4 w-4 text-gray-400" />
-                        <span>
+                        <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-900">
                           {selectedClient.completedAppointments} of {selectedClient.totalAppointments} appointments completed
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
-                        <span>Total spent: ${selectedClient.totalSpent}</span>
+                        <CurrencyDollarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-900">Total spent: ${selectedClient.totalSpent}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <CalendarIcon className="h-4 w-4 text-gray-400" />
-                        <span>Last appointment: {new Date(selectedClient.lastAppointment).toLocaleDateString()}</span>
+                        <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-900">Last appointment: {new Date(selectedClient.lastAppointment).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
 
                   {selectedClient.notes && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Notes</h3>
+                      <h3 className="text-sm font-medium text-gray-700">Notes</h3>
                       <div className="mt-2 flex items-start gap-2 text-sm">
-                        <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400" />
-                        <p className="text-gray-600">{selectedClient.notes}</p>
+                        <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-gray-900">{selectedClient.notes}</p>
                       </div>
                     </div>
                   )}
