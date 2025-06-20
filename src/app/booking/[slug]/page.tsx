@@ -220,7 +220,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               {services.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
+                  className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                   placeholder="Please describe the service you want"
                   value={otherService}
                   onChange={e => setOtherService(e.target.value)}
@@ -229,7 +229,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               ) : (
                 <>
                   <select
-                    className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedService ?? ''}
                     onChange={e => {
                       const val = e.target.value
@@ -239,16 +239,16 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     }}
                     required
                   >
-                    <option value="" disabled className="text-gray-600">Select a service</option>
+                    <option value="" disabled className="text-gray-500 bg-white">Select a service</option>
                     {services.map((service) => (
-                      <option key={service.id} value={service.id}>{service.name}</option>
+                      <option key={service.id} value={service.id} className="text-gray-900 bg-white">{service.name}</option>
                     ))}
-                    <option value={OTHER_SERVICE_ID}>Other (please specify)</option>
+                    <option value={OTHER_SERVICE_ID} className="text-gray-900 bg-white">Other (please specify)</option>
                   </select>
                   {selectedService === OTHER_SERVICE_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
+                      className="mt-3 w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                       placeholder="Please describe the service you want"
                       value={otherService}
                       onChange={e => setOtherService(e.target.value)}
@@ -281,7 +281,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               {providerOptions.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
+                  className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                   placeholder="Enter stylist preference (optional)"
                   value={otherProvider}
                   onChange={e => setOtherProvider(e.target.value)}
@@ -289,7 +289,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               ) : (
                 <>
                   <select
-                    className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedProvider}
                     onChange={e => {
                       if (e.target.value === 'any') setSelectedProvider('any')
@@ -298,16 +298,16 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     }}
                     required
                   >
-                    <option value="any" className="text-gray-600">Any</option>
+                    <option value="any" className="text-gray-500 bg-white">Any</option>
                     {providerOptions.map((provider) => (
-                      <option key={provider.id} value={provider.id}>{provider.name}</option>
+                      <option key={provider.id} value={provider.id} className="text-gray-900 bg-white">{provider.name}</option>
                     ))}
-                    <option value={OTHER_PROVIDER_ID}>Other (please specify)</option>
+                    <option value={OTHER_PROVIDER_ID} className="text-gray-900 bg-white">Other (please specify)</option>
                   </select>
                   {selectedProvider === OTHER_PROVIDER_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-600"
+                      className="mt-3 w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                       placeholder="Enter stylist preference (optional)"
                       value={otherProvider}
                       onChange={e => setOtherProvider(e.target.value)}
@@ -348,7 +348,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 Please note that we cannot guarantee your date/time but we will do our best to match your preferences and will reach out to confirm details.
               </p>
               <textarea
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-600"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
                 value={form.dateTimePreference}
                 onChange={e => setForm({ ...form, dateTimePreference: e.target.value })}
                 placeholder="e.g., 'Weekdays after 5pm', 'Saturday mornings', 'Any time next week', 'Prefer Tuesday or Thursday evenings'"
@@ -371,7 +371,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
               <input
                 type="text"
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 required
@@ -381,7 +381,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
               <input
                 type="tel"
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
                 required
@@ -391,7 +391,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
               <input
                 type="email"
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 required
@@ -427,7 +427,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 Feel free to share any special requests, allergies, previous experiences, or other information that might help us better serve you.
               </p>
               <textarea
-                className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-600"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
                 value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
                 placeholder="e.g., 'I have sensitive skin', 'This is for a special occasion', 'I prefer natural products', 'I'm a returning client', etc."
