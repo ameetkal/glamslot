@@ -22,13 +22,13 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { salonService } from '@/lib/firebase/services'
 
 const settingsSubItems = [
-  { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
-  { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
   { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
   { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
-  { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
-  { name: 'Analytics', href: '/dashboard/settings/analytics', icon: ChartBarIcon },
   { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
+  { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
+  { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
+  { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
+  { name: 'Analytics', href: '/dashboard/settings/analytics', icon: ChartBarIcon },
 ]
 
 const navigation = [
