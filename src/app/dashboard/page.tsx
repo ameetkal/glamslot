@@ -175,7 +175,8 @@ export default function DashboardPage() {
   }
 
   const copyBookingUrl = () => {
-    const bookingUrl = salonData?.bookingUrl || `${window.location.origin}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`
+    const currentDomain = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const bookingUrl = `${currentDomain}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`
     if (bookingUrl) {
       navigator.clipboard.writeText(bookingUrl).then(() => {
         setCopied(true)
@@ -282,7 +283,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <input
                   readOnly
-                  value={salonData?.bookingUrl || `${window.location.origin}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`}
+                  value={`${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`}
                   className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
                 />
                 <button
