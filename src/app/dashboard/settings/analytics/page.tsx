@@ -171,9 +171,6 @@ export default function AnalyticsPage() {
         <div className="sm:flex sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Analytics</h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Track your booking performance and client engagement
-            </p>
           </div>
           <div className="mt-4 sm:mt-0">
             <button className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 text-white rounded-md hover:bg-accent-700 transition">
@@ -193,7 +190,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Total Requests</dt>
                     <dd className="text-lg font-medium text-gray-900">{analytics.totalRequests}</dd>
                   </dl>
                 </div>
@@ -209,7 +206,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Bookings Made</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Bookings Made</dt>
                     <dd className="text-lg font-medium text-gray-900">{analytics.totalBookingsMade}</dd>
                   </dl>
                 </div>
@@ -225,7 +222,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Not Booked</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Not Booked</dt>
                     <dd className="text-lg font-medium text-gray-900">{analytics.totalBookingsNotMade}</dd>
                   </dl>
                 </div>
@@ -241,7 +238,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Unique Sessions</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Unique Sessions</dt>
                     <dd className="text-lg font-medium text-gray-900">{analytics.totalUniqueSessions}</dd>
                   </dl>
                 </div>
@@ -257,7 +254,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Completion Rate</dt>
                     <dd className="text-lg font-medium text-gray-900">{analytics.formCompletionRate}%</dd>
                   </dl>
                 </div>
@@ -281,7 +278,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                      <p className="text-xs text-gray-500">{formatDate(activity.timestamp)}</p>
+                      <p className="text-xs text-gray-600">{formatDate(activity.timestamp)}</p>
                     </div>
                   </div>
                 ))
@@ -289,7 +286,7 @@ export default function AnalyticsPage() {
                 <div className="text-center py-8">
                   <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No activity yet</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-gray-600">
                     Start receiving booking requests to see activity here.
                   </p>
                 </div>

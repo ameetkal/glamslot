@@ -98,4 +98,27 @@ export interface DayHours {
 export interface BookingSettings {
   requireConsultation: boolean;
   allowWaitlist: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'member';
+  status: 'active' | 'pending' | 'invited';
+  invitedAt: Date;
+  joinedAt?: Date;
+  salonId: string;
+  userId: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  name: string;
+  salonId: string;
+  status: 'pending' | 'accepted' | 'expired';
+  invitedAt: Date;
+  expiresAt: Date;
+  invitedBy: string;
 } 

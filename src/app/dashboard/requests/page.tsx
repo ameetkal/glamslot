@@ -56,6 +56,15 @@ export default function RequestsPage() {
         
         // Sort in memory instead
         const sortedRequests = requestsData.sort((a, b) => {
+          // First, prioritize pending requests
+          if (a.status === 'pending' && b.status !== 'pending') {
+            return -1; // a comes first
+          }
+          if (a.status !== 'pending' && b.status === 'pending') {
+            return 1; // b comes first
+          }
+          
+          // If both have the same status priority, sort by date (most recent first)
           const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
             ? (a.createdAt as { toDate: () => Date }).toDate() 
             : new Date(a.createdAt);

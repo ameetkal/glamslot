@@ -12,7 +12,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Provider, Service, BookingRequest, Salon } from '@/types/firebase';
+import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation } from '@/types/firebase';
 
 // Provider Services
 export const providerService = {
@@ -214,5 +214,97 @@ export const salonService = {
       settings: settings,
       updatedAt: serverTimestamp()
     });
+  },
+
+  // Update salon information
+  async updateSalon(id: string, updates: Partial<Salon>): Promise<void> {
+    const docRef = doc(db, 'salons', id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  }
+};
+
+// Team Management Services
+export const teamService = {
+  // Get all team members for a salon
+  async getTeamMembers(salonId: string): Promise<TeamMember[]> {
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as TeamMember[];
+  },
+
+  // Get all invitations for a salon
+  async getInvitations(salonId: string): Promise<Invitation[]> {
+    const q = query(
+      collection(db, 'invitations'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Invitation[];
+  },
+
+  // Create a new invitation
+  async createInvitation(invitation: {
+    email: string;
+    name: string;
+    salonId: string;
+    invitedBy: string;
+  }): Promise<string> {
+    const docRef = await addDoc(collection(db, 'invitations'), {
+      ...invitation,
+      status: 'pending',
+      invitedAt: serverTimestamp(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    });
+    return docRef.id;
+  },
+
+  // Update invitation status
+  async updateInvitation(id: string, updates: Partial<Invitation>): Promise<void> {
+    const docRef = doc(db, 'invitations', id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Delete invitation
+  async deleteInvitation(id: string): Promise<void> {
+    const docRef = doc(db, 'invitations', id);
+    await deleteDoc(docRef);
+  },
+
+  // Add team member
+  async addTeamMember(member: {
+    name: string;
+    email: string;
+    role: 'owner' | 'admin' | 'member';
+    salonId: string;
+    userId: string;
+  }): Promise<string> {
+    const docRef = await addDoc(collection(db, 'teamMembers'), {
+      ...member,
+      status: 'active',
+      invitedAt: serverTimestamp(),
+      joinedAt: serverTimestamp(),
+    });
+    return docRef.id;
+  },
+
+  // Remove team member
+  async removeTeamMember(id: string): Promise<void> {
+    const docRef = doc(db, 'teamMembers', id);
+    await deleteDoc(docRef);
   }
 }; 

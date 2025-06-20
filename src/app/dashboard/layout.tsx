@@ -12,13 +12,18 @@ import {
   ChartBarIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  UserIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { salonService } from '@/lib/firebase/services'
 
 const settingsSubItems = [
+  { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
+  { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
   { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
   { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
   { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
@@ -38,6 +43,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'))
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [salonName, setSalonName] = useState<string>('')
+
+  useEffect(() => {
+    const fetchSalon = async () => {
+      if (!user) return
+      const salon = await salonService.getSalon(user.uid)
+      if (salon && salon.name) setSalonName(salon.name)
+    }
+    fetchSalon()
+  }, [user])
 
   const handleLogout = async () => {
     try {
@@ -77,7 +92,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           <div className="flex items-center flex-shrink-0 px-4 py-6">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Elegant Cuts Salon</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{salonName || 'Business Name'}</h1>
               <p className="text-sm text-gray-500 mt-1">by Glammatic</p>
             </div>
           </div>
@@ -101,7 +116,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
             {navigation.map((item) => {
               if (!item.subItems) {
                 const isActive = pathname === item.href

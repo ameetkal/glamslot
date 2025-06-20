@@ -22,21 +22,68 @@ const config: Config = {
           900: '#9d4d03',
         },
         accent: {
-          50: '#fff1f1',
-          100: '#ffe1e1',
-          200: '#ffc7c7',
-          300: '#ffadad',
-          400: '#ff9393',
-          500: '#ff7979',
-          600: '#ff5f5f',
-          700: '#ff4545',
-          800: '#ff2b2b',
-          900: '#ff1111',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
         },
+      },
+      // Better default form styles
+      backgroundColor: {
+        'form-input': '#ffffff',
+      },
+      textColor: {
+        'form-label': '#374151', // gray-700
+        'form-input': '#111827', // gray-900
+        'form-placeholder': '#6b7280', // gray-500
+      },
+      borderColor: {
+        'form-input': '#d1d5db', // gray-300
+        'form-input-focus': '#3b82f6', // blue-500
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Add custom form input styles
+    function({ addComponents, theme }: any) {
+      addComponents({
+        '.form-input': {
+          backgroundColor: theme('backgroundColor.form-input'),
+          color: theme('textColor.form-input'),
+          borderColor: theme('borderColor.form-input'),
+          '&::placeholder': {
+            color: theme('textColor.form-placeholder'),
+          },
+          '&:focus': {
+            borderColor: theme('borderColor.form-input-focus'),
+            outline: 'none',
+            boxShadow: `0 0 0 3px ${theme('colors.blue.100')}`,
+          },
+        },
+        '.form-label': {
+          color: theme('textColor.form-label'),
+          fontWeight: '500',
+        },
+        '.btn-primary': {
+          backgroundColor: theme('colors.accent.600'),
+          color: '#ffffff',
+          '&:hover': {
+            backgroundColor: theme('colors.accent.700'),
+          },
+          '&:disabled': {
+            opacity: '0.5',
+            cursor: 'not-allowed',
+          },
+        },
+      })
+    },
+  ],
 }
 
 export default config 

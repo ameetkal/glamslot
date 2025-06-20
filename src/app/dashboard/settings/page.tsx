@@ -59,9 +59,6 @@ export default function SettingsPage() {
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
             <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Manage your salon settings and preferences
-            </p>
           </div>
         </div>
 
@@ -74,28 +71,28 @@ export default function SettingsPage() {
                 <BuildingOfficeIcon className="h-5 w-5 text-gray-400 mr-3" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">{salonData?.name || 'Salon Name'}</p>
-                  <p className="text-sm text-gray-500">Business Name</p>
+                  <p className="text-sm text-gray-600">Business Name</p>
                 </div>
               </div>
               <div className="flex items-center">
                 <UserIcon className="h-5 w-5 text-gray-400 mr-3" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">{salonData?.ownerName || 'Owner Name'}</p>
-                  <p className="text-sm text-gray-500">Owner</p>
+                  <p className="text-sm text-gray-600">Owner</p>
                 </div>
               </div>
               <div className="flex items-center">
                 <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">{salonData?.ownerEmail || user?.email}</p>
-                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="text-sm text-gray-600">Email</p>
                 </div>
               </div>
               <div className="flex items-center">
                 <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
                 <div>
                   <p className="text-sm font-medium text-gray-900 capitalize">{salonData?.businessType || 'Business Type'}</p>
-                  <p className="text-sm text-gray-500">Business Type</p>
+                  <p className="text-sm text-gray-600">Business Type</p>
                 </div>
               </div>
             </div>
@@ -110,7 +107,7 @@ export default function SettingsPage() {
                   <BellIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Email Notifications</p>
-                    <p className="text-sm text-gray-500">Receive booking notifications via email</p>
+                    <p className="text-sm text-gray-600">Receive booking notifications via email</p>
                   </div>
                 </div>
                 <button
@@ -131,7 +128,7 @@ export default function SettingsPage() {
                   <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">SMS Notifications</p>
-                    <p className="text-sm text-gray-500">Receive booking notifications via SMS</p>
+                    <p className="text-sm text-gray-600">Receive booking notifications via SMS</p>
                   </div>
                 </div>
                 <button
@@ -157,7 +154,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">Require Consultation</p>
-                  <p className="text-sm text-gray-500">Require consultation for new clients</p>
+                  <p className="text-sm text-gray-600">Require consultation for new clients</p>
                 </div>
                 <button
                   type="button"
@@ -175,7 +172,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">Allow Waitlist</p>
-                  <p className="text-sm text-gray-500">Allow clients to join waitlist</p>
+                  <p className="text-sm text-gray-600">Allow clients to join waitlist</p>
                 </div>
                 <button
                   type="button"
@@ -215,12 +212,12 @@ export default function SettingsPage() {
                         navigator.clipboard.writeText(salonData.bookingUrl)
                       }
                     }}
-                    className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
+                    className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
                   >
                     Copy
                   </button>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-gray-600">
                   Share this link with your clients to allow them to request appointments.
                 </p>
               </div>
