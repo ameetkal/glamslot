@@ -1,10 +1,16 @@
 "use client"
 
-import { CalendarIcon, UserGroupIcon, ClockIcon, XMarkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { 
+  ClipboardDocumentIcon,
+  UserGroupIcon,
+  ClockIcon,
+  CalendarIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline'
 
 interface DashboardStats {
   appointmentsCreated: number
@@ -15,16 +21,38 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string
-  type: 'booking_request' | 'appointment_booked' | 'appointment_not_booked'
+  type: string
   message: string
-  time: string
+  timestamp: Date
   status: 'pending' | 'completed'
+}
+
+interface Salon {
+  id: string
+  name: string
+  slug: string
+  bookingUrl: string
+  ownerName: string
+  ownerEmail: string
+  businessType: string
+  settings: {
+    notifications: {
+      email: boolean
+      sms: boolean
+    }
+    booking: {
+      requireConsultation: boolean
+      allowWaitlist: boolean
+    }
+  }
+  createdAt: string
+  updatedAt: string
 }
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const [copied, setCopied] = useState(false)
-  const [salonData, setSalonData] = useState<any>(null)
+  const [salonData, setSalonData] = useState<Salon | null>(null)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     appointmentsCreated: 0,
     requestedNotFulfilled: 0,
@@ -50,7 +78,7 @@ export default function DashboardPage() {
         console.log('Fetching salon document with ID:', user.uid)
         const salonDoc = await getDoc(salonDocRef)
         if (salonDoc.exists()) {
-          const salon = salonDoc.data()
+          const salon = salonDoc.data() as Salon
           console.log('Salon data loaded:', salon)
           console.log('Salon name:', salon.name)
           console.log('Salon bookingUrl:', salon.bookingUrl)
@@ -100,7 +128,7 @@ export default function DashboardPage() {
           type: req.status === 'booked' ? 'appointment_booked' : 
                 req.status === 'not-booked' ? 'appointment_not_booked' : 'booking_request',
           message: `Booking request from ${req.clientName}`,
-          time: formatTimeAgo(req.createdAt),
+          timestamp: req.createdAt ? new Date(req.createdAt) : new Date(),
           status: req.status === 'pending' ? 'pending' : 'completed'
         }))
 
@@ -125,10 +153,18 @@ export default function DashboardPage() {
     fetchDashboardData()
   }, [user])
 
-  const formatTimeAgo = (timestamp: any) => {
+  const formatTimeAgo = (timestamp: Date | { toDate: () => Date } | string) => {
     if (!timestamp) return 'Unknown time'
     
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    let date: Date
+    if (typeof timestamp === 'string') {
+      date = new Date(timestamp)
+    } else if (typeof timestamp === 'object' && 'toDate' in timestamp) {
+      date = timestamp.toDate()
+    } else {
+      date = timestamp
+    }
+    
     const now = new Date()
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
     
@@ -225,7 +261,7 @@ export default function DashboardPage() {
               <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
                 <h2 className="text-lg font-semibold text-yellow-900 mb-2">Setup Required</h2>
                 <p className="text-sm text-yellow-700 mb-4">
-                  Your salon profile hasn't been set up yet. Click the button below to create your salon profile and get your booking URL.
+                  Your salon profile hasn&apos;t been set up yet. Click the button below to create your salon profile and get your booking URL.
                 </p>
                 <button
                   onClick={createSalonDocument}
@@ -374,7 +410,7 @@ export default function DashboardPage() {
                               {activity.message}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {activity.time}
+                              {formatTimeAgo(activity.timestamp)}
                             </p>
                           </div>
                         </div>

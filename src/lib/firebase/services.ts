@@ -133,15 +133,16 @@ export const bookingRequestService = {
     })) as BookingRequest[];
     
     // Sort in memory instead
-    return requests.sort((a, b) => {
+    const sortedRequests = requests.sort((a, b) => {
       const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
-        ? (a.createdAt as any).toDate() 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
         : new Date(a.createdAt);
       const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
-        ? (b.createdAt as any).toDate() 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
         : new Date(b.createdAt);
       return dateB.getTime() - dateA.getTime();
     });
+    return sortedRequests;
   },
 
   // Get a single booking request

@@ -10,7 +10,6 @@ import {
   WrenchScrewdriverIcon,
   BellIcon,
   ChartBarIcon,
-  CalendarIcon,
   Bars3Icon,
   XMarkIcon,
   ArrowRightOnRectangleIcon

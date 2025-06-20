@@ -10,16 +10,23 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  signup: (email: string, password: string, userData: any) => Promise<void>
+  signup: (email: string, password: string, userData: UserData) => Promise<void>
   logout: () => Promise<void>
   loginWithGoogle: () => Promise<void>
+}
+
+interface UserData {
+  name: string
+  businessName: string
+  phone: string
+  businessType: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,12 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password)
-    } catch (error: any) {
-      throw new Error(error.message)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Login failed')
     }
   }
 
-  const signup = async (email: string, password: string, userData: any) => {
+  const signup = async (email: string, password: string, userData: UserData) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -87,16 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       await setDoc(doc(db, 'salons', user.uid), salonData)
-    } catch (error: any) {
-      throw new Error(error.message)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Signup failed')
     }
   }
 
   const logout = async () => {
     try {
       await signOut(auth)
-    } catch (error: any) {
-      throw new Error(error.message)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Logout failed')
     }
   }
 
@@ -104,8 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider()
       await signInWithPopup(auth, provider)
-    } catch (error: any) {
-      throw new Error(error.message)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Google login failed')
     }
   }
 

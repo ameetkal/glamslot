@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { 
   CalendarIcon, 
@@ -28,8 +28,8 @@ interface BookingRequest {
   waitlistOptIn: boolean
   status: 'pending' | 'booked' | 'not-booked'
   salonId: string
-  createdAt: any
-  updatedAt: any
+  createdAt: Date | { toDate: () => Date }
+  updatedAt: Date | { toDate: () => Date }
 }
 
 export default function RequestsPage() {
@@ -57,10 +57,10 @@ export default function RequestsPage() {
         // Sort in memory instead
         const sortedRequests = requestsData.sort((a, b) => {
           const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
-            ? (a.createdAt as any).toDate() 
+            ? (a.createdAt as { toDate: () => Date }).toDate() 
             : new Date(a.createdAt);
           const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
-            ? (b.createdAt as any).toDate() 
+            ? (b.createdAt as { toDate: () => Date }).toDate() 
             : new Date(b.createdAt);
           return dateB.getTime() - dateA.getTime();
         });
@@ -82,12 +82,16 @@ export default function RequestsPage() {
     try {
       await updateDoc(doc(db, 'bookingRequests', requestId), {
         status,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       
       // Update local state
       setRequests(prev => prev.map(req => 
-        req.id === requestId ? { ...req, status, updatedAt: new Date().toISOString() } : req
+        req.id === requestId ? { 
+          ...req, 
+          status, 
+          updatedAt: new Date()
+        } : req
       ))
     } catch (error) {
       console.error('Error updating request status:', error)
@@ -98,10 +102,12 @@ export default function RequestsPage() {
     setExpandedRequest(expandedRequest === requestId ? null : requestId)
   }
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: Date | { toDate: () => Date }) => {
     if (!timestamp) return 'Unknown date'
     
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const date = typeof timestamp === 'object' && 'toDate' in timestamp 
+      ? timestamp.toDate() 
+      : new Date(timestamp)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',

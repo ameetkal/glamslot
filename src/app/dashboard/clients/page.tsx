@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth'
 import { bookingRequestService } from '@/lib/firebase/services'
@@ -36,13 +36,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (user) {
-      fetchClients()
-    }
-  }, [user])
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     if (!user) return
 
     try {
@@ -96,7 +90,13 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchClients()
+    }
+  }, [user, fetchClients])
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

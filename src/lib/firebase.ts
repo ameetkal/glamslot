@@ -16,17 +16,6 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Debug: Log the configuration (remove this in production)
-console.log('Firebase Config:', {
-  apiKey: firebaseConfig.apiKey ? 'SET' : 'NOT SET',
-  authDomain: firebaseConfig.authDomain ? 'SET' : 'NOT SET',
-  projectId: firebaseConfig.projectId ? 'SET' : 'NOT SET',
-  storageBucket: firebaseConfig.storageBucket ? 'SET' : 'NOT SET',
-  messagingSenderId: firebaseConfig.messagingSenderId ? 'SET' : 'NOT SET',
-  appId: firebaseConfig.appId ? 'SET' : 'NOT SET',
-  measurementId: firebaseConfig.measurementId ? 'SET' : 'NOT SET',
-});
-
 // Check if all required config values are present
 const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
 const missingFields = requiredFields.filter(field => !firebaseConfig[field as keyof typeof firebaseConfig]);

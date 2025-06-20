@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { providerService, serviceService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService } from '@/types/firebase';
@@ -31,30 +31,30 @@ export default function ProvidersPage() {
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      const [fetchedProviders, fetchedServices] = await Promise.all([
+      const [providersData, servicesData] = await Promise.all([
         providerService.getProviders(user.uid),
         serviceService.getServices(user.uid)
       ]);
-      setProviders(fetchedProviders);
-      setServices(fetchedServices);
+      setProviders(providersData);
+      setServices(servicesData);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to load providers and services');
+      console.error('Error fetching providers:', error);
+      setError('Failed to load providers');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user, fetchData]);
 
   function openAddModal() {
     setEditing({ 
@@ -162,10 +162,6 @@ export default function ProvidersPage() {
 
   function toggleProviderExpansion(providerId: string) {
     setExpandedProvider(expandedProvider === providerId ? null : providerId);
-  }
-
-  function getProviderService(provider: Provider, serviceId: string): ProviderService | undefined {
-    return provider.services.find(s => s.serviceId === serviceId);
   }
 
   function getServiceName(serviceId: string): string {

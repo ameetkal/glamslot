@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { serviceService } from '@/lib/firebase/services';
 import { Service } from '@/types/firebase';
@@ -14,13 +14,7 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<Service | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (user) {
-      fetchServices();
-    }
-  }, [user]);
-
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -33,7 +27,13 @@ export default function ServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchServices();
+    }
+  }, [user, fetchServices]);
 
   const openAddModal = () => {
     setEditing({

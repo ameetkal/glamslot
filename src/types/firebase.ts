@@ -69,6 +69,7 @@ export interface Salon {
 export interface SalonSettings {
   notifications: NotificationSettings;
   businessHours: BusinessHours;
+  booking: BookingSettings;
 }
 
 export interface NotificationSettings {
@@ -92,4 +93,9 @@ export interface DayHours {
   isOpen: boolean;
   openTime?: string;
   closeTime?: string;
+}
+
+export interface BookingSettings {
+  requireConsultation: boolean;
+  allowWaitlist: boolean;
 } 

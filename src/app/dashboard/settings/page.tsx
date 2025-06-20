@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { Salon } from '@/types/firebase'
 import { 
   UserIcon, 
   EnvelopeIcon, 
@@ -15,7 +16,7 @@ import {
 
 export default function SettingsPage() {
   const { user } = useAuth()
-  const [salonData, setSalonData] = useState<any>(null)
+  const [salonData, setSalonData] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -23,12 +24,13 @@ export default function SettingsPage() {
       if (!user) return
 
       try {
-        const salonDoc = await getDocs(query(collection(db, 'salons'), where('id', '==', user.uid)))
-        if (!salonDoc.empty) {
-          const salon = salonDoc.docs[0].data()
-          setSalonData(salon)
+        const docRef = doc(db, 'salons', user.uid)
+        const docSnap = await getDoc(docRef)
+        
+        if (docSnap.exists()) {
+          setSalonData({ id: docSnap.id, ...docSnap.data() } as Salon)
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching salon data:', error)
       } finally {
         setLoading(false)

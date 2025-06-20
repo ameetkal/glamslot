@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { bookingRequestService } from '@/lib/firebase/services'
 import { BookingRequest } from '@/types/firebase'
@@ -39,15 +39,8 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (user) {
-      fetchClients()
-    }
-  }, [user])
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     if (!user) return
-
     try {
       setLoading(true)
       const bookingRequests = await bookingRequestService.getBookingRequests(user.uid)
@@ -111,7 +104,13 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchClients()
+    }
+  }, [user, fetchClients])
 
   // Filter clients based on search term and waitlist filter
   const filteredClients = clients.filter(client => {
