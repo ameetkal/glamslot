@@ -111,14 +111,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       isActive
-                        ? 'bg-accent-100 text-accent-900'
+                        ? 'bg-accent-100 text-gray-900'
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive ? 'text-accent-500' : 'text-gray-600 group-hover:text-gray-700'
+                        isActive ? 'text-accent-600' : 'text-gray-600 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
@@ -134,7 +134,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     type="button"
                     className={`group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md focus:outline-none transition-colors ${
                       isSettingsActive
-                        ? 'bg-accent-100 text-accent-900'
+                        ? 'bg-accent-100 text-gray-900'
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                     onClick={() => setSettingsOpen((open) => !open)}
@@ -142,7 +142,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isSettingsActive ? 'text-accent-500' : 'text-gray-600 group-hover:text-gray-700'
+                        isSettingsActive ? 'text-accent-600' : 'text-gray-600 group-hover:text-gray-700'
                       }`}
                       aria-hidden="true"
                     />
@@ -166,7 +166,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                             href={sub.href}
                             className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               isSubActive
-                                ? 'bg-accent-50 text-accent-700 border border-accent-200'
+                                ? 'bg-accent-50 text-gray-900 border border-accent-200'
                                 : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                             }`}
                             onClick={() => setMobileMenuOpen(false)}

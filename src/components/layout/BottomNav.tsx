@@ -45,7 +45,7 @@ export default function BottomNav() {
               key={item.name}
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 py-2 text-xs transition-colors duration-150 ${
-                isActive ? "text-accent-600" : "text-gray-500 hover:text-accent-500"
+                isActive ? "text-gray-900" : "text-gray-500 hover:text-accent-500"
               }`}
             >
               <item.icon className="h-6 w-6 mb-1" aria-hidden="true" />

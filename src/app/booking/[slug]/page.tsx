@@ -2,6 +2,7 @@
 
 import React, { useState, use, useEffect } from 'react'
 import { salonService, serviceService, providerService } from '@/lib/firebase/services'
+import { SessionTrackingService } from '@/lib/sessionTracking'
 import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
@@ -58,6 +59,15 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         }
         setSalon(salonData)
         
+        // Track session start
+        const sessionTracking = SessionTrackingService.getInstance()
+        await sessionTracking.trackSessionStart(
+          salonData.id, 
+          navigator.userAgent,
+          undefined, // IP address would be available server-side
+          document.referrer
+        )
+        
         // Fetch services and providers for this salon
         const [servicesData, providersData] = await Promise.all([
           serviceService.getServices(salonData.id),
@@ -91,10 +101,47 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     : null
 
   function handleNext() {
-    if (step === 1 && (selectedService || (services.length === 0 && otherService.trim()))) setStep(2)
-    else if (step === 2 && (selectedProvider || (providerOptions.length === 0 && otherProvider.trim()))) setStep(3)
-    else if (step === 3 && form.dateTimePreference) setStep(4)
-    else if (step === 4 && form.name && form.phone && form.email) setStep(5)
+    if (step === 1 && (selectedService || (services.length === 0 && otherService.trim()))) {
+      // Track form start when user selects a service
+      if (salon) {
+        const sessionTracking = SessionTrackingService.getInstance()
+        sessionTracking.trackFormStart(salon.id)
+      }
+      setStep(2)
+    }
+    else if (step === 2 && (selectedProvider || (providerOptions.length === 0 && otherProvider.trim()))) {
+      // Track form progress
+      if (salon) {
+        const sessionTracking = SessionTrackingService.getInstance()
+        sessionTracking.trackFormProgress(salon.id, 2, {
+          service: getServiceName(),
+          provider: getProviderName()
+        })
+      }
+      setStep(3)
+    }
+    else if (step === 3 && form.dateTimePreference) {
+      // Track form progress
+      if (salon) {
+        const sessionTracking = SessionTrackingService.getInstance()
+        sessionTracking.trackFormProgress(salon.id, 3, {
+          service: getServiceName(),
+          provider: getProviderName()
+        })
+      }
+      setStep(4)
+    }
+    else if (step === 4 && form.name && form.phone && form.email) {
+      // Track form progress
+      if (salon) {
+        const sessionTracking = SessionTrackingService.getInstance()
+        sessionTracking.trackFormProgress(salon.id, 4, {
+          service: getServiceName(),
+          provider: getProviderName()
+        })
+      }
+      setStep(5)
+    }
     else if (step === 5) setStep(6)
     else if (step === 6) setStep(7)
   }
@@ -141,6 +188,11 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       const result = await response.json()
       
       if (result.success) {
+        // Track form completion
+        if (salon) {
+          const sessionTracking = SessionTrackingService.getInstance()
+          sessionTracking.trackFormComplete(salon.id)
+        }
         setStep(7)
       } else {
         throw new Error(result.message || 'Failed to submit booking request')

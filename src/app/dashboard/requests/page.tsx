@@ -165,75 +165,74 @@ export default function RequestsPage() {
                       className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => toggleExpanded(request.id)}
                     >
-                      {/* Main card content - always visible */}
-                      <div className="flex items-center justify-between">
+                      {/* Mobile-optimized main card content */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                        {/* Left side - Essential info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-shrink-0">
-                                <UserIcon className="h-5 w-5 text-gray-400" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {request.clientName}
-                                </p>
-                                <div className="flex items-center space-x-4 mt-1">
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <PhoneIcon className="h-4 w-4 mr-1" />
-                                    {request.clientPhone}
-                                  </div>
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <CalendarIcon className="h-4 w-4 mr-1" />
-                                    {request.service}
-                                  </div>
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <ClockIcon className="h-4 w-4 mr-1" />
-                                    {formatDate(request.createdAt)}
-                                  </div>
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              <UserIcon className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {request.clientName}
+                              </p>
+                              <div className="flex items-center space-x-3 mt-1">
+                                <div className="flex items-center text-sm text-gray-500">
+                                  <ClockIcon className="h-4 w-4 mr-1" />
+                                  {formatDate(request.createdAt)}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-500">
+                                  <CalendarIcon className="h-4 w-4 mr-1" />
+                                  {request.service}
                                 </div>
                               </div>
                             </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                                {request.status === 'pending' ? 'Pending' : 
-                                 request.status === 'booked' ? 'Booked' : 'Not Booked'}
-                              </span>
-                              
-                              {request.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
-                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                  >
-                                    <CheckIcon className="h-4 w-4 mr-1" />
-                                    Appointment Made
-                                  </button>
-                                  <button
-                                    onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
-                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                  >
-                                    <XMarkIcon className="h-4 w-4 mr-1" />
-                                    Not Booked
-                                  </button>
-                                </>
-                              )}
-                              
+                          </div>
+                        </div>
+                        
+                        {/* Right side - Status and actions */}
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                            {request.status === 'pending' ? 'Pending' : 
+                             request.status === 'booked' ? 'Booked' : 'Not Booked'}
+                          </span>
+                          
+                          {/* Action buttons - always visible on mobile */}
+                          {request.status === 'pending' && (
+                            <div className="flex items-center space-x-1 sm:space-x-2">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleExpanded(request.id)
-                                }}
-                                className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                                onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                                className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                               >
-                                {expandedRequest === request.id ? (
-                                  <ChevronUpIcon className="h-4 w-4" />
-                                ) : (
-                                  <ChevronDownIcon className="h-4 w-4" />
-                                )}
+                                <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                <span className="hidden sm:inline">Appointment Made</span>
+                                <span className="sm:hidden">Book</span>
+                              </button>
+                              <button
+                                onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                                className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              >
+                                <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                <span className="hidden sm:inline">Not Booked</span>
+                                <span className="sm:hidden">Decline</span>
                               </button>
                             </div>
-                          </div>
+                          )}
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleExpanded(request.id)
+                            }}
+                            className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                          >
+                            {expandedRequest === request.id ? (
+                              <ChevronUpIcon className="h-4 w-4" />
+                            ) : (
+                              <ChevronDownIcon className="h-4 w-4" />
+                            )}
+                          </button>
                         </div>
                       </div>
 

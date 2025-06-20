@@ -133,11 +133,29 @@ export default function ClientsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+    try {
+      // Handle Firestore timestamp objects
+      let date: Date
+      if (typeof dateString === 'object' && dateString && 'toDate' in dateString) {
+        date = (dateString as { toDate: () => Date }).toDate()
+      } else {
+        date = new Date(dateString)
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Unknown date'
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return 'Unknown date'
+    }
   }
 
   if (loading) {
@@ -184,7 +202,7 @@ export default function ClientsPage() {
                 placeholder="Search clients by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-600 text-gray-900 focus:outline-none focus:placeholder-gray-500 focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
               />
             </div>
           </div>
@@ -225,35 +243,59 @@ export default function ClientsPage() {
                 onClick={() => toggleExpanded(client.id)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
                     <div className="flex-shrink-0">
                       <UserIcon className="h-8 w-8 text-gray-500" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{client.name}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center">
-                          <EnvelopeIcon className="h-4 w-4 mr-1" />
-                          {client.email}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 truncate">{client.name}</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-sm text-gray-600 mt-1">
+                        <div className="flex items-center mb-1 sm:mb-0">
+                          <EnvelopeIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{client.email}</span>
                         </div>
                         <div className="flex items-center">
-                          <PhoneIcon className="h-4 w-4 mr-1" />
-                          {client.phone}
+                          <PhoneIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{client.phone}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
+                  <div className="flex items-center space-x-3 ml-3">
+                    <div className="text-right hidden sm:block">
                       <div className="text-sm text-gray-600">Last request</div>
                       <div className="text-sm font-medium text-gray-900">
                         {formatDate(client.lastRequestDate)}
                       </div>
                     </div>
+                    <div className="text-right sm:hidden">
+                      <div className="text-sm font-medium text-gray-900">
+                        {formatDate(client.lastRequestDate)}
+                      </div>
+                    </div>
                     {expandedClient === client.id ? (
-                      <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                      <ChevronDownIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                     ) : (
-                      <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                      <ChevronRightIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Mobile: Show key stats upfront */}
+                <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-4">
+                      <span className="text-gray-700">
+                        <span className="font-medium text-gray-900">{client.totalRequests}</span> requests
+                      </span>
+                      <span className="text-gray-700">
+                        <span className="font-medium text-green-600">{client.totalBooked}</span> booked
+                      </span>
+                    </div>
+                    {client.isOnWaitlist && (
+                      <span className="text-blue-600 text-xs font-medium bg-blue-50 px-2 py-1 rounded">
+                        Waitlist
+                      </span>
                     )}
                   </div>
                 </div>
@@ -262,14 +304,14 @@ export default function ClientsPage() {
               {/* Expanded Details */}
               {expandedClient === client.id && (
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Booking Statistics */}
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 mb-3">Booking Statistics</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-700">Total Requests:</span>
-                          <span className="font-medium">{client.totalRequests}</span>
+                          <span className="font-medium text-gray-900">{client.totalRequests}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-700">Successfully Booked:</span>
@@ -293,8 +335,8 @@ export default function ClientsPage() {
                         {client.servicesRequested.length > 0 ? (
                           client.servicesRequested.map((service, index) => (
                             <div key={index} className="flex items-center text-sm">
-                              <CheckIcon className="h-4 w-4 text-green-500 mr-2" />
-                              <span className="text-gray-700">{service}</span>
+                              <CheckIcon className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{service}</span>
                             </div>
                           ))
                         ) : (
@@ -310,8 +352,8 @@ export default function ClientsPage() {
                         {client.stylistsRequested.length > 0 ? (
                           client.stylistsRequested.map((stylist, index) => (
                             <div key={index} className="flex items-center text-sm">
-                              <UserIcon className="h-4 w-4 text-blue-500 mr-2" />
-                              <span className="text-gray-700">{stylist}</span>
+                              <UserIcon className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{stylist}</span>
                             </div>
                           ))
                         ) : (
@@ -327,14 +369,14 @@ export default function ClientsPage() {
                     <div className="space-y-2">
                       {client.requests.slice(0, 5).map((request, index) => (
                         <div key={index} className="bg-white p-3 rounded border">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium text-sm">{request.service}</div>
-                              <div className="text-xs text-gray-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-gray-900">{request.service}</div>
+                              <div className="text-xs text-gray-600 mt-1">
                                 {request.stylistPreference} • {formatDate(request.createdAt.toString())}
                               </div>
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex items-center mt-2 sm:mt-0 sm:ml-3">
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 request.status === 'booked' 
                                   ? 'bg-green-100 text-green-800'

@@ -270,7 +270,7 @@ export default function ProvidersPage() {
                         e.stopPropagation();
                         openEditModal(provider);
                       }}
-                      className="text-sm text-accent-600 hover:text-accent-700"
+                      className="text-sm text-gray-700 hover:text-gray-900 font-medium"
                     >
                       Edit
                     </button>
@@ -338,7 +338,7 @@ export default function ProvidersPage() {
                 required
                 value={editing?.name || ''}
                 onChange={(e) => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white placeholder:text-gray-500"
                 placeholder="Provider name"
               />
             </div>
@@ -353,7 +353,7 @@ export default function ProvidersPage() {
                 required
                 value={editing?.email || ''}
                 onChange={(e) => setEditing(prev => prev ? { ...prev, email: e.target.value } : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white placeholder:text-gray-500"
                 placeholder="provider@example.com"
               />
             </div>
@@ -368,7 +368,7 @@ export default function ProvidersPage() {
                 required
                 value={editing?.phone || ''}
                 onChange={(e) => setEditing(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white placeholder:text-gray-500"
                 placeholder="(555) 123-4567"
               />
             </div>
@@ -381,57 +381,73 @@ export default function ProvidersPage() {
                 {services.map((service) => {
                   const providerService = editing?.services.find(s => s.serviceId === service.id);
                   return (
-                    <div key={service.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={!!providerService}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              updateProviderService(editing?.id || '', service.id, {
-                                duration: service.defaultDuration,
-                                isSpecialty: false,
-                                requiresConsultation: service.requiresConsultation
-                              });
-                            } else {
-                              removeProviderService(editing?.id || '', service.id);
-                            }
-                          }}
-                          className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm font-medium text-gray-900">{service.name}</span>
+                    <div key={service.id} className="border border-gray-200 rounded p-3">
+                      {/* First line: Service name and checkbox */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={!!providerService}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                updateProviderService(editing?.id || '', service.id, {
+                                  duration: service.defaultDuration,
+                                  isSpecialty: false,
+                                  requiresConsultation: service.requiresConsultation
+                                });
+                              } else {
+                                removeProviderService(editing?.id || '', service.id);
+                              }
+                            }}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-900">{service.name}</span>
+                        </div>
                       </div>
+                      
+                      {/* Second line: Duration and options (only show if service is selected) */}
                       {providerService && (
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="number"
-                            min="15"
-                            step="15"
-                            value={providerService.duration || 60}
-                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
-                              duration: parseInt(e.target.value)
-                            })}
-                            className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                          <span className="text-xs text-gray-500">min</span>
-                          <input
-                            type="checkbox"
-                            checked={providerService.isSpecialty || false}
-                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
-                              isSpecialty: e.target.checked
-                            })}
-                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
-                          />
-                          <span className="text-xs text-gray-500">Specialty</span>
-                          <input
-                            type="checkbox"
-                            checked={providerService.requiresConsultation || false}
-                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
-                              requiresConsultation: e.target.checked
-                            })}
-                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
-                          />
-                          <span className="text-xs text-gray-500">Consultation</span>
+                        <div className="ml-7 space-y-2">
+                          {/* Duration input */}
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              min="15"
+                              step="15"
+                              value={providerService.duration || 60}
+                              onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                                duration: parseInt(e.target.value)
+                              })}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-gray-900 bg-white"
+                            />
+                            <span className="text-sm text-gray-600">minutes</span>
+                          </div>
+                          
+                          {/* Checkboxes on separate line */}
+                          <div className="flex flex-wrap gap-4">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={providerService.isSpecialty || false}
+                                onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                                  isSpecialty: e.target.checked
+                                })}
+                                className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">Specialty</span>
+                            </label>
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={providerService.requiresConsultation || false}
+                                onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                                  requiresConsultation: e.target.checked
+                                })}
+                                className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">Consultation Required</span>
+                            </label>
+                          </div>
                         </div>
                       )}
                     </div>
