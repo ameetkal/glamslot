@@ -12,16 +12,13 @@ import Input from '@/components/ui/Input'
 import { useAuth } from '@/lib/auth'
 
 const schema = yup.object({
-  name: yup.string().required('Name is required'),
+  name: yup.string().required('Full name is required'),
   email: yup.string().email('Invalid email address').required('Email is required'),
   password: yup.string()
     .required('Password is required')
     .min(8, 'Password must be at least 8 characters'),
-  confirmPassword: yup.string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords must match'),
   businessName: yup.string().required('Business name is required'),
-  businessType: yup.string().required('Business type is required'),
+  phone: yup.string().required('Phone number is required'),
 }).required()
 
 type SignupFormData = yup.InferType<typeof schema>
@@ -48,7 +45,8 @@ export default function SignupPage() {
       await signup(data.email, data.password, {
         name: data.name,
         businessName: data.businessName,
-        businessType: data.businessType
+        phone: data.phone,
+        businessType: 'salon' // Default to salon since we removed the selector
       })
       router.push('/dashboard')
     } catch (error: any) {
@@ -81,10 +79,10 @@ export default function SignupPage() {
         transition={{ duration: 0.5 }}
       >
         <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Create your account
+          Booking Requests
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Join LastMinute to start filling your appointment gaps
+          by Glammatic
         </p>
       </motion.div>
 
@@ -95,6 +93,10 @@ export default function SignupPage() {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 ring-1 ring-gray-200">
+          <h3 className="text-center text-xl font-semibold text-gray-900 mb-6">
+            Create your account
+          </h3>
+          
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
@@ -102,24 +104,22 @@ export default function SignupPage() {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input
-                label="Full name"
-                type="text"
-                autoComplete="name"
-                error={errors.name?.message}
-                disabled={isLoading}
-                {...register('name')}
-              />
+            <Input
+              label="Full name"
+              type="text"
+              autoComplete="name"
+              error={errors.name?.message}
+              disabled={isLoading}
+              {...register('name')}
+            />
 
-              <Input
-                label="Business name"
-                type="text"
-                error={errors.businessName?.message}
-                disabled={isLoading}
-                {...register('businessName')}
-              />
-            </div>
+            <Input
+              label="Business name"
+              type="text"
+              error={errors.businessName?.message}
+              disabled={isLoading}
+              {...register('businessName')}
+            />
 
             <Input
               label="Email address"
@@ -130,46 +130,23 @@ export default function SignupPage() {
               {...register('email')}
             />
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input
-                label="Password"
-                type="password"
-                autoComplete="new-password"
-                error={errors.password?.message}
-                disabled={isLoading}
-                {...register('password')}
-              />
+            <Input
+              label="Phone number"
+              type="tel"
+              autoComplete="tel"
+              error={errors.phone?.message}
+              disabled={isLoading}
+              {...register('phone')}
+            />
 
-              <Input
-                label="Confirm password"
-                type="password"
-                autoComplete="new-password"
-                error={errors.confirmPassword?.message}
-                disabled={isLoading}
-                {...register('confirmPassword')}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="businessType" className="block text-sm font-medium leading-6 text-gray-900">
-                Business type
-              </label>
-              <select
-                id="businessType"
-                className="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-accent-600 sm:text-sm sm:leading-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading}
-                {...register('businessType')}
-              >
-                <option value="">Select a type</option>
-                <option value="salon">Salon</option>
-                <option value="spa">Spa</option>
-                <option value="barbershop">Barbershop</option>
-                <option value="independent">Independent Stylist</option>
-              </select>
-              {errors.businessType && (
-                <p className="mt-2 text-sm text-red-600">{errors.businessType.message}</p>
-              )}
-            </div>
+            <Input
+              label="Password"
+              type="password"
+              autoComplete="new-password"
+              error={errors.password?.message}
+              disabled={isLoading}
+              {...register('password')}
+            />
 
             <div className="flex items-center">
               <input

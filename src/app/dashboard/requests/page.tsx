@@ -12,7 +12,8 @@ import {
   ClockIcon,
   CheckIcon,
   XMarkIcon,
-  EyeIcon
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline'
 
 interface BookingRequest {
@@ -23,6 +24,7 @@ interface BookingRequest {
   service: string
   stylistPreference: string
   dateTimePreference: string
+  notes?: string
   waitlistOptIn: boolean
   status: 'pending' | 'booked' | 'not-booked'
   salonId: string
@@ -34,8 +36,7 @@ export default function RequestsPage() {
   const { user } = useAuth()
   const [requests, setRequests] = useState<BookingRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null)
-  const [showModal, setShowModal] = useState(false)
+  const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -44,8 +45,7 @@ export default function RequestsPage() {
       try {
         const requestsQuery = query(
           collection(db, 'bookingRequests'),
-          where('salonId', '==', user.uid),
-          orderBy('createdAt', 'desc')
+          where('salonId', '==', user.uid)
         )
         const snapshot = await getDocs(requestsQuery)
         
@@ -54,7 +54,18 @@ export default function RequestsPage() {
           ...doc.data()
         })) as BookingRequest[]
         
-        setRequests(requestsData)
+        // Sort in memory instead
+        const sortedRequests = requestsData.sort((a, b) => {
+          const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+            ? (a.createdAt as any).toDate() 
+            : new Date(a.createdAt);
+          const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+            ? (b.createdAt as any).toDate() 
+            : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        setRequests(sortedRequests)
       } catch (error) {
         console.error('Error fetching requests:', error)
       } finally {
@@ -65,7 +76,9 @@ export default function RequestsPage() {
     fetchRequests()
   }, [user])
 
-  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked') => {
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked', e?: React.MouseEvent) => {
+    e?.stopPropagation() // Prevent card expansion when clicking buttons
+    
     try {
       await updateDoc(doc(db, 'bookingRequests', requestId), {
         status,
@@ -76,13 +89,13 @@ export default function RequestsPage() {
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, status, updatedAt: new Date().toISOString() } : req
       ))
-      
-      // Close modal if open
-      setShowModal(false)
-      setSelectedRequest(null)
     } catch (error) {
       console.error('Error updating request status:', error)
     }
+  }
+
+  const toggleExpanded = (requestId: string) => {
+    setExpandedRequest(expandedRequest === requestId ? null : requestId)
   }
 
   const formatDate = (timestamp: any) => {
@@ -138,68 +151,139 @@ export default function RequestsPage() {
 
         <div className="mt-8">
           {requests.length > 0 ? (
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <ul className="divide-y divide-gray-200">
                 {requests.map((request) => (
                   <li key={request.id}>
-                    <div className="px-4 py-4 sm:px-6">
+                    <div 
+                      className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => toggleExpanded(request.id)}
+                    >
+                      {/* Main card content - always visible */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-accent-100 flex items-center justify-center">
-                              <UserIcon className="h-5 w-5 text-accent-600" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <UserIcon className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {request.clientName}
+                                </p>
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <div className="flex items-center text-sm text-gray-500">
+                                    <PhoneIcon className="h-4 w-4 mr-1" />
+                                    {request.clientPhone}
+                                  </div>
+                                  <div className="flex items-center text-sm text-gray-500">
+                                    <CalendarIcon className="h-4 w-4 mr-1" />
+                                    {request.service}
+                                  </div>
+                                  <div className="flex items-center text-sm text-gray-500">
+                                    <ClockIcon className="h-4 w-4 mr-1" />
+                                    {formatDate(request.createdAt)}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="flex items-center">
-                              <p className="text-sm font-medium text-gray-900">
-                                {request.clientName}
-                              </p>
-                              <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                                {request.status}
+                            
+                            <div className="flex items-center space-x-2">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                                {request.status === 'pending' ? 'Pending' : 
+                                 request.status === 'booked' ? 'Booked' : 'Not Booked'}
                               </span>
-                            </div>
-                            <div className="mt-1 flex items-center text-sm text-gray-500">
-                              <EnvelopeIcon className="mr-1 h-4 w-4" />
-                              {request.clientEmail}
-                            </div>
-                            <div className="mt-1 flex items-center text-sm text-gray-500">
-                              <CalendarIcon className="mr-1 h-4 w-4" />
-                              {request.service} • {request.dateTimePreference}
+                              
+                              {request.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                  >
+                                    <CheckIcon className="h-4 w-4 mr-1" />
+                                    Appointment Made
+                                  </button>
+                                  <button
+                                    onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                  >
+                                    <XMarkIcon className="h-4 w-4 mr-1" />
+                                    Not Booked
+                                  </button>
+                                </>
+                              )}
+                              
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleExpanded(request.id)
+                                }}
+                                className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                              >
+                                {expandedRequest === request.id ? (
+                                  <ChevronUpIcon className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDownIcon className="h-4 w-4" />
+                                )}
+                              </button>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedRequest(request)
-                              setShowModal(true)
-                            }}
-                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
-                          >
-                            <EyeIcon className="h-4 w-4 mr-1" />
-                            View
-                          </button>
-                          {request.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => updateRequestStatus(request.id, 'booked')}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                              >
-                                <CheckIcon className="h-4 w-4 mr-1" />
-                                Book
-                              </button>
-                              <button
-                                onClick={() => updateRequestStatus(request.id, 'not-booked')}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                              >
-                                <XMarkIcon className="h-4 w-4 mr-1" />
-                                Decline
-                              </button>
-                            </>
-                          )}
                         </div>
                       </div>
+
+                      {/* Expanded details */}
+                      {expandedRequest === request.id && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Client Information</h4>
+                              <div className="space-y-2">
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                                  {request.clientEmail}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <PhoneIcon className="h-4 w-4 mr-2" />
+                                  {request.clientPhone}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
+                              <div className="space-y-2">
+                                <div className="text-sm">
+                                  <span className="font-medium text-gray-700">Service:</span>
+                                  <span className="ml-2 text-gray-600">{request.service}</span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium text-gray-700">Stylist Preference:</span>
+                                  <span className="ml-2 text-gray-600">{request.stylistPreference}</span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium text-gray-700">Preferred Date/Time:</span>
+                                  <span className="ml-2 text-gray-600">{request.dateTimePreference}</span>
+                                </div>
+                                {request.waitlistOptIn && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-gray-700">Waitlist:</span>
+                                    <span className="ml-2 text-gray-600">Yes, include me on waitlist</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {request.notes && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-gray-900 mb-2">Additional Notes</h4>
+                              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                                {request.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -215,106 +299,6 @@ export default function RequestsPage() {
             </div>
           )}
         </div>
-
-        {/* Request Details Modal */}
-        {showModal && selectedRequest && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)}></div>
-              
-              <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-                <div>
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Booking Request Details
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900">Client Information</h4>
-                        <div className="mt-2 space-y-2">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            {selectedRequest.clientName}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <EnvelopeIcon className="h-4 w-4 mr-2" />
-                            {selectedRequest.clientEmail}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <PhoneIcon className="h-4 w-4 mr-2" />
-                            {selectedRequest.clientPhone}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-medium text-gray-900">Booking Details</h4>
-                        <div className="mt-2 space-y-2">
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Service:</span> {selectedRequest.service}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Stylist Preference:</span> {selectedRequest.stylistPreference || 'No preference'}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Preferred Date/Time:</span> {selectedRequest.dateTimePreference}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Waitlist Opt-in:</span> {selectedRequest.waitlistOptIn ? 'Yes' : 'No'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-medium text-gray-900">Request Information</h4>
-                        <div className="mt-2 space-y-2">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <ClockIcon className="h-4 w-4 mr-2" />
-                            Submitted: {formatDate(selectedRequest.createdAt)}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Status:</span>{' '}
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
-                              {selectedRequest.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                  {selectedRequest.status === 'pending' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => updateRequestStatus(selectedRequest.id, 'booked')}
-                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm"
-                      >
-                        Book Appointment
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateRequestStatus(selectedRequest.id, 'not-booked')}
-                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 sm:mt-0 sm:col-start-1 sm:text-sm"
-                      >
-                        Decline Request
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 sm:mt-0 sm:text-sm"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

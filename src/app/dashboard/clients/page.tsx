@@ -1,7 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/lib/auth'
+import { bookingRequestService } from '@/lib/firebase/services'
+import { BookingRequest } from '@/types/firebase'
 import { 
   UserIcon,
   PhoneIcon,
@@ -12,52 +15,133 @@ import {
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 
-// Mock data for the prototype
-const clients = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    email: 'sarah.j@email.com',
-    phone: '(555) 123-4567',
-    totalAppointments: 5,
-    completedAppointments: 4,
-    totalSpent: 425,
-    lastAppointment: '2024-03-15',
-    notes: 'Prefers morning appointments',
-  },
-  {
-    id: 2,
-    name: 'Mike Chen',
-    email: 'mike.c@email.com',
-    phone: '(555) 987-6543',
-    totalAppointments: 3,
-    completedAppointments: 3,
-    totalSpent: 285,
-    lastAppointment: '2024-03-10',
-    notes: 'Regular client, always books balayage',
-  },
-  {
-    id: 3,
-    name: 'Emma Davis',
-    email: 'emma.d@email.com',
-    phone: '(555) 456-7890',
-    totalAppointments: 2,
-    completedAppointments: 1,
-    totalSpent: 135,
-    lastAppointment: '2024-03-18',
-    notes: 'New client, interested in color services',
-  },
-]
+interface Client {
+  id: string
+  name: string
+  email: string
+  phone: string
+  totalRequests: number
+  completedRequests: number
+  totalSpent: number
+  lastRequest: string
+  notes: string
+  requests: BookingRequest[]
+}
 
 export default function ClientsPage() {
-  const [selectedClient, setSelectedClient] = useState<typeof clients[0] | null>(null)
+  const { user } = useAuth()
+  const [clients, setClients] = useState<Client[]>([])
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      fetchClients()
+    }
+  }, [user])
+
+  const fetchClients = async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      const bookingRequests = await bookingRequestService.getBookingRequests(user.uid)
+      
+      // Group booking requests by client (email)
+      const clientMap = new Map<string, Client>()
+      
+      bookingRequests.forEach((request) => {
+        const clientKey = request.clientEmail.toLowerCase()
+        
+        if (!clientMap.has(clientKey)) {
+          clientMap.set(clientKey, {
+            id: clientKey,
+            name: request.clientName,
+            email: request.clientEmail,
+            phone: request.clientPhone,
+            totalRequests: 0,
+            completedRequests: 0,
+            totalSpent: 0,
+            lastRequest: request.createdAt.toString(),
+            notes: request.notes || '',
+            requests: []
+          })
+        }
+        
+        const client = clientMap.get(clientKey)!
+        client.totalRequests++
+        client.requests.push(request)
+        
+        // Update last request date
+        const requestDate = new Date(request.createdAt)
+        const lastRequestDate = new Date(client.lastRequest)
+        if (requestDate > lastRequestDate) {
+          client.lastRequest = request.createdAt.toString()
+        }
+        
+        // Count completed requests (booked status)
+        if (request.status === 'booked') {
+          client.completedRequests++
+          // Estimate spending (this would be more accurate with actual pricing)
+          client.totalSpent += 75 // Default estimate
+        }
+      })
+      
+      setClients(Array.from(clientMap.values()))
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+      setError('Failed to load clients')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.phone.includes(searchQuery)
   )
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-8">
+            <div className="text-red-600 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Clients</h2>
+            <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-6">
@@ -97,45 +181,55 @@ export default function ClientsPage() {
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Clients List */}
           <div className="space-y-4">
-            {filteredClients.map((client) => (
-              <motion.div
-                key={client.id}
-                onClick={() => setSelectedClient(client)}
-                className={`w-full rounded-lg border p-4 text-left transition-all cursor-pointer ${
-                  selectedClient?.id === client.id
-                    ? 'border-accent-500 bg-accent-50'
-                    : 'border-gray-200 bg-white hover:border-accent-300'
-                }`}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                      <span className="font-medium text-gray-900 truncate">
-                        {client.name}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-700">
-                      <div className="flex items-center gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>{client.completedAppointments} completed</span>
+            {filteredClients.length === 0 ? (
+              <div className="text-center py-8">
+                <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No clients found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {searchQuery ? 'Try adjusting your search terms.' : 'Clients will appear here once they submit booking requests.'}
+                </p>
+              </div>
+            ) : (
+              filteredClients.map((client) => (
+                <motion.div
+                  key={client.id}
+                  onClick={() => setSelectedClient(client)}
+                  className={`w-full rounded-lg border p-4 text-left transition-all cursor-pointer ${
+                    selectedClient?.id === client.id
+                      ? 'border-accent-500 bg-accent-50'
+                      : 'border-gray-200 bg-white hover:border-accent-300'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-900 truncate">
+                          {client.name}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <CurrencyDollarIcon className="h-4 w-4" />
-                        <span>${client.totalSpent}</span>
+                      <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-700">
+                        <div className="flex items-center gap-1">
+                          <CalendarIcon className="h-4 w-4" />
+                          <span>{client.completedRequests} completed</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <CurrencyDollarIcon className="h-4 w-4" />
+                          <span>${client.totalSpent}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right ml-4 flex-shrink-0">
+                      <div className="text-sm text-gray-700">
+                        Last request: {formatDate(client.lastRequest)}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right ml-4 flex-shrink-0">
-                    <div className="text-sm text-gray-700">
-                      Last visit: {new Date(client.lastAppointment).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            )}
           </div>
 
           {/* Client Details */}
@@ -171,28 +265,28 @@ export default function ClientsPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700">Appointment History</h3>
+                    <h3 className="text-sm font-medium text-gray-700">Booking History</h3>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                         <span className="text-gray-900">
-                          {selectedClient.completedAppointments} of {selectedClient.totalAppointments} appointments completed
+                          {selectedClient.completedRequests} of {selectedClient.totalRequests} requests completed
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <CurrencyDollarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">Total spent: ${selectedClient.totalSpent}</span>
+                        <span className="text-gray-900">Estimated total spent: ${selectedClient.totalSpent}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">Last appointment: {new Date(selectedClient.lastAppointment).toLocaleDateString()}</span>
+                        <span className="text-gray-900">Last request: {formatDate(selectedClient.lastRequest)}</span>
                       </div>
                     </div>
                   </div>
 
                   {selectedClient.notes && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-700">Notes</h3>
+                      <h3 className="text-sm font-medium text-gray-700">Latest Notes</h3>
                       <div className="mt-2 flex items-start gap-2 text-sm">
                         <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
                         <p className="text-gray-900">{selectedClient.notes}</p>
@@ -200,27 +294,28 @@ export default function ClientsPage() {
                     </div>
                   )}
 
-                  <div className="mt-6 flex gap-3">
-                    <Button
-                      variant="primary"
-                      className="flex-1"
-                      onClick={() => {/* TODO: Implement client messaging */}}
-                    >
-                      Send Message
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {/* TODO: Implement appointment scheduling */}}
-                    >
-                      Schedule Appointment
-                    </Button>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700">Recent Requests</h3>
+                    <div className="mt-2 space-y-2">
+                      {selectedClient.requests.slice(0, 3).map((request, index) => (
+                        <div key={index} className="text-sm bg-gray-50 p-2 rounded">
+                          <div className="font-medium">{request.service}</div>
+                          <div className="text-gray-600">
+                            {request.stylistPreference} • {formatDate(request.createdAt.toString())}
+                          </div>
+                          <div className="text-xs text-gray-500 capitalize">
+                            Status: {request.status}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
             ) : (
-              <div className="mt-6 text-center text-gray-500">
-                Select a client to view details
+              <div className="mt-4 text-center text-gray-500">
+                <UserIcon className="mx-auto h-8 w-8 text-gray-400" />
+                <p className="mt-2 text-sm">Select a client to view details</p>
               </div>
             )}
           </div>

@@ -3,7 +3,7 @@
 import { CalendarIcon, UserGroupIcon, ClockIcon, XMarkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 interface DashboardStats {
@@ -36,26 +36,47 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user) return
+      if (!user) {
+        console.log('No user found')
+        return
+      }
+
+      console.log('Fetching dashboard data for user:', user.uid)
+      setLoading(true)
 
       try {
-        // Fetch salon data
-        const salonDoc = await getDocs(query(collection(db, 'salons'), where('id', '==', user.uid)))
-        if (!salonDoc.empty) {
-          const salon = salonDoc.docs[0].data()
+        // Fetch salon data using user UID as document ID
+        const salonDocRef = doc(db, 'salons', user.uid)
+        console.log('Fetching salon document with ID:', user.uid)
+        const salonDoc = await getDoc(salonDocRef)
+        if (salonDoc.exists()) {
+          const salon = salonDoc.data()
+          console.log('Salon data loaded:', salon)
+          console.log('Salon name:', salon.name)
+          console.log('Salon bookingUrl:', salon.bookingUrl)
           setSalonData(salon)
+        } else {
+          console.log('No salon document found for user:', user.uid)
+          setSalonData(null)
         }
 
+        // Temporarily comment out booking requests to isolate salon data issue
+        /*
         // Fetch booking requests for this salon
         const bookingRequestsQuery = query(
           collection(db, 'bookingRequests'),
           where('salonId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
           limit(10)
         )
         const bookingRequestsSnapshot = await getDocs(bookingRequestsQuery)
         
         const requests = bookingRequestsSnapshot.docs.map(doc => doc.data())
+          .sort((a, b) => {
+            // Sort by createdAt in descending order (most recent first)
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+            return dateB.getTime() - dateA.getTime()
+          })
         
         // Calculate stats
         const totalRequests = requests.length
@@ -84,6 +105,16 @@ export default function DashboardPage() {
         }))
 
         setRecentActivity(activity)
+        */
+        
+        // Set default stats for now
+        setDashboardStats({
+          appointmentsCreated: 0,
+          requestedNotFulfilled: 0,
+          totalClients: 0,
+          averageResponseTime: '0 hours'
+        })
+        setRecentActivity([])
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -108,11 +139,51 @@ export default function DashboardPage() {
   }
 
   const copyBookingUrl = () => {
-    if (salonData?.bookingUrl) {
-      navigator.clipboard.writeText(salonData.bookingUrl).then(() => {
+    const bookingUrl = salonData?.bookingUrl || `${window.location.origin}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`
+    if (bookingUrl) {
+      navigator.clipboard.writeText(bookingUrl).then(() => {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       })
+    }
+  }
+
+  const createSalonDocument = async () => {
+    if (!user) return
+    
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+
+      const salonData = {
+        id: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'My Salon',
+        slug: (user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-'),
+        bookingUrl: `${appUrl}/booking/${(user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')}`,
+        ownerName: user.displayName || 'Salon Owner',
+        ownerEmail: user.email || '',
+        businessType: 'salon',
+        settings: {
+          notifications: {
+            email: true,
+            sms: false
+          },
+          booking: {
+            requireConsultation: false,
+            allowWaitlist: true
+          }
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      await setDoc(doc(db, 'salons', user.uid), salonData)
+      console.log('Salon document created successfully')
+      
+      // Refresh the page to load the new data
+      window.location.reload()
+    } catch (error) {
+      console.error('Error creating salon document:', error)
     }
   }
 
@@ -142,31 +213,56 @@ export default function DashboardPage() {
         </div>
 
         {/* Booking URL Section */}
-        {salonData?.bookingUrl && (
-          <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Share this link with your clients so they can request appointments
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={salonData.bookingUrl}
-                className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
-              />
-              <button
-                onClick={copyBookingUrl}
-                className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
-                aria-label="Copy booking URL"
-              >
-                <ClipboardDocumentIcon className="h-5 w-5" />
-              </button>
+        {(() => {
+          console.log('Rendering booking URL section check:')
+          console.log('salonData:', salonData)
+          console.log('salonData?.bookingUrl:', salonData?.bookingUrl)
+          console.log('salonData?.name:', salonData?.name)
+          console.log('Should show booking URL:', (salonData?.bookingUrl || salonData?.name))
+          
+          if (!salonData) {
+            return (
+              <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
+                <h2 className="text-lg font-semibold text-yellow-900 mb-2">Setup Required</h2>
+                <p className="text-sm text-yellow-700 mb-4">
+                  Your salon profile hasn't been set up yet. Click the button below to create your salon profile and get your booking URL.
+                </p>
+                <button
+                  onClick={createSalonDocument}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                >
+                  Create Salon Profile
+                </button>
+              </div>
+            )
+          }
+          
+          return (salonData?.bookingUrl || salonData?.name) && (
+            <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Share this link with your clients so they can request appointments
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={salonData?.bookingUrl || `${window.location.origin}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                />
+                <button
+                  onClick={copyBookingUrl}
+                  className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
+                  aria-label="Copy booking URL"
+                >
+                  <ClipboardDocumentIcon className="h-5 w-5" />
+                </button>
+              </div>
+              {copied && (
+                <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
+              )}
             </div>
-            {copied && (
-              <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
-            )}
-          </div>
-        )}
+          )
+        })()}
 
         {/* Stats Cards */}
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

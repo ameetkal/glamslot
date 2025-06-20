@@ -1,45 +1,30 @@
 'use client'
 
-import React, { useState, use } from 'react'
-
-// Mock data for services, providers, and mappings
-const services = [
-  { id: 1, name: 'Haircut' },
-  { id: 2, name: 'Color' },
-  { id: 3, name: 'Balayage' },
-]
-const providers = [
-  { id: 1, name: 'Alice Smith' },
-  { id: 2, name: 'Bob Johnson' },
-]
-const providerServices = [
-  { providerId: 1, serviceId: 1, duration: 45, isSpecialty: true, requiresConsultation: false },
-  { providerId: 1, serviceId: 2, duration: 100, isSpecialty: false, requiresConsultation: true },
-  { providerId: 2, serviceId: 1, duration: 50, isSpecialty: false, requiresConsultation: false },
-  { providerId: 2, serviceId: 3, duration: 130, isSpecialty: true, requiresConsultation: true },
-]
-
-type Provider = typeof providers[number]
-type ProviderService = typeof providerServices[number]
+import React, { useState, use, useEffect } from 'react'
+import { salonService, serviceService, providerService } from '@/lib/firebase/services'
+import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
-const OTHER_SERVICE_ID = 9999
-const OTHER_PROVIDER_ID = 9999
+const OTHER_SERVICE_ID = 'other'
+const OTHER_PROVIDER_ID = 'other'
 
-function getProvidersForService(serviceId: number): Provider[] {
-  return providers.filter((p) => providerServices.some((ps) => ps.providerId === p.id && ps.serviceId === serviceId))
+function getProvidersForService(providers: Provider[], serviceId: string): Provider[] {
+  return providers.filter((provider) => 
+    provider.services.some((ps) => ps.serviceId === serviceId)
+  )
 }
-function getMapping(providerId: number, serviceId: number): ProviderService | undefined {
-  return providerServices.find((ps) => ps.providerId === providerId && ps.serviceId === serviceId)
+
+function getMapping(provider: Provider, serviceId: string): ProviderService | undefined {
+  return provider.services.find((ps) => ps.serviceId === serviceId)
 }
 
 export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [step, setStep] = useState<Step>(1)
-  const [selectedService, setSelectedService] = useState<number | null>(null)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
   const [otherService, setOtherService] = useState('')
-  const [selectedProvider, setSelectedProvider] = useState<'any' | number>('any')
+  const [selectedProvider, setSelectedProvider] = useState<'any' | string>('any')
   const [otherProvider, setOtherProvider] = useState('')
   const [form, setForm] = useState({
     name: '',
@@ -51,12 +36,58 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  
+  // Data from Firestore
+  const [salon, setSalon] = useState<Salon | null>(null)
+  const [services, setServices] = useState<Service[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Fetch salon, services, and providers data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch salon by slug
+        const salonData = await salonService.getSalonBySlug(slug)
+        if (!salonData) {
+          setError('Salon not found')
+          return
+        }
+        setSalon(salonData)
+        
+        // Fetch services and providers for this salon
+        const [servicesData, providersData] = await Promise.all([
+          serviceService.getServices(salonData.id),
+          providerService.getProviders(salonData.id)
+        ])
+        
+        setServices(servicesData)
+        setProviders(providersData)
+      } catch (error) {
+        console.error('Error fetching booking data:', error)
+        setError('Failed to load booking information')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [slug])
 
   // Providers for the selected service
-  const providerOptions = selectedService && selectedService !== OTHER_SERVICE_ID ? getProvidersForService(selectedService) : providers
+  const providerOptions = selectedService && selectedService !== OTHER_SERVICE_ID 
+    ? getProvidersForService(providers, selectedService) 
+    : providers
+
   // Mapping for selected provider/service
-  const mapping = selectedService && selectedService !== OTHER_SERVICE_ID && selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID
-    ? getMapping(selectedProvider as number, selectedService)
+  const selectedProviderData = selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID
+    ? providers.find(p => p.id === selectedProvider)
+    : null
+  const mapping = selectedService && selectedService !== OTHER_SERVICE_ID && selectedProviderData
+    ? getMapping(selectedProviderData, selectedService)
     : null
 
   function handleNext() {
@@ -77,6 +108,10 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     setSubmitError('')
 
     try {
+      if (!salon) {
+        throw new Error('Salon information not available')
+      }
+
       // Prepare booking data
       const bookingData = {
         service: getServiceName(),
@@ -131,11 +166,47 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     return providers.find(p => p.id === selectedProvider)?.name || otherProvider
   }
 
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (hours > 0) {
+      return `${hours}h ${mins > 0 ? `${mins}m` : ''}`.trim()
+    }
+    return `${mins}m`
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading booking information...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Booking Unavailable</h2>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
       {/* Salon Name Header */}
       <div className="text-center mb-4 sm:mb-6 pb-4 border-b border-gray-200">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Elegant Cuts Salon</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{salon?.name || 'Salon'}</h1>
         <p className="text-sm text-gray-700 mt-1">Professional Hair & Beauty Services</p>
       </div>
 
@@ -161,7 +232,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     className="w-full border rounded-lg px-3 sm:px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedService ?? ''}
                     onChange={e => {
-                      const val = Number(e.target.value)
+                      const val = e.target.value
                       setSelectedService(val)
                       setSelectedProvider('any')
                       if (val !== OTHER_SERVICE_ID) setOtherService('')
@@ -222,8 +293,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     value={selectedProvider}
                     onChange={e => {
                       if (e.target.value === 'any') setSelectedProvider('any')
-                      else if (Number(e.target.value) === OTHER_PROVIDER_ID) setSelectedProvider(OTHER_PROVIDER_ID)
-                      else setSelectedProvider(Number(e.target.value))
+                      else if (e.target.value === OTHER_PROVIDER_ID) setSelectedProvider(OTHER_PROVIDER_ID)
+                      else setSelectedProvider(e.target.value)
                     }}
                     required
                   >
@@ -249,7 +320,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             {selectedService && selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID && mapping && (
               <div className="rounded bg-gray-50 p-3 text-sm text-gray-700 mt-2">
                 <div>Service: <span className="font-medium">{services.find(s => s.id === selectedService)?.name}</span></div>
-                <div>Estimated Duration: <span className="font-medium">{mapping.duration} min</span></div>
+                <div>Estimated Duration: <span className="font-medium">{formatDuration(mapping.duration)}</span></div>
               </div>
             )}
             <div className="flex justify-between gap-2 mt-4">
@@ -477,13 +548,13 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 Call us directly to discuss availability and book your appointment right away:
               </p>
               <a 
-                href="tel:+1234567890" 
+                href={`tel:${salon?.ownerPhone || '+1234567890'}`}
                 className="inline-flex items-center justify-center px-4 sm:px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full sm:w-auto"
               >
                 <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                Call (123) 456-7890
+                Call {salon?.ownerPhone || '(123) 456-7890'}
               </a>
             </div>
             

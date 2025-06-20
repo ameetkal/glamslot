@@ -69,10 +69,10 @@ export default function LoginPage() {
         transition={{ duration: 0.5 }}
       >
         <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Welcome back
+          Booking Requests
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to manage your appointments
+          by Glammatic
         </p>
       </motion.div>
 
@@ -83,6 +83,10 @@ export default function LoginPage() {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 ring-1 ring-gray-200">
+          <h3 className="text-center text-xl font-semibold text-gray-900 mb-6">
+            Welcome
+          </h3>
+          
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
@@ -108,19 +112,7 @@ export default function LoginPage() {
               {...register('password')}
             />
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                  Remember me
-                </label>
-              </div>
-
+            <div className="flex items-center justify-end">
               <div className="text-sm">
                 <Link href="#" className="font-medium text-accent-600 hover:text-accent-500">
                   Forgot your password?

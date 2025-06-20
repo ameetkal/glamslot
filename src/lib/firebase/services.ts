@@ -124,14 +124,24 @@ export const bookingRequestService = {
   async getBookingRequests(salonId: string): Promise<BookingRequest[]> {
     const q = query(
       collection(db, 'bookingRequests'),
-      where('salonId', '==', salonId),
-      orderBy('createdAt', 'desc')
+      where('salonId', '==', salonId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const requests = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as BookingRequest[];
+    
+    // Sort in memory instead
+    return requests.sort((a, b) => {
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as any).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as any).toDate() 
+        : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
   },
 
   // Get a single booking request

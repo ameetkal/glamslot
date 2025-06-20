@@ -1,33 +1,14 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth';
+import { providerService, serviceService } from '@/lib/firebase/services';
+import { Provider, Service, ProviderService } from '@/types/firebase';
+import Modal from '@/components/ui/Modal';
 
 interface ProviderAvailabilityDay {
   start: string;
   end: string;
   isAvailable: boolean;
-}
-
-interface Service {
-  id: number;
-  name: string;
-  defaultDuration: number;
-  requiresConsultation: boolean;
-}
-
-interface ProviderService {
-  serviceId: number;
-  duration: number;
-  isSpecialty: boolean;
-  requiresConsultation: boolean;
-}
-
-interface Provider {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  availability: Record<string, ProviderAvailabilityDay>;
-  services: ProviderService[];
 }
 
 const defaultAvailability: Record<string, ProviderAvailabilityDay> = {
@@ -40,63 +21,52 @@ const defaultAvailability: Record<string, ProviderAvailabilityDay> = {
   sunday: { start: '10:00', end: '15:00', isAvailable: false },
 };
 
-const sampleServices: Service[] = [
-  { id: 1, name: 'Haircut', defaultDuration: 45, requiresConsultation: false },
-  { id: 2, name: 'Color', defaultDuration: 90, requiresConsultation: true },
-  { id: 3, name: 'Balayage', defaultDuration: 120, requiresConsultation: true },
-  { id: 4, name: 'Highlights', defaultDuration: 90, requiresConsultation: true },
-  { id: 5, name: 'Blowout', defaultDuration: 30, requiresConsultation: false },
-];
-
-const initialProviders: Provider[] = [
-  {
-    id: 1,
-    name: 'Alice Smith',
-    email: 'alice@example.com',
-    phone: '555-111-2222',
-    availability: {
-      ...defaultAvailability,
-      monday: { start: '09:00', end: '17:00', isAvailable: true },
-      tuesday: { start: '09:00', end: '17:00', isAvailable: true },
-    },
-    services: [
-      { serviceId: 1, duration: 45, isSpecialty: true, requiresConsultation: false },
-      { serviceId: 2, duration: 100, isSpecialty: false, requiresConsultation: true },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Bob Johnson',
-    email: 'bob@example.com',
-    phone: '555-333-4444',
-    availability: {
-      ...defaultAvailability,
-      wednesday: { start: '10:00', end: '16:00', isAvailable: true },
-      thursday: { start: '10:00', end: '16:00', isAvailable: true },
-    },
-    services: [
-      { serviceId: 1, duration: 50, isSpecialty: false, requiresConsultation: false },
-      { serviceId: 3, duration: 130, isSpecialty: true, requiresConsultation: true },
-    ],
-  },
-];
-
 export default function ProvidersPage() {
-  const [providers, setProviders] = useState<Provider[]>(initialProviders);
+  const { user } = useAuth();
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Provider | null>(null);
-  const [expandedProvider, setExpandedProvider] = useState<number | null>(null);
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  console.log('ProvidersPage mounted, providers:', providers);
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const [fetchedProviders, fetchedServices] = await Promise.all([
+        providerService.getProviders(user.uid),
+        serviceService.getServices(user.uid)
+      ]);
+      setProviders(fetchedProviders);
+      setServices(fetchedServices);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to load providers and services');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   function openAddModal() {
     setEditing({ 
-      id: 0, 
+      id: '', 
       name: '', 
       email: '', 
       phone: '', 
+      salonId: user?.uid || '',
       availability: { ...defaultAvailability },
-      services: []
+      services: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     setModalOpen(true);
   }
@@ -113,322 +83,389 @@ export default function ProvidersPage() {
   function closeModal() {
     setModalOpen(false);
     setEditing(null);
+    setError('');
   }
 
-  function handleSave(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!editing) return;
-    setProviders((prev) => {
-      if (editing.id === 0) {
-        // Add new
-        const newId = Math.max(0, ...prev.map((p) => p.id)) + 1;
-        return [...prev, { ...editing, id: newId }];
-      } else {
-        // Edit existing
-        return prev.map((p) => (p.id === editing.id ? editing : p));
-      }
-    });
-    closeModal();
-  }
+    if (!editing || !user) return;
 
-  function handleDelete(id: number) {
-    if (window.confirm('Are you sure you want to delete this provider?')) {
-      setProviders((prev) => prev.filter((p) => p.id !== id));
+    try {
+      setError('');
+      
+      if (editing.id) {
+        // Update existing provider
+        const updateData = {
+          name: editing.name.trim(),
+          email: editing.email.trim(),
+          phone: editing.phone.trim(),
+          availability: editing.availability,
+          services: editing.services.map(service => ({
+            serviceId: service.serviceId,
+            duration: service.duration || 60,
+            isSpecialty: service.isSpecialty || false,
+            requiresConsultation: service.requiresConsultation || false
+          }))
+        };
+
+        // Validate that all required fields have values
+        if (!updateData.name || !updateData.email || !updateData.phone) {
+          setError('Please fill in all required fields');
+          return;
+        }
+
+        await providerService.updateProvider(editing.id, updateData);
+      } else {
+        // Create new provider
+        const providerData = {
+          name: editing.name.trim(),
+          email: editing.email.trim(),
+          phone: editing.phone.trim(),
+          availability: editing.availability,
+          services: editing.services.map(service => ({
+            serviceId: service.serviceId,
+            duration: service.duration || 60,
+            isSpecialty: service.isSpecialty || false,
+            requiresConsultation: service.requiresConsultation || false
+          })),
+          salonId: user.uid
+        };
+
+        // Validate that all required fields have values
+        if (!providerData.name || !providerData.email || !providerData.phone) {
+          setError('Please fill in all required fields');
+          return;
+        }
+
+        await providerService.createProvider(providerData);
+      }
+      
+      closeModal();
+      fetchData(); // Refresh the list
+    } catch (error) {
+      console.error('Error saving provider:', error);
+      setError('Failed to save provider');
     }
   }
 
-  function toggleProviderExpansion(providerId: number) {
+  async function handleDelete(id: string) {
+    if (!window.confirm('Are you sure you want to delete this provider?')) return;
+
+    try {
+      await providerService.deleteProvider(id);
+      fetchData(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting provider:', error);
+      setError('Failed to delete provider');
+    }
+  }
+
+  function toggleProviderExpansion(providerId: string) {
     setExpandedProvider(expandedProvider === providerId ? null : providerId);
   }
 
-  function getProviderService(provider: Provider, serviceId: number): ProviderService | undefined {
+  function getProviderService(provider: Provider, serviceId: string): ProviderService | undefined {
     return provider.services.find(s => s.serviceId === serviceId);
   }
 
-  function updateProviderService(providerId: number, serviceId: number, updates: Partial<ProviderService>) {
-    setProviders(prev => prev.map(provider => {
-      if (provider.id !== providerId) return provider;
+  function getServiceName(serviceId: string): string {
+    const service = services.find(s => s.id === serviceId);
+    return service?.name || 'Unknown Service';
+  }
+
+  function updateProviderService(providerId: string, serviceId: string, updates: Partial<ProviderService>) {
+    setEditing(prev => {
+      if (!prev || prev.id !== providerId) return prev;
       
-      const existingService = provider.services.find(s => s.serviceId === serviceId);
+      const existingService = prev.services.find(s => s.serviceId === serviceId);
       if (existingService) {
         // Update existing service
         return {
-          ...provider,
-          services: provider.services.map(s => 
+          ...prev,
+          services: prev.services.map(s => 
             s.serviceId === serviceId ? { ...s, ...updates } : s
           )
         };
       } else {
         // Add new service
-        const service = sampleServices.find(s => s.id === serviceId);
-        if (!service) return provider;
+        const service = services.find(s => s.id === serviceId);
+        if (!service) return prev;
         
         return {
-          ...provider,
-          services: [...provider.services, {
+          ...prev,
+          services: [...prev.services, {
             serviceId,
-            duration: service.defaultDuration,
+            duration: service.defaultDuration || 60,
             isSpecialty: false,
-            requiresConsultation: service.requiresConsultation,
+            requiresConsultation: service.requiresConsultation || false,
             ...updates
           }]
         };
       }
-    }));
+    });
   }
 
-  function removeProviderService(providerId: number, serviceId: number) {
-    setProviders(prev => prev.map(provider => {
-      if (provider.id !== providerId) return provider;
+  function removeProviderService(providerId: string, serviceId: string) {
+    setEditing(prev => {
+      if (!prev || prev.id !== providerId) return prev;
       return {
-        ...provider,
-        services: provider.services.filter(s => s.serviceId !== serviceId)
+        ...prev,
+        services: prev.services.filter(s => s.serviceId !== serviceId)
       };
-    }));
+    });
+  }
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins > 0 ? `${mins}m` : ''}`.trim();
+    }
+    return `${mins}m`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600"></div>
+      </div>
+    );
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Providers</h1>
-        <button className="px-4 py-2 bg-accent-600 text-white rounded-md font-semibold hover:bg-accent-700 transition" onClick={openAddModal}>Add Provider</button>
+        <button 
+          className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm" 
+          onClick={openAddModal}
+        >
+          Add Provider
+        </button>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
       
-      <div>Providers loaded: {providers.length}</div>
-
       <div className="space-y-4">
-        {providers.map((provider) => (
-          <div key={provider.id} className="bg-white rounded-lg shadow border">
-            {/* Provider Header */}
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 cursor-pointer" onClick={() => toggleProviderExpansion(provider.id)}>
-                  <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-                  <p className="text-sm text-gray-600">{provider.email} • {provider.phone}</p>
+        {providers.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No providers found. Add your first provider to get started.</p>
+          </div>
+        ) : (
+          providers.map((provider) => (
+            <div key={provider.id} className="bg-white rounded-lg shadow border border-gray-200">
+              <div className="p-4">
+                <div 
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
+                  onClick={() => toggleProviderExpansion(provider.id)}
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
+                    <p className="text-sm text-gray-600">{provider.email}</p>
+                    <p className="text-sm text-gray-600">{provider.phone}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(provider);
+                      }}
+                      className="text-sm text-accent-600 hover:text-accent-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(provider.id);
+                      }}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    className="text-accent-700 hover:text-accent-900 text-sm"
-                    onClick={() => openEditModal(provider)}
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    className="text-red-600 hover:text-red-900 text-sm"
-                    onClick={() => handleDelete(provider.id)}
-                  >
-                    Delete
-                  </button>
-                  <button 
-                    className="text-gray-700 hover:text-gray-900 text-sm"
-                    onClick={() => toggleProviderExpansion(provider.id)}
-                  >
-                    {expandedProvider === provider.id ? '▼' : '▶'} Services
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            {/* Services Accordion */}
-            {expandedProvider === provider.id && (
-              <div className="p-4 bg-gray-50">
-                <h4 className="text-md font-medium text-gray-900 mb-4">Service Offerings</h4>
-                <div className="space-y-3">
-                  {sampleServices.map((service) => {
-                    const providerService = getProviderService(provider, service.id);
-                    const isOffered = !!providerService;
-                    
-                    return (
-                      <div key={service.id} className="bg-white rounded border p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isOffered}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  updateProviderService(provider.id, service.id, {});
-                                } else {
-                                  removeProviderService(provider.id, service.id);
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
-                            />
-                            <span className="font-medium text-gray-900">{service.name}</span>
-                          </div>
-                          {isOffered && (
-                            <button
-                              onClick={() => removeProviderService(provider.id, service.id)}
-                              className="text-red-600 hover:text-red-900 text-xs"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        
-                        {isOffered && providerService && (
-                          <div className="ml-7 space-y-2">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Duration (minutes)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={providerService.duration}
-                                  onChange={(e) => updateProviderService(provider.id, service.id, {
-                                    duration: parseInt(e.target.value) || service.defaultDuration
-                                  })}
-                                  className="w-full border rounded px-2 py-1 text-sm placeholder:text-gray-600"
-                                  placeholder="Duration"
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id={`specialty-${provider.id}-${service.id}`}
-                                  checked={providerService.isSpecialty}
-                                  onChange={(e) => updateProviderService(provider.id, service.id, {
-                                    isSpecialty: e.target.checked
-                                  })}
-                                  className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
-                                />
-                                <label htmlFor={`specialty-${provider.id}-${service.id}`} className="text-xs text-gray-700">
-                                  Specialty Service
-                                </label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id={`consultation-${provider.id}-${service.id}`}
-                                  checked={providerService.requiresConsultation}
-                                  onChange={(e) => updateProviderService(provider.id, service.id, {
-                                    requiresConsultation: e.target.checked
-                                  })}
-                                  className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
-                                />
-                                <label htmlFor={`consultation-${provider.id}-${service.id}`} className="text-xs text-gray-700">
-                                  Requires Consultation
-                                </label>
-                              </div>
+                {expandedProvider === provider.id && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Services</h4>
+                    {provider.services.length === 0 ? (
+                      <p className="text-sm text-gray-500">No services assigned</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {provider.services.map((providerService) => (
+                          <div key={providerService.serviceId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {getServiceName(providerService.serviceId)}
+                              </span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                {formatDuration(providerService.duration || 60)}
+                              </span>
+                              {providerService.isSpecialty && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Specialty
+                                </span>
+                              )}
                             </div>
                           </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Add/Edit Modal */}
-      {modalOpen && editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">{editing.id === 0 ? 'Add' : 'Edit'} Provider</h2>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
-                  value={editing.name}
-                  onChange={e => setEditing({ ...editing, name: e.target.value })}
-                  placeholder="Enter provider name"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
-                  value={editing.email}
-                  onChange={e => setEditing({ ...editing, email: e.target.value })}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  className="w-full border rounded px-3 py-2 placeholder:text-gray-600"
-                  value={editing.phone}
-                  onChange={e => setEditing({ ...editing, phone: e.target.value })}
-                  placeholder="Enter phone number"
-                  required
-                />
-              </div>
-              <div className="rounded-lg bg-gray-50 p-4 mt-6">
-                <h3 className="text-md font-medium text-gray-900 mb-2">Default Availability</h3>
-                <div className="space-y-4">
-                  {Object.entries(editing.availability).map(([day, schedule]) => (
-                    <div key={day} className="flex items-center gap-4">
-                      <div className="w-32">
-                        <label className="flex items-center gap-2">
+      {/* Add/Edit Provider Modal */}
+      <Modal 
+        isOpen={modalOpen} 
+        onClose={closeModal}
+        title={editing?.id ? 'Edit Provider' : 'Add Provider'}
+      >
+        <div className="p-6">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                required
+                value={editing?.name || ''}
+                onChange={(e) => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                placeholder="Provider name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                required
+                value={editing?.email || ''}
+                onChange={(e) => setEditing(prev => prev ? { ...prev, email: e.target.value } : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                placeholder="provider@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone *
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                required
+                value={editing?.phone || ''}
+                onChange={(e) => setEditing(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Services
+              </label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {services.map((service) => {
+                  const providerService = editing?.services.find(s => s.serviceId === service.id);
+                  return (
+                    <div key={service.id} className="flex items-center justify-between p-2 border border-gray-200 rounded">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={!!providerService}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateProviderService(editing?.id || '', service.id, {
+                                duration: service.defaultDuration,
+                                isSpecialty: false,
+                                requiresConsultation: service.requiresConsultation
+                              });
+                            } else {
+                              removeProviderService(editing?.id || '', service.id);
+                            }
+                          }}
+                          className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-900">{service.name}</span>
+                      </div>
+                      {providerService && (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            min="15"
+                            step="15"
+                            value={providerService.duration || 60}
+                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                              duration: parseInt(e.target.value)
+                            })}
+                            className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
+                          />
+                          <span className="text-xs text-gray-500">min</span>
                           <input
                             type="checkbox"
-                            checked={schedule.isAvailable}
-                            onChange={e => setEditing({
-                              ...editing,
-                              availability: {
-                                ...editing.availability,
-                                [day]: { ...schedule, isAvailable: e.target.checked }
-                              }
+                            checked={providerService.isSpecialty || false}
+                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                              isSpecialty: e.target.checked
                             })}
-                            className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
+                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                           />
-                          <span className="text-sm font-medium text-gray-700">
-                            {day.charAt(0).toUpperCase() + day.slice(1)}
-                          </span>
-                        </label>
-                      </div>
-                      {schedule.isAvailable && (
-                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Specialty</span>
                           <input
-                            type="time"
-                            value={schedule.start}
-                            onChange={e => setEditing({
-                              ...editing,
-                              availability: {
-                                ...editing.availability,
-                                [day]: { ...schedule, start: e.target.value }
-                              }
+                            type="checkbox"
+                            checked={providerService.requiresConsultation || false}
+                            onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                              requiresConsultation: e.target.checked
                             })}
-                            className="w-32 border rounded px-2 py-1"
+                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                           />
-                          <span className="text-gray-500">to</span>
-                          <input
-                            type="time"
-                            value={schedule.end}
-                            onChange={e => setEditing({
-                              ...editing,
-                              availability: {
-                                ...editing.availability,
-                                [day]: { ...schedule, end: e.target.value }
-                              }
-                            })}
-                            className="w-32 border rounded px-2 py-1"
-                          />
+                          <span className="text-xs text-gray-500">Consultation</span>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" className="px-4 py-2 bg-gray-200 rounded" onClick={closeModal}>Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-accent-600 text-white rounded hover:bg-accent-700">Save</button>
-              </div>
-            </form>
-          </div>
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {editing?.id ? 'Update' : 'Create'} Provider
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
     </div>
   );
 } 

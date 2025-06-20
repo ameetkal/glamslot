@@ -54,14 +54,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
                     (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
 
+      // Create a clean slug from business name
+      const businessSlug = userData.businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .trim()
+
       // Create salon document with user ID as the document ID
       const salonData = {
         id: user.uid,
         name: userData.businessName,
-        slug: userData.businessName.toLowerCase().replace(/\s+/g, '-'),
-        bookingUrl: `${appUrl}/booking/${userData.businessName.toLowerCase().replace(/\s+/g, '-')}`,
+        slug: businessSlug,
+        bookingUrl: `${appUrl}/booking/${businessSlug}`,
         ownerName: userData.name,
         ownerEmail: email,
+        ownerPhone: userData.phone,
         businessType: userData.businessType,
         settings: {
           notifications: {

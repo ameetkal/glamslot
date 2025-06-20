@@ -5,10 +5,11 @@ export interface Provider {
   name: string;
   email: string;
   phone: string;
+  salonId: string;
   availability: Record<string, ProviderAvailabilityDay>;
   services: ProviderService[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface ProviderAvailabilityDay {
@@ -20,10 +21,12 @@ export interface ProviderAvailabilityDay {
 export interface Service {
   id: string;
   name: string;
-  defaultDuration: number;
-  requiresConsultation: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  description?: string;
+  defaultDuration?: number;
+  requiresConsultation?: boolean;
+  salonId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface ProviderService {
@@ -54,6 +57,10 @@ export interface Salon {
   name: string;
   slug: string;
   bookingUrl: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  businessType?: string;
   settings: SalonSettings;
   createdAt: Date;
   updatedAt: Date;

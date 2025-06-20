@@ -22,10 +22,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 const settingsSubItems = [
   { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
   { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
-  { name: 'Availability', href: '/dashboard/settings/availability', icon: CalendarIcon },
   { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
   { name: 'Analytics', href: '/dashboard/settings/analytics', icon: ChartBarIcon },
-  { name: 'Appointments', href: '/dashboard/settings/appointments', icon: CalendarIcon },
   { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
 ]
 
