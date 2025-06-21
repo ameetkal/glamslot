@@ -2,10 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { salonService } from '@/lib/firebase/services';
-import { PhoneIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PhoneIcon, PlusIcon, XMarkIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 interface SmsRecipient {
   phone: string;
+  enabled: boolean;
+}
+
+interface EmailRecipient {
+  email: string;
   enabled: boolean;
 }
 
@@ -13,6 +18,7 @@ interface SalonNotifications {
   email: boolean;
   sms: boolean;
   smsRecipients: SmsRecipient[];
+  emailRecipients: EmailRecipient[];
 }
 
 interface ClientNotifications {
@@ -38,6 +44,7 @@ const initialSalonNotifications: SalonNotifications = {
   smsRecipients: [
     { phone: '555-123-4567', enabled: true }
   ],
+  emailRecipients: [],
 };
 
 const initialClientNotifications: ClientNotifications = {
@@ -56,6 +63,12 @@ const initialClientNotifications: ClientNotifications = {
     email: false,
   },
 };
+
+// Client-side email validation function
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
 // Client-side phone number validation functions
 function isValidPhoneNumber(phone: string): boolean {
@@ -101,7 +114,10 @@ export default function NotificationsPage() {
   const [clientNotifications, setClientNotifications] = useState<ClientNotifications>(initialClientNotifications);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [newEmailAddress, setNewEmailAddress] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [testSMSStatus, setTestSMSStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'success' | 'error' }>({});
+  const [testEmailStatus, setTestEmailStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'success' | 'error' }>({});
   const [loading, setLoading] = useState(true);
 
   // Save notification settings to Firestore automatically
@@ -112,7 +128,8 @@ export default function NotificationsPage() {
       console.log('Saving notification settings:', {
         email: salonNotifications.email,
         sms: salonNotifications.sms,
-        smsRecipients: salonNotifications.smsRecipients
+        smsRecipients: salonNotifications.smsRecipients,
+        emailRecipients: salonNotifications.emailRecipients
       });
       
       await salonService.updateSalonSettings(user.uid, {
@@ -120,6 +137,7 @@ export default function NotificationsPage() {
           email: salonNotifications.email,
           sms: salonNotifications.sms,
           smsRecipients: salonNotifications.smsRecipients,
+          emailRecipients: salonNotifications.emailRecipients,
           bookingConfirmation: true,
           bookingReminders: true
         }
@@ -158,18 +176,35 @@ export default function NotificationsPage() {
             smsRecipients = [{ phone: salon.ownerPhone, enabled: true }];
           }
           
+          // Handle existing emailRecipients properly
+          let emailRecipients: EmailRecipient[] = notifications.emailRecipients || [];
+          
+          // If emailRecipients is empty but we have an owner email, add it
+          if (emailRecipients.length === 0 && salon.ownerEmail) {
+            emailRecipients = [{ email: salon.ownerEmail, enabled: true }];
+          }
+          
           setSalonNotifications({
             email: notifications.email ?? true,
             sms: notifications.sms ?? false,
-            smsRecipients: smsRecipients
+            smsRecipients: smsRecipients,
+            emailRecipients: emailRecipients
           });
         } else if (salon?.ownerPhone) {
           // If no notification settings exist yet, initialize with salon phone
           console.log('No notification settings found, initializing with owner phone:', salon.ownerPhone);
+          
+          // Initialize email recipients with salon email if available
+          let emailRecipients: EmailRecipient[] = [];
+          if (salon.ownerEmail) {
+            emailRecipients = [{ email: salon.ownerEmail, enabled: true }];
+          }
+          
           setSalonNotifications({
             email: true,
             sms: false,
-            smsRecipients: [{ phone: salon.ownerPhone, enabled: true }]
+            smsRecipients: [{ phone: salon.ownerPhone, enabled: true }],
+            emailRecipients: emailRecipients
           });
         } else {
           // No salon data at all, use defaults
@@ -188,7 +223,7 @@ export default function NotificationsPage() {
     loadNotificationSettings();
   }, [user]);
 
-  function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients'>) {
+  function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients' | 'emailRecipients'>) {
     setSalonNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
     // Auto-save after a short delay to avoid too many API calls
     setTimeout(() => saveNotificationSettings(), 500);
@@ -314,6 +349,96 @@ export default function NotificationsPage() {
         hoursBefore: hours
       }
     }));
+  }
+
+  // Email Recipient Management Functions
+  function handleAddEmailRecipient() {
+    const trimmedEmail = newEmailAddress.trim();
+    if (!trimmedEmail) {
+      setEmailError('Email address is required');
+      return;
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    const emailExists = salonNotifications.emailRecipients.some(
+      recipient => recipient.email.toLowerCase() === trimmedEmail.toLowerCase()
+    );
+
+    if (emailExists) {
+      setEmailError('This email address is already in the list');
+      return;
+    }
+
+    setSalonNotifications(prev => ({
+      ...prev,
+      emailRecipients: [...prev.emailRecipients, { email: trimmedEmail, enabled: true }]
+    }));
+
+    setNewEmailAddress('');
+    setEmailError('');
+    
+    // Save immediately
+    setTimeout(() => saveNotificationSettings(), 100);
+  }
+
+  function handleRemoveEmailRecipient(emailAddress: string) {
+    setSalonNotifications(prev => ({
+      ...prev,
+      emailRecipients: prev.emailRecipients.filter(recipient => recipient.email !== emailAddress)
+    }));
+    
+    // Save immediately
+    setTimeout(() => saveNotificationSettings(), 100);
+  }
+
+  function handleToggleEmailRecipient(emailAddress: string) {
+    setSalonNotifications(prev => ({
+      ...prev,
+      emailRecipients: prev.emailRecipients.map(recipient =>
+        recipient.email === emailAddress
+          ? { ...recipient, enabled: !recipient.enabled }
+          : recipient
+      )
+    }));
+    
+    // Save immediately
+    setTimeout(() => saveNotificationSettings(), 100);
+  }
+
+  async function handleTestEmail(emailAddress: string) {
+    setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'sending' }));
+    
+    try {
+      const response = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailAddress }),
+      });
+
+      const data = await response.json();
+      const success = response.ok && data.success;
+      
+      setTestEmailStatus(prev => ({ 
+        ...prev, 
+        [emailAddress]: success ? 'success' : 'error' 
+      }));
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'idle' }));
+      }, 3000);
+    } catch {
+      setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'error' }));
+      setTimeout(() => {
+        setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'idle' }));
+      }, 3000);
+    }
   }
 
   return (
@@ -452,6 +577,92 @@ export default function NotificationsPage() {
                         
                         <p className="text-xs text-gray-500 mt-2">
                           SMS message: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email Recipients Management */}
+                  {salonNotifications.email && (
+                    <div className="pl-4 border-l-2 border-accent-200 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Email Recipients</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Add email addresses that should receive email notifications for new booking requests.
+                        </p>
+                        
+                        {/* Current Recipients */}
+                        <div className="space-y-2 mb-4">
+                          {salonNotifications.emailRecipients.map((recipient, index) => (
+                            <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                              <div className="flex items-center">
+                                <EnvelopeIcon className="h-4 w-4 text-gray-500 mr-2" />
+                                <span className="text-sm text-gray-900">{recipient.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="relative inline-flex cursor-pointer items-center mr-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={recipient.enabled}
+                                    onChange={() => handleToggleEmailRecipient(recipient.email)}
+                                    className="peer sr-only"
+                                  />
+                                  <div className="peer h-5 w-10 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTestEmail(recipient.email)}
+                                  disabled={testEmailStatus[recipient.email] === 'sending'}
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                                >
+                                  {testEmailStatus[recipient.email] === 'sending' && 'Sending...'}
+                                  {testEmailStatus[recipient.email] === 'success' && '✓ Sent'}
+                                  {testEmailStatus[recipient.email] === 'error' && '✗ Failed'}
+                                  {testEmailStatus[recipient.email] === 'idle' && 'Test Email'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEmailRecipient(recipient.email)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add New Recipient */}
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="email"
+                              value={newEmailAddress}
+                              onChange={(e) => {
+                                setNewEmailAddress(e.target.value);
+                                if (emailError) setEmailError('');
+                              }}
+                              placeholder="Enter email address"
+                              className={`flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                                emailError ? 'border-red-300' : 'border-gray-300'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddEmailRecipient}
+                              disabled={!newEmailAddress.trim()}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <PlusIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {emailError && (
+                            <p className="text-sm text-red-600">{emailError}</p>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 mt-2">
+                          Email notification: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
                         </p>
                       </div>
                     </div>

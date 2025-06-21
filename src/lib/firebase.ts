@@ -16,6 +16,15 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+// Debug log to check environment variables in production
+if (typeof window !== 'undefined') {
+  console.log('Firebase Config Debug:', {
+    apiKey: firebaseConfig.apiKey ? 'LOADED' : 'MISSING',
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId ? 'LOADED' : 'MISSING',
+  });
+}
+
 // Check if all required config values are present
 const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
 const missingFields = requiredFields.filter(field => !firebaseConfig[field as keyof typeof firebaseConfig]);

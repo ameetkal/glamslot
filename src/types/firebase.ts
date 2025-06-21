@@ -78,6 +78,7 @@ export interface NotificationSettings {
   bookingConfirmation: boolean;
   bookingReminders: boolean;
   smsRecipients?: SmsRecipient[];
+  emailRecipients?: EmailRecipient[];
 }
 
 export interface BusinessHours {
@@ -126,5 +127,10 @@ export interface Invitation {
 
 export interface SmsRecipient {
   phone: string;
+  enabled: boolean;
+}
+
+export interface EmailRecipient {
+  email: string;
   enabled: boolean;
 } 
