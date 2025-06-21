@@ -109,7 +109,12 @@ export default function NotificationsPage() {
     if (!user || loading) return;
     
     try {
-      console.log('Saving notification settings:', salonNotifications);
+      console.log('Saving notification settings:', {
+        email: salonNotifications.email,
+        sms: salonNotifications.sms,
+        smsRecipients: salonNotifications.smsRecipients
+      });
+      
       await salonService.updateSalonSettings(user.uid, {
         notifications: {
           email: salonNotifications.email,
@@ -143,21 +148,38 @@ export default function NotificationsPage() {
         
         if (salon?.settings?.notifications) {
           const notifications = salon.settings.notifications;
+          console.log('Loaded notifications from database:', notifications);
+          
+          // Handle existing smsRecipients properly
+          let smsRecipients = notifications.smsRecipients || [];
+          
+          // If smsRecipients is empty but we have an owner phone, add it
+          if (smsRecipients.length === 0 && salon.ownerPhone) {
+            smsRecipients = [{ phone: salon.ownerPhone, enabled: true }];
+          }
+          
           setSalonNotifications({
             email: notifications.email ?? true,
             sms: notifications.sms ?? false,
-            smsRecipients: notifications.smsRecipients || [{ phone: salon.ownerPhone || '555-123-4567', enabled: true }]
+            smsRecipients: smsRecipients
           });
         } else if (salon?.ownerPhone) {
           // If no notification settings exist yet, initialize with salon phone
+          console.log('No notification settings found, initializing with owner phone:', salon.ownerPhone);
           setSalonNotifications({
             email: true,
             sms: false,
             smsRecipients: [{ phone: salon.ownerPhone, enabled: true }]
           });
+        } else {
+          // No salon data at all, use defaults
+          console.log('No salon data found, using defaults');
+          setSalonNotifications(initialSalonNotifications);
         }
       } catch (error) {
         console.error('Error loading notification settings:', error);
+        // Use defaults on error
+        setSalonNotifications(initialSalonNotifications);
       } finally {
         setLoading(false);
       }
