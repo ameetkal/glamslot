@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 import { PhoneIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { SmsService, formatPhoneNumber, isValidPhoneNumber } from '@/lib/smsService';
 
 interface SalonNotifications {
   email: boolean;
@@ -49,20 +48,31 @@ const initialClientNotifications: ClientNotifications = {
   },
 };
 
+// Client-side phone number validation functions
+function isValidPhoneNumber(phone: string): boolean {
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length === 10 || cleaned.length === 11;
+}
+
+function formatPhoneNumber(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  return phone;
+}
+
 export default function NotificationsPage() {
   const [salonNotifications, setSalonNotifications] = useState<SalonNotifications>(initialSalonNotifications);
   const [clientNotifications, setClientNotifications] = useState<ClientNotifications>(initialClientNotifications);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [testSmsStatus, setTestSmsStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'success' | 'error' }>({});
+  const [testSMSStatus, setTestSMSStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'success' | 'error' }>({});
 
   // Initialize SMS service with current settings
   React.useEffect(() => {
-    const smsService = SmsService.getInstance();
-    smsService.updateSalonSettings({
-      enabled: salonNotifications.sms,
-      recipients: salonNotifications.smsRecipients
-    });
+    // SMS settings are handled server-side via API calls
+    // No client-side SMS service initialization needed
   }, [salonNotifications.sms, salonNotifications.smsRecipients]);
 
   function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients'>) {
@@ -104,25 +114,33 @@ export default function NotificationsPage() {
   }
 
   async function handleTestSms(phoneNumber: string) {
-    setTestSmsStatus(prev => ({ ...prev, [phoneNumber]: 'sending' }));
+    setTestSMSStatus(prev => ({ ...prev, [phoneNumber]: 'sending' }));
     
     try {
-      const smsService = SmsService.getInstance();
-      const success = await smsService.sendTestSms(phoneNumber);
+      const response = await fetch('/api/sms/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      const data = await response.json();
+      const success = response.ok && data.success;
       
-      setTestSmsStatus(prev => ({ 
+      setTestSMSStatus(prev => ({ 
         ...prev, 
         [phoneNumber]: success ? 'success' : 'error' 
       }));
 
       // Reset status after 3 seconds
       setTimeout(() => {
-        setTestSmsStatus(prev => ({ ...prev, [phoneNumber]: 'idle' }));
+        setTestSMSStatus(prev => ({ ...prev, [phoneNumber]: 'idle' }));
       }, 3000);
     } catch {
-      setTestSmsStatus(prev => ({ ...prev, [phoneNumber]: 'error' }));
+      setTestSMSStatus(prev => ({ ...prev, [phoneNumber]: 'error' }));
       setTimeout(() => {
-        setTestSmsStatus(prev => ({ ...prev, [phoneNumber]: 'idle' }));
+        setTestSMSStatus(prev => ({ ...prev, [phoneNumber]: 'idle' }));
       }, 3000);
     }
   }
@@ -234,13 +252,13 @@ export default function NotificationsPage() {
                             <button
                               type="button"
                               onClick={() => handleTestSms(phone)}
-                              disabled={testSmsStatus[phone] === 'sending'}
+                              disabled={testSMSStatus[phone] === 'sending'}
                               className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
                             >
-                              {testSmsStatus[phone] === 'sending' && 'Sending...'}
-                              {testSmsStatus[phone] === 'success' && '✓ Sent'}
-                              {testSmsStatus[phone] === 'error' && '✗ Failed'}
-                              {testSmsStatus[phone] === 'idle' && 'Test SMS'}
+                              {testSMSStatus[phone] === 'sending' && 'Sending...'}
+                              {testSMSStatus[phone] === 'success' && '✓ Sent'}
+                              {testSMSStatus[phone] === 'error' && '✗ Failed'}
+                              {testSMSStatus[phone] === 'idle' && 'Test SMS'}
                             </button>
                             <button
                               type="button"

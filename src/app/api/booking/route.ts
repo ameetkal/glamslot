@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { bookingRequestService, salonService } from '@/lib/firebase/services'
-import { smsService } from '@/lib/smsService'
+import { smsService, formatPhoneNumber } from '@/lib/smsService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     // Send SMS notification to salon if phone number is configured
     if (salon.ownerPhone) {
       try {
-        const formattedPhone = smsService.formatPhoneNumber(salon.ownerPhone)
+        const formattedPhone = formatPhoneNumber(salon.ownerPhone)
         await smsService.sendBookingRequestNotification(
           formattedPhone,
           name,
