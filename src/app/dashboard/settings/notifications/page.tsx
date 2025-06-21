@@ -109,6 +109,7 @@ export default function NotificationsPage() {
     if (!user || loading) return;
     
     try {
+      console.log('Saving notification settings:', salonNotifications);
       await salonService.updateSalonSettings(user.uid, {
         notifications: {
           email: salonNotifications.email,
@@ -118,8 +119,11 @@ export default function NotificationsPage() {
           bookingReminders: true
         }
       });
+      console.log('Notification settings saved successfully');
     } catch (error) {
       console.error('Error saving notification settings:', error);
+      // Optionally show a user-friendly error message
+      alert('Failed to save notification settings. Please try again.');
     }
   };
 
@@ -191,8 +195,8 @@ export default function NotificationsPage() {
     setTestSMSStatus(prev => ({ ...prev, [formattedPhone]: 'idle' }));
     setNewPhoneNumber('');
     setPhoneError('');
-    // Auto-save after adding recipient
-    setTimeout(() => saveNotificationSettings(), 500);
+    // Save immediately instead of with delay
+    saveNotificationSettings();
   }
 
   function handleRemoveSmsRecipient(phoneNumber: string) {
@@ -200,8 +204,8 @@ export default function NotificationsPage() {
       ...prev,
       smsRecipients: prev.smsRecipients.filter(r => r.phone !== phoneNumber)
     }));
-    // Auto-save after removing recipient
-    setTimeout(() => saveNotificationSettings(), 500);
+    // Save immediately instead of with delay
+    saveNotificationSettings();
   }
 
   function handleToggleSmsRecipient(phoneNumber: string) {
@@ -211,8 +215,8 @@ export default function NotificationsPage() {
         r.phone === phoneNumber ? { ...r, enabled: !r.enabled } : r
       )
     }));
-    // Auto-save after toggling recipient
-    setTimeout(() => saveNotificationSettings(), 500);
+    // Save immediately instead of with delay
+    saveNotificationSettings();
   }
 
   async function handleTestSms(phoneNumber: string) {
