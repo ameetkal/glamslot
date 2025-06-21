@@ -241,7 +241,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Owner Phone *
+                    Salon Phone *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -255,7 +255,7 @@ export default function ProfilePage() {
                       value={formData.ownerPhone}
                       onChange={handleInputChange}
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-600 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
-                      placeholder="Enter phone number"
+                      placeholder="Enter salon phone number"
                     />
                   </div>
                 </div>
@@ -294,25 +294,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-
-            {/* SMS Notification Settings */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">SMS Notifications</h3>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <PhoneIcon className="h-5 w-5 text-blue-400 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-blue-900">Booking Request Alerts</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      You&apos;ll receive SMS notifications at {formData.ownerPhone || 'your phone number'} when new booking requests are submitted.
-                    </p>
-                    <p className="text-xs text-blue-600 mt-2">
-                      💡 Make sure your phone number above is correct to receive notifications.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Submit Button */}
             <div className="flex justify-end">

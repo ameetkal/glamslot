@@ -130,7 +130,7 @@ export default function SignupPage() {
             />
 
             <Input
-              label="Phone number"
+              label="Salon Phone"
               type="tel"
               autoComplete="tel"
               error={errors.phone?.message}

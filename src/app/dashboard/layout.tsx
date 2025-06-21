@@ -9,12 +9,11 @@ import {
   UserGroupIcon,
   WrenchScrewdriverIcon,
   BellIcon,
-  ChartBarIcon,
+  UserIcon,
+  ShieldCheckIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowRightOnRectangleIcon,
-  UserIcon,
-  ShieldCheckIcon
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -28,7 +27,6 @@ const settingsSubItems = [
   { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
   { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
   { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
-  { name: 'Analytics', href: '/dashboard/settings/analytics', icon: ChartBarIcon },
 ]
 
 const navigation = [

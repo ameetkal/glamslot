@@ -11,12 +11,17 @@ import {
   CalendarIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
+import { bookingRequestService } from '@/lib/firebase/services'
+import { BookingRequest } from '@/types/firebase'
+import { SessionTrackingService } from '@/lib/sessionTracking'
 
 interface DashboardStats {
   appointmentsCreated: number
   requestedNotFulfilled: number
   totalClients: number
   averageResponseTime: string
+  totalUniqueSessions: number
+  formCompletionRate: number
 }
 
 interface RecentActivity {
@@ -57,7 +62,9 @@ export default function DashboardPage() {
     appointmentsCreated: 0,
     requestedNotFulfilled: 0,
     totalClients: 0,
-    averageResponseTime: '0 hours'
+    averageResponseTime: '0 hours',
+    totalUniqueSessions: 0,
+    formCompletionRate: 0
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,43 +95,32 @@ export default function DashboardPage() {
           setSalonData(null)
         }
 
-        // Temporarily comment out booking requests to isolate salon data issue
-        /*
         // Fetch booking requests for this salon
-        const bookingRequestsQuery = query(
-          collection(db, 'bookingRequests'),
-          where('salonId', '==', user.uid),
-          limit(10)
-        )
-        const bookingRequestsSnapshot = await getDocs(bookingRequestsQuery)
-        
-        const requests = bookingRequestsSnapshot.docs.map(doc => doc.data())
-          .sort((a, b) => {
-            // Sort by createdAt in descending order (most recent first)
-            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
-            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
-            return dateB.getTime() - dateA.getTime()
-          })
+        const bookingRequests = await bookingRequestService.getBookingRequests(user.uid)
         
         // Calculate stats
-        const totalRequests = requests.length
-        const bookedRequests = requests.filter(req => req.status === 'booked').length
-        const notBookedRequests = requests.filter(req => req.status === 'not-booked').length
-        const pendingRequests = requests.filter(req => req.status === 'pending').length
+        const bookedRequests = bookingRequests.filter((req: BookingRequest) => req.status === 'booked').length
+        const notBookedRequests = bookingRequests.filter((req: BookingRequest) => req.status === 'not-booked').length
+        const pendingRequests = bookingRequests.filter((req: BookingRequest) => req.status === 'pending').length
         
         // Get unique clients
-        const uniqueClients = new Set(requests.map(req => req.clientEmail)).size
+        const uniqueClients = new Set(bookingRequests.map((req: BookingRequest) => req.clientEmail)).size
+        
+        const sessionTracking = SessionTrackingService.getInstance()
+        const sessionData = await sessionTracking.getAnalyticsData(user.uid)
         
         setDashboardStats({
           appointmentsCreated: bookedRequests,
           requestedNotFulfilled: notBookedRequests + pendingRequests,
           totalClients: uniqueClients,
-          averageResponseTime: '2.3 hours' // This would need more complex calculation
+          averageResponseTime: '2.3 hours',
+          totalUniqueSessions: sessionData.totalSessions,
+          formCompletionRate: sessionData.formCompletionRate
         })
 
         // Create recent activity from booking requests
-        const activity: RecentActivity[] = requests.slice(0, 4).map(req => ({
-          id: req.id || Math.random().toString(),
+        const activity: RecentActivity[] = bookingRequests.slice(0, 4).map((req: BookingRequest) => ({
+          id: req.id,
           type: req.status === 'booked' ? 'appointment_booked' : 
                 req.status === 'not-booked' ? 'appointment_not_booked' : 'booking_request',
           message: `Booking request from ${req.clientName}`,
@@ -133,16 +129,6 @@ export default function DashboardPage() {
         }))
 
         setRecentActivity(activity)
-        */
-        
-        // Set default stats for now
-        setDashboardStats({
-          appointmentsCreated: 0,
-          requestedNotFulfilled: 0,
-          totalClients: 0,
-          averageResponseTime: '0 hours'
-        })
-        setRecentActivity([])
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -373,6 +359,38 @@ export default function DashboardPage() {
                     <dd className="text-lg font-medium text-gray-900">
                       {dashboardStats.averageResponseTime}
                     </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-700 truncate">Unique Sessions</dt>
+                    <dd className="text-lg font-medium text-gray-900">{dashboardStats.totalUniqueSessions}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2M7 9l5-5 5 5M12 4v12" /></svg>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-700 truncate">Form Completion Rate</dt>
+                    <dd className="text-lg font-medium text-gray-900">{dashboardStats.formCompletionRate}%</dd>
                   </dl>
                 </div>
               </div>

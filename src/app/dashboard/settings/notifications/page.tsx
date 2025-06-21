@@ -1,11 +1,18 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth';
+import { salonService } from '@/lib/firebase/services';
 import { PhoneIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+interface SmsRecipient {
+  phone: string;
+  enabled: boolean;
+}
 
 interface SalonNotifications {
   email: boolean;
   sms: boolean;
-  smsRecipients: string[];
+  smsRecipients: SmsRecipient[];
 }
 
 interface ClientNotifications {
@@ -28,7 +35,9 @@ interface ClientNotifications {
 const initialSalonNotifications: SalonNotifications = {
   email: true,
   sms: false,
-  smsRecipients: ['555-123-4567'], // Default salon number
+  smsRecipients: [
+    { phone: '555-123-4567', enabled: true }
+  ],
 };
 
 const initialClientNotifications: ClientNotifications = {
@@ -62,67 +71,163 @@ function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
+// Format phone number to E.164 format for SMS (client-side)
+function formatPhoneForSMS(phone: string): string {
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // If it's 10 digits, add +1 prefix for US numbers
+  if (cleaned.length === 10) {
+    return `+1${cleaned}`;
+  }
+  
+  // If it's 11 digits and starts with 1, add + prefix
+  if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    return `+${cleaned}`;
+  }
+  
+  // If it already starts with +, return as is
+  if (phone.startsWith('+')) {
+    return phone;
+  }
+  
+  // Fallback: add +1 prefix
+  return `+1${cleaned}`;
+}
+
 export default function NotificationsPage() {
+  const { user } = useAuth();
   const [salonNotifications, setSalonNotifications] = useState<SalonNotifications>(initialSalonNotifications);
   const [clientNotifications, setClientNotifications] = useState<ClientNotifications>(initialClientNotifications);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [testSMSStatus, setTestSMSStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'success' | 'error' }>({});
+  const [loading, setLoading] = useState(true);
+
+  // Save notification settings to Firestore automatically
+  const saveNotificationSettings = async () => {
+    if (!user || loading) return;
+    
+    try {
+      await salonService.updateSalonSettings(user.uid, {
+        notifications: {
+          email: salonNotifications.email,
+          sms: salonNotifications.sms,
+          smsRecipients: salonNotifications.smsRecipients,
+          bookingConfirmation: true,
+          bookingReminders: true
+        }
+      });
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+    }
+  };
 
   // Initialize SMS service with current settings
-  React.useEffect(() => {
-    // SMS settings are handled server-side via API calls
-    // No client-side SMS service initialization needed
-  }, [salonNotifications.sms, salonNotifications.smsRecipients]);
+  useEffect(() => {
+    // This will be replaced with actual Firestore loading
+  }, []);
+
+  // Load existing notification settings from Firestore
+  useEffect(() => {
+    const loadNotificationSettings = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const salon = await salonService.getSalon(user.uid);
+        
+        if (salon?.settings?.notifications) {
+          const notifications = salon.settings.notifications;
+          setSalonNotifications({
+            email: notifications.email ?? true,
+            sms: notifications.sms ?? false,
+            smsRecipients: notifications.smsRecipients || [{ phone: salon.ownerPhone || '555-123-4567', enabled: true }]
+          });
+        } else if (salon?.ownerPhone) {
+          // If no notification settings exist yet, initialize with salon phone
+          setSalonNotifications({
+            email: true,
+            sms: false,
+            smsRecipients: [{ phone: salon.ownerPhone, enabled: true }]
+          });
+        }
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotificationSettings();
+  }, [user]);
 
   function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients'>) {
     setSalonNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+    // Auto-save after a short delay to avoid too many API calls
+    setTimeout(() => saveNotificationSettings(), 500);
   }
 
   function handleAddSmsRecipient() {
     const trimmedPhone = newPhoneNumber.trim();
-    
     if (!trimmedPhone) {
       setPhoneError('Phone number is required');
       return;
     }
-
     if (!isValidPhoneNumber(trimmedPhone)) {
       setPhoneError('Please enter a valid 10-digit phone number');
       return;
     }
-
-    if (salonNotifications.smsRecipients.includes(trimmedPhone)) {
+    if (salonNotifications.smsRecipients.some(r => r.phone === trimmedPhone)) {
       setPhoneError('This phone number is already added');
       return;
     }
-
     const formattedPhone = formatPhoneNumber(trimmedPhone);
     setSalonNotifications((prev) => ({
       ...prev,
-      smsRecipients: [...prev.smsRecipients, formattedPhone]
+      smsRecipients: [...prev.smsRecipients, { phone: formattedPhone, enabled: true }]
     }));
+    // Initialize test status for the new phone number
+    setTestSMSStatus(prev => ({ ...prev, [formattedPhone]: 'idle' }));
     setNewPhoneNumber('');
     setPhoneError('');
+    // Auto-save after adding recipient
+    setTimeout(() => saveNotificationSettings(), 500);
   }
 
   function handleRemoveSmsRecipient(phoneNumber: string) {
     setSalonNotifications((prev) => ({
       ...prev,
-      smsRecipients: prev.smsRecipients.filter(phone => phone !== phoneNumber)
+      smsRecipients: prev.smsRecipients.filter(r => r.phone !== phoneNumber)
     }));
+    // Auto-save after removing recipient
+    setTimeout(() => saveNotificationSettings(), 500);
+  }
+
+  function handleToggleSmsRecipient(phoneNumber: string) {
+    setSalonNotifications((prev) => ({
+      ...prev,
+      smsRecipients: prev.smsRecipients.map(r =>
+        r.phone === phoneNumber ? { ...r, enabled: !r.enabled } : r
+      )
+    }));
+    // Auto-save after toggling recipient
+    setTimeout(() => saveNotificationSettings(), 500);
   }
 
   async function handleTestSms(phoneNumber: string) {
     setTestSMSStatus(prev => ({ ...prev, [phoneNumber]: 'sending' }));
     
     try {
+      // Format phone number to E.164 format for SMS service
+      const formattedPhone = formatPhoneForSMS(phoneNumber);
+      
       const response = await fetch('/api/sms/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phoneNumber }),
+        body: JSON.stringify({ phoneNumber: formattedPhone }),
       });
 
       const data = await response.json();
@@ -187,257 +292,170 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notification Preferences</h1>
-      
-      <div className="space-y-8">
-        {/* Salon Notifications Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Salon Notifications</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Internal notifications for salon staff and management when new booking requests arrive.
-          </p>
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-gray-900">Email Notifications</div>
-                <div className="mt-1 text-sm text-gray-500">Receive internal notifications via email</div>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={salonNotifications.email}
-                  onChange={() => handleSalonToggle('email')}
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-              </label>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-gray-900">SMS Notifications</div>
-                  <div className="mt-1 text-sm text-gray-500">Receive instant text messages for new booking requests</div>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={salonNotifications.sms}
-                    onChange={() => handleSalonToggle('sms')}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                </label>
-              </div>
-
-              {/* SMS Recipients Management */}
-              {salonNotifications.sms && (
-                <div className="pl-4 border-l-2 border-accent-200 space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">SMS Recipients</h4>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Add phone numbers that should receive SMS notifications for new booking requests.
-                    </p>
-                    
-                    {/* Current Recipients */}
-                    <div className="space-y-2 mb-4">
-                      {salonNotifications.smsRecipients.map((phone, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                          <div className="flex items-center">
-                            <PhoneIcon className="h-4 w-4 text-gray-500 mr-2" />
-                            <span className="text-sm text-gray-900">{phone}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleTestSms(phone)}
-                              disabled={testSMSStatus[phone] === 'sending'}
-                              className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
-                            >
-                              {testSMSStatus[phone] === 'sending' && 'Sending...'}
-                              {testSMSStatus[phone] === 'success' && '✓ Sent'}
-                              {testSMSStatus[phone] === 'error' && '✗ Failed'}
-                              {testSMSStatus[phone] === 'idle' && 'Test SMS'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSmsRecipient(phone)}
-                              className="text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Add New Recipient */}
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <input
-                          type="tel"
-                          value={newPhoneNumber}
-                          onChange={(e) => {
-                            setNewPhoneNumber(e.target.value);
-                            if (phoneError) setPhoneError('');
-                          }}
-                          placeholder="Enter phone number (e.g., 555-123-4567)"
-                          className={`flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                            phoneError ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddSmsRecipient}
-                          disabled={!newPhoneNumber.trim()}
-                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-accent-600 hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <PlusIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {phoneError && (
-                        <p className="text-sm text-red-600">{phoneError}</p>
-                      )}
-                    </div>
-                    
-                    <p className="text-xs text-gray-500 mt-2">
-                      SMS message: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading notification settings...</p>
         </div>
-
-        {/* Client Notifications Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Client Notifications</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Notifications sent to clients about their booking requests and appointments.
-          </p>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
+          </div>
           
-          <div className="space-y-6">
-            {/* Booking Request Accepted */}
-            <div className="border-b border-gray-200 pb-4">
-              <h3 className="text-md font-medium text-gray-900 mb-3">When Booking Request is Accepted</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">Email</div>
-                    <div className="text-sm text-gray-500">Send confirmation email to client</div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={clientNotifications.bookingAccepted.email}
-                      onChange={() => handleClientBookingToggle('bookingAccepted', 'email')}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                  </label>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">SMS</div>
-                    <div className="text-sm text-gray-500">Send confirmation text message to client</div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={clientNotifications.bookingAccepted.sms}
-                      onChange={() => handleClientBookingToggle('bookingAccepted', 'sms')}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Booking Request Declined */}
-            <div className="border-b border-gray-200 pb-4">
-              <h3 className="text-md font-medium text-gray-900 mb-3">When Booking Request is Declined</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">Email</div>
-                    <div className="text-sm text-gray-500">Send decline notification email to client</div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={clientNotifications.bookingDeclined.email}
-                      onChange={() => handleClientBookingToggle('bookingDeclined', 'email')}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                  </label>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">SMS</div>
-                    <div className="text-sm text-gray-500">Send decline notification text message to client</div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={clientNotifications.bookingDeclined.sms}
-                      onChange={() => handleClientBookingToggle('bookingDeclined', 'sms')}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Appointment Reminders */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-md font-medium text-gray-900">Appointment Reminders</h3>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={clientNotifications.appointmentReminders.enabled}
-                    onChange={handleReminderEnabledToggle}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                </label>
-              </div>
+          <div className="space-y-8">
+            {/* Salon Notifications Section */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Salon Notifications</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Internal notifications for salon staff and management when new booking requests arrive.
+              </p>
               
-              {clientNotifications.appointmentReminders.enabled && (
-                <div className="space-y-4 pl-4 border-l-2 border-accent-200">
-                  <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-gray-700">Send reminder</label>
-                    <select
-                      value={clientNotifications.appointmentReminders.hoursBefore}
-                      onChange={(e) => handleHoursBeforeChange(Number(e.target.value))}
-                      className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                    >
-                      <option value={1}>1 hour before</option>
-                      <option value={2}>2 hours before</option>
-                      <option value={4}>4 hours before</option>
-                      <option value={6}>6 hours before</option>
-                      <option value={12}>12 hours before</option>
-                      <option value={24}>24 hours before</option>
-                      <option value={48}>48 hours before</option>
-                    </select>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">Email Notifications</div>
+                    <div className="mt-1 text-sm text-gray-500">Receive internal notifications via email</div>
                   </div>
-                  
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={salonNotifications.email}
+                      onChange={() => handleSalonToggle('email')}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                  </label>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900">SMS Notifications</div>
+                      <div className="mt-1 text-sm text-gray-500">Receive instant text messages for new booking requests</div>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={salonNotifications.sms}
+                        onChange={() => handleSalonToggle('sms')}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                    </label>
+                  </div>
+
+                  {/* SMS Recipients Management */}
+                  {salonNotifications.sms && (
+                    <div className="pl-4 border-l-2 border-accent-200 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">SMS Recipients</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Add phone numbers that should receive SMS notifications for new booking requests.
+                        </p>
+                        
+                        {/* Current Recipients */}
+                        <div className="space-y-2 mb-4">
+                          {salonNotifications.smsRecipients.map((recipient, index) => (
+                            <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                              <div className="flex items-center">
+                                <PhoneIcon className="h-4 w-4 text-gray-500 mr-2" />
+                                <span className="text-sm text-gray-900">{recipient.phone}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="relative inline-flex cursor-pointer items-center mr-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={recipient.enabled}
+                                    onChange={() => handleToggleSmsRecipient(recipient.phone)}
+                                    className="peer sr-only"
+                                  />
+                                  <div className="peer h-5 w-10 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTestSms(recipient.phone)}
+                                  disabled={testSMSStatus[recipient.phone] === 'sending'}
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                                >
+                                  {testSMSStatus[recipient.phone] === 'sending' && 'Sending...'}
+                                  {testSMSStatus[recipient.phone] === 'success' && '✓ Sent'}
+                                  {testSMSStatus[recipient.phone] === 'error' && '✗ Failed'}
+                                  {testSMSStatus[recipient.phone] === 'idle' && 'Test SMS'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSmsRecipient(recipient.phone)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add New Recipient */}
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="tel"
+                              value={newPhoneNumber}
+                              onChange={(e) => {
+                                setNewPhoneNumber(e.target.value);
+                                if (phoneError) setPhoneError('');
+                              }}
+                              placeholder="Enter phone number (e.g., 555-123-4567)"
+                              className={`flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                                phoneError ? 'border-red-300' : 'border-gray-300'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddSmsRecipient}
+                              disabled={!newPhoneNumber.trim()}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <PlusIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {phoneError && (
+                            <p className="text-sm text-red-600">{phoneError}</p>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 mt-2">
+                          SMS message: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Client Notifications Section */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Client Notifications</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Notifications sent to clients about their booking requests and appointments.
+              </p>
+              
+              <div className="space-y-6">
+                {/* Booking Request Accepted */}
+                <div className="border-b border-gray-200 pb-4">
+                  <h3 className="text-md font-medium text-gray-900 mb-3">When Booking Request is Accepted</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-gray-900">Email</div>
-                        <div className="text-sm text-gray-500">Send reminder email to client</div>
+                        <div className="text-sm text-gray-500">Send confirmation email to client</div>
                       </div>
                       <label className="relative inline-flex cursor-pointer items-center">
                         <input
                           type="checkbox"
-                          checked={clientNotifications.appointmentReminders.email}
-                          onChange={() => handleReminderToggle('email')}
+                          checked={clientNotifications.bookingAccepted.email}
+                          onChange={() => handleClientBookingToggle('bookingAccepted', 'email')}
                           className="peer sr-only"
                         />
                         <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
@@ -446,13 +464,13 @@ export default function NotificationsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-gray-900">SMS</div>
-                        <div className="text-sm text-gray-500">Send reminder text message to client</div>
+                        <div className="text-sm text-gray-500">Send confirmation text message to client</div>
                       </div>
                       <label className="relative inline-flex cursor-pointer items-center">
                         <input
                           type="checkbox"
-                          checked={clientNotifications.appointmentReminders.sms}
-                          onChange={() => handleReminderToggle('sms')}
+                          checked={clientNotifications.bookingAccepted.sms}
+                          onChange={() => handleClientBookingToggle('bookingAccepted', 'sms')}
                           className="peer sr-only"
                         />
                         <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
@@ -460,11 +478,118 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                 </div>
-              )}
+
+                {/* Booking Request Declined */}
+                <div className="border-b border-gray-200 pb-4">
+                  <h3 className="text-md font-medium text-gray-900 mb-3">When Booking Request is Declined</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">Email</div>
+                        <div className="text-sm text-gray-500">Send decline notification email to client</div>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={clientNotifications.bookingDeclined.email}
+                          onChange={() => handleClientBookingToggle('bookingDeclined', 'email')}
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">SMS</div>
+                        <div className="text-sm text-gray-500">Send decline notification text message to client</div>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={clientNotifications.bookingDeclined.sms}
+                          onChange={() => handleClientBookingToggle('bookingDeclined', 'sms')}
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appointment Reminders */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-md font-medium text-gray-900">Appointment Reminders</h3>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={clientNotifications.appointmentReminders.enabled}
+                        onChange={handleReminderEnabledToggle}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                    </label>
+                  </div>
+                  
+                  {clientNotifications.appointmentReminders.enabled && (
+                    <div className="space-y-4 pl-4 border-l-2 border-accent-200">
+                      <div className="flex items-center gap-4">
+                        <label className="text-sm font-medium text-gray-700">Send reminder</label>
+                        <select
+                          value={clientNotifications.appointmentReminders.hoursBefore}
+                          onChange={(e) => handleHoursBeforeChange(Number(e.target.value))}
+                          className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                        >
+                          <option value={1}>1 hour before</option>
+                          <option value={2}>2 hours before</option>
+                          <option value={4}>4 hours before</option>
+                          <option value={6}>6 hours before</option>
+                          <option value={12}>12 hours before</option>
+                          <option value={24}>24 hours before</option>
+                          <option value={48}>48 hours before</option>
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">Email</div>
+                            <div className="text-sm text-gray-500">Send reminder email to client</div>
+                          </div>
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={clientNotifications.appointmentReminders.email}
+                              onChange={() => handleReminderToggle('email')}
+                              className="peer sr-only"
+                            />
+                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                          </label>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">SMS</div>
+                            <div className="text-sm text-gray-500">Send reminder text message to client</div>
+                          </div>
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={clientNotifications.appointmentReminders.sms}
+                              onChange={() => handleReminderToggle('sms')}
+                              className="peer sr-only"
+                            />
+                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 } 

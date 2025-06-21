@@ -4,7 +4,7 @@ import { smsService } from '@/lib/smsService'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { to, message, type, salonPhone, clientName, service, salonName } = body
+    const { to, message, type, salonPhone } = body
 
     // Validate required fields
     if (!to || !message) {
@@ -25,12 +25,9 @@ export async function POST(request: NextRequest) {
     let success = false
 
     // Handle different types of notifications
-    if (type === 'booking_request' && salonPhone && clientName && service && salonName) {
+    if (type === 'booking_request' && salonPhone) {
       success = await smsService.sendBookingRequestNotification(
-        salonPhone,
-        clientName,
-        service,
-        salonName
+        salonPhone
       )
     } else {
       // Send general notification

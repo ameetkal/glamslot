@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send test message
-    const testMessage = '🧪 Test SMS from Last Minute App - SMS notifications are working!'
+    const testMessage = '🧪 Test SMS from Glammatic - SMS notifications are working!'
     
     const success = await smsService.sendNotification({
       to: phoneNumber,

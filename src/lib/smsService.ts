@@ -32,13 +32,10 @@ export class SMSService {
    * Send a booking request notification to salon
    */
   async sendBookingRequestNotification(
-    salonPhone: string,
-    clientName: string,
-    service: string,
-    salonName: string
+    salonPhone: string
   ): Promise<boolean> {
     try {
-      const message = `🔔 New booking request from ${clientName} for ${service} at ${salonName}. Check your dashboard to respond!`
+      const message = `🔔 New booking request! View now: booking.glammatic.com`
 
       await this.twilioClient.messages.create({
         body: message,
