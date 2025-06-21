@@ -28,7 +28,7 @@ if (missingFields.length > 0) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
+// Initialize Firebase services with error handling
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
@@ -50,5 +50,24 @@ export const analytics = typeof window !== 'undefined' ? (() => {
     return null;
   }
 })() : null;
+
+// Add error handling for Firebase services
+if (typeof window !== 'undefined') {
+  // Suppress Firebase installation errors in development/production
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    const message = args[0];
+    if (typeof message === 'string' && (
+      message.includes('Firebase Installations') ||
+      message.includes('measurementId') ||
+      message.includes('webConfig') ||
+      message.includes('installations')
+    )) {
+      console.warn('Firebase service warning (suppressed):', ...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+}
 
 export default app; 
