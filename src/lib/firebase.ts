@@ -33,10 +33,18 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Initialize Analytics only in browser environment
+// Initialize Analytics only in browser environment with better error handling
 export const analytics = typeof window !== 'undefined' ? (() => {
   try {
-    return getAnalytics(app);
+    // Only initialize analytics if measurementId is valid
+    if (firebaseConfig.measurementId && 
+        firebaseConfig.measurementId !== 'G-C6SHWDM5WQ' && 
+        firebaseConfig.measurementId.length > 0) {
+      return getAnalytics(app);
+    } else {
+      console.warn('Analytics not initialized: Invalid or missing measurementId');
+      return null;
+    }
   } catch (error) {
     console.warn('Analytics initialization failed:', error);
     return null;
