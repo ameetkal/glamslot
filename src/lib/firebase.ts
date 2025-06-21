@@ -34,6 +34,13 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // Initialize Analytics only in browser environment
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+export const analytics = typeof window !== 'undefined' ? (() => {
+  try {
+    return getAnalytics(app);
+  } catch (error) {
+    console.warn('Analytics initialization failed:', error);
+    return null;
+  }
+})() : null;
 
 export default app; 

@@ -35,7 +35,7 @@ export class SMSService {
     salonPhone: string
   ): Promise<boolean> {
     try {
-      const message = `🔔 New booking request! View now: booking.glammatic.com`
+      const message = `🔔 New booking request! View now: last-minute-app.vercel.app`
 
       await this.twilioClient.messages.create({
         body: message,
@@ -100,7 +100,7 @@ export const smsService = SMSService.getInstance()
 
 // Helper function to get the booking URL
 export function getBookingUrl(salonSlug: string): string {
-  return `https://booking.glammatic.com/${salonSlug}`;
+  return `https://last-minute-app.vercel.app/booking/${salonSlug}`;
 }
 
 // Helper function to format phone numbers
