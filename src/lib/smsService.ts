@@ -1,96 +1,108 @@
 // SMS Service for sending notifications
 // In a real implementation, this would integrate with services like Twilio, AWS SNS, etc.
 
-export interface SmsNotification {
-  to: string;
-  message: string;
+import twilio from 'twilio'
+
+export interface SMSNotification {
+  to: string
+  message: string
+  salonName?: string
 }
 
-export interface SalonSmsSettings {
-  enabled: boolean;
-  recipients: string[];
-}
+export class SMSService {
+  private static instance: SMSService
+  private twilioClient: twilio.Twilio
 
-export class SmsService {
-  private static instance: SmsService;
-  private salonSettings: SalonSmsSettings = {
-    enabled: false,
-    recipients: []
-  };
-
-  private constructor() {}
-
-  public static getInstance(): SmsService {
-    if (!SmsService.instance) {
-      SmsService.instance = new SmsService();
-    }
-    return SmsService.instance;
+  private constructor() {
+    this.twilioClient = twilio(
+      process.env.TWILIO_ACCOUNT_SID!,
+      process.env.TWILIO_AUTH_TOKEN!
+    )
   }
 
-  public updateSalonSettings(settings: SalonSmsSettings): void {
-    this.salonSettings = settings;
+  public static getInstance(): SMSService {
+    if (!SMSService.instance) {
+      SMSService.instance = new SMSService()
+    }
+    return SMSService.instance
   }
 
-  public async sendBookingRequestNotification(): Promise<void> {
-    if (!this.salonSettings.enabled || this.salonSettings.recipients.length === 0) {
-      console.log('SMS notifications disabled or no recipients configured');
-      return;
-    }
-
-    // Use the salon dashboard requests URL
-    const dashboardUrl = process.env.NEXT_PUBLIC_DASHBOARD_URL || 'https://last-minute-app.vercel.app/dashboard/requests';
-    const message = `New Booking Request: visit ${dashboardUrl} to view`;
-
-    const notifications: SmsNotification[] = this.salonSettings.recipients.map(recipient => ({
-      to: recipient,
-      message
-    }));
-
+  /**
+   * Send a booking request notification to salon
+   */
+  async sendBookingRequestNotification(
+    salonPhone: string,
+    clientName: string,
+    service: string,
+    salonName: string
+  ): Promise<boolean> {
     try {
-      // In a real implementation, this would make API calls to your SMS provider
-      await this.sendSmsBatch(notifications);
-      console.log(`SMS notifications sent to ${notifications.length} recipients`);
+      const message = `🔔 New booking request from ${clientName} for ${service} at ${salonName}. Check your dashboard to respond!`
+
+      await this.twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: salonPhone
+      })
+
+      console.log(`SMS notification sent to ${salonPhone} for booking request`)
+      return true
     } catch (error) {
-      console.error('Failed to send SMS notifications:', error);
-      // In production, you might want to log this to an error tracking service
+      console.error('Error sending SMS notification:', error)
+      return false
     }
   }
 
-  private async sendSmsBatch(notifications: SmsNotification[]): Promise<void> {
-    // Simulate SMS sending - replace with actual SMS provider integration
-    const promises = notifications.map(async (notification) => {
-      // Example with Twilio:
-      // const client = require('twilio')(accountSid, authToken);
-      // return client.messages.create({
-      //   body: notification.message,
-      //   from: '+1234567890',
-      //   to: notification.to
-      // });
-
-      // For now, just simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 100));
-      console.log(`SMS to ${notification.to}: ${notification.message}`);
-    });
-
-    await Promise.all(promises);
-  }
-
-  public async sendTestSms(phoneNumber: string): Promise<boolean> {
+  /**
+   * Send a general SMS notification
+   */
+  async sendNotification(notification: SMSNotification): Promise<boolean> {
     try {
-      const testMessage = 'Test SMS from Last Minute App - SMS notifications are working!';
-      await this.sendSmsBatch([{ to: phoneNumber, message: testMessage }]);
-      return true;
+      await this.twilioClient.messages.create({
+        body: notification.message,
+        from: process.env.TWILIO_PHONE_NUMBER!,
+        to: notification.to
+      })
+
+      console.log(`SMS notification sent to ${notification.to}`)
+      return true
     } catch (error) {
-      console.error('Test SMS failed:', error);
-      return false;
+      console.error('Error sending SMS notification:', error)
+      return false
     }
+  }
+
+  /**
+   * Validate phone number format
+   */
+  validatePhoneNumber(phoneNumber: string): boolean {
+    // Basic validation - should start with + and contain only digits
+    const phoneRegex = /^\+[1-9]\d{1,14}$/
+    return phoneRegex.test(phoneNumber)
+  }
+
+  /**
+   * Format phone number to E.164 format
+   */
+  formatPhoneNumber(phoneNumber: string): string {
+    // Remove all non-digit characters except +
+    let cleaned = phoneNumber.replace(/[^\d+]/g, '')
+    
+    // If it doesn't start with +, add +1 for US numbers
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+1' + cleaned
+    }
+    
+    return cleaned
   }
 }
+
+// Export singleton instance
+export const smsService = SMSService.getInstance()
 
 // Helper function to get the booking URL
 export function getBookingUrl(salonSlug: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://last-minute-app.vercel.app';
-  return `${baseUrl}/booking/${salonSlug}`;
+  return `https://booking.glammatic.com/${salonSlug}`;
 }
 
 // Helper function to format phone numbers

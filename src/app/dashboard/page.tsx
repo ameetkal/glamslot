@@ -175,8 +175,7 @@ export default function DashboardPage() {
   }
 
   const copyBookingUrl = () => {
-    const currentDomain = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const bookingUrl = `${currentDomain}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`
+    const bookingUrl = salonData?.bookingUrl || `https://booking.glammatic.com/${salonData?.slug}`
     if (bookingUrl) {
       navigator.clipboard.writeText(bookingUrl).then(() => {
         setCopied(true)
@@ -189,14 +188,11 @@ export default function DashboardPage() {
     if (!user) return
     
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-
       const salonData = {
         id: user.uid,
         name: user.displayName || user.email?.split('@')[0] || 'My Salon',
         slug: (user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-'),
-        bookingUrl: `${appUrl}/booking/${(user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')}`,
+        bookingUrl: `https://booking.glammatic.com/${(user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')}`,
         ownerName: user.displayName || 'Salon Owner',
         ownerEmail: user.email || '',
         businessType: 'salon',
@@ -283,7 +279,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <input
                   readOnly
-                  value={`${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/booking/${salonData?.name?.toLowerCase().replace(/\s+/g, '-')}`}
+                  value={salonData?.bookingUrl || `https://booking.glammatic.com/${salonData?.slug}`}
                   className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
                 />
                 <button

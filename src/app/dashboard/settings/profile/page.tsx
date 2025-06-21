@@ -295,6 +295,25 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {/* SMS Notification Settings */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">SMS Notifications</h3>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <PhoneIcon className="h-5 w-5 text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-blue-900">Booking Request Alerts</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      You&apos;ll receive SMS notifications at {formData.ownerPhone || 'your phone number'} when new booking requests are submitted.
+                    </p>
+                    <p className="text-xs text-blue-600 mt-2">
+                      💡 Make sure your phone number above is correct to receive notifications.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Submit Button */}
             <div className="flex justify-end">
               <button

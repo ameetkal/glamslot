@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { bookingRequestService, salonService } from '@/lib/firebase/services'
-import { SmsService } from '@/lib/smsService'
+import { smsService } from '@/lib/smsService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,13 +52,23 @@ export async function POST(request: NextRequest) {
 
     const requestId = await bookingRequestService.createBookingRequest(bookingRequest)
 
-    // Send SMS notification to salon
-    try {
-      const smsService = SmsService.getInstance()
-      await smsService.sendBookingRequestNotification()
-    } catch (smsError) {
-      console.error('Failed to send SMS notification:', smsError)
-      // Don't fail the booking request if SMS fails
+    // Send SMS notification to salon if phone number is configured
+    if (salon.ownerPhone) {
+      try {
+        const formattedPhone = smsService.formatPhoneNumber(salon.ownerPhone)
+        await smsService.sendBookingRequestNotification(
+          formattedPhone,
+          name,
+          service,
+          salon.name
+        )
+        console.log(`SMS notification sent to salon ${salon.name} for booking request`)
+      } catch (smsError) {
+        console.error('Failed to send SMS notification:', smsError)
+        // Don't fail the booking request if SMS fails
+      }
+    } else {
+      console.log(`No phone number configured for salon ${salon.name}, skipping SMS notification`)
     }
 
     // TODO: Send email notification if configured

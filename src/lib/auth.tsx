@@ -57,10 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      // Get app URL from environment or use fallback
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-
       // Create a clean slug from business name
       const businessSlug = userData.businessName
         .toLowerCase()
@@ -74,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: user.uid,
         name: userData.businessName,
         slug: businessSlug,
-        bookingUrl: `${appUrl}/booking/${businessSlug}`,
+        bookingUrl: `https://booking.glammatic.com/${businessSlug}`,
         ownerName: userData.name,
         ownerEmail: email,
         ownerPhone: userData.phone,
