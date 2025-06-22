@@ -310,8 +310,16 @@ export const salonService = {
   // Update salon settings
   async updateSalonSettings(id: string, settings: Partial<Salon['settings']>): Promise<void> {
     const docRef = doc(db, 'salons', id);
+    
+    // Get current salon data to merge settings
+    const currentSalon = await this.getSalon(id);
+    const currentSettings = currentSalon?.settings || {};
+    
     await updateDoc(docRef, {
-      settings: settings,
+      settings: {
+        ...currentSettings,
+        ...settings
+      },
       updatedAt: serverTimestamp()
     });
   },

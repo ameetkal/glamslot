@@ -65,6 +65,14 @@ export async function POST(request: NextRequest) {
     const enabledSmsRecipients = Array.isArray(smsRecipients)
       ? smsRecipients.filter(r => r.enabled)
       : [];
+    
+    console.log('SMS notification check:', {
+      smsEnabled: salon.settings?.notifications?.sms,
+      totalRecipients: smsRecipients.length,
+      enabledRecipients: enabledSmsRecipients.length,
+      recipients: enabledSmsRecipients
+    });
+    
     if (enabledSmsRecipients.length > 0) {
       for (const recipient of enabledSmsRecipients) {
         try {
@@ -85,6 +93,13 @@ export async function POST(request: NextRequest) {
     const enabledEmailRecipients = Array.isArray(emailRecipients)
       ? emailRecipients.filter(r => r.enabled)
       : [];
+    
+    console.log('Email notification check:', {
+      emailEnabled: salon.settings?.notifications?.email,
+      totalRecipients: emailRecipients.length,
+      enabledRecipients: enabledEmailRecipients.length,
+      recipients: enabledEmailRecipients
+    });
     
     if (enabledEmailRecipients.length > 0) {
       const bookingUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'https://last-minute-app.vercel.app'}/dashboard/requests`;

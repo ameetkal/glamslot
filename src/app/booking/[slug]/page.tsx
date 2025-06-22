@@ -281,9 +281,15 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
 
   // Helper function to get provider name
   const getProviderName = () => {
-    if (selectedProvider === 'any') return 'Any stylist'
-    if (selectedProvider === OTHER_PROVIDER_ID) return otherProvider
-    return providers.find(p => p.id === selectedProvider)?.name || otherProvider
+    if (selectedProvider === 'any') {
+      // If no provider options and user entered text, return that text
+      if (providerOptions.length === 0 && otherProvider.trim()) {
+        return otherProvider.trim()
+      }
+      return 'Any stylist'
+    }
+    if (selectedProvider === OTHER_PROVIDER_ID) return otherProvider.trim()
+    return providers.find(p => p.id === selectedProvider)?.name || otherProvider.trim()
   }
 
   const formatDuration = (minutes: number) => {
@@ -464,7 +470,15 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                   className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                   placeholder="Enter stylist preference (optional)"
                   value={otherProvider}
-                  onChange={e => setOtherProvider(e.target.value)}
+                  onChange={e => {
+                    setOtherProvider(e.target.value)
+                    // If user enters text, set selectedProvider to OTHER_PROVIDER_ID
+                    if (e.target.value.trim()) {
+                      setSelectedProvider(OTHER_PROVIDER_ID)
+                    } else {
+                      setSelectedProvider('any')
+                    }
+                  }}
                 />
               ) : (
                 <>

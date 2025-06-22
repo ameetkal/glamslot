@@ -267,36 +267,107 @@ export default function NotificationsPage() {
       return;
     }
     const formattedPhone = formatPhoneNumber(trimmedPhone);
-    setSalonNotifications((prev) => ({
-      ...prev,
-      smsRecipients: [...prev.smsRecipients, { phone: formattedPhone, enabled: true }]
-    }));
+    
+    setSalonNotifications((prev) => {
+      const updatedState = {
+        ...prev,
+        smsRecipients: [...prev.smsRecipients, { phone: formattedPhone, enabled: true }]
+      };
+      
+      // Save the updated state directly
+      setTimeout(() => {
+        if (user && !loading) {
+          salonService.updateSalonSettings(user.uid, {
+            notifications: {
+              email: updatedState.email,
+              sms: updatedState.sms,
+              smsRecipients: updatedState.smsRecipients,
+              emailRecipients: updatedState.emailRecipients,
+              bookingConfirmation: true,
+              bookingReminders: true
+            }
+          }).then(() => {
+            console.log('SMS recipient added and saved successfully');
+          }).catch((error) => {
+            console.error('Error saving SMS recipient:', error);
+            alert('Failed to save SMS recipient. Please try again.');
+          });
+        }
+      }, 100);
+      
+      return updatedState;
+    });
+    
     // Initialize test status for the new phone number
     setTestSMSStatus(prev => ({ ...prev, [formattedPhone]: 'idle' }));
     setNewPhoneNumber('');
     setPhoneError('');
-    // Save immediately instead of with delay
-    saveNotificationSettings();
   }
 
   function handleRemoveSmsRecipient(phoneNumber: string) {
-    setSalonNotifications((prev) => ({
-      ...prev,
-      smsRecipients: prev.smsRecipients.filter(r => r.phone !== phoneNumber)
-    }));
-    // Save immediately instead of with delay
-    saveNotificationSettings();
+    setSalonNotifications((prev) => {
+      const updatedState = {
+        ...prev,
+        smsRecipients: prev.smsRecipients.filter(r => r.phone !== phoneNumber)
+      };
+      
+      // Save the updated state directly
+      setTimeout(() => {
+        if (user && !loading) {
+          salonService.updateSalonSettings(user.uid, {
+            notifications: {
+              email: updatedState.email,
+              sms: updatedState.sms,
+              smsRecipients: updatedState.smsRecipients,
+              emailRecipients: updatedState.emailRecipients,
+              bookingConfirmation: true,
+              bookingReminders: true
+            }
+          }).then(() => {
+            console.log('SMS recipient removed and saved successfully');
+          }).catch((error) => {
+            console.error('Error removing SMS recipient:', error);
+            alert('Failed to remove SMS recipient. Please try again.');
+          });
+        }
+      }, 100);
+      
+      return updatedState;
+    });
   }
 
   function handleToggleSmsRecipient(phoneNumber: string) {
-    setSalonNotifications((prev) => ({
-      ...prev,
-      smsRecipients: prev.smsRecipients.map(r =>
-        r.phone === phoneNumber ? { ...r, enabled: !r.enabled } : r
-      )
-    }));
-    // Save immediately instead of with delay
-    saveNotificationSettings();
+    setSalonNotifications((prev) => {
+      const updatedState = {
+        ...prev,
+        smsRecipients: prev.smsRecipients.map(r =>
+          r.phone === phoneNumber ? { ...r, enabled: !r.enabled } : r
+        )
+      };
+      
+      // Save the updated state directly
+      setTimeout(() => {
+        if (user && !loading) {
+          salonService.updateSalonSettings(user.uid, {
+            notifications: {
+              email: updatedState.email,
+              sms: updatedState.sms,
+              smsRecipients: updatedState.smsRecipients,
+              emailRecipients: updatedState.emailRecipients,
+              bookingConfirmation: true,
+              bookingReminders: true
+            }
+          }).then(() => {
+            console.log('SMS recipient toggled and saved successfully');
+          }).catch((error) => {
+            console.error('Error toggling SMS recipient:', error);
+            alert('Failed to toggle SMS recipient. Please try again.');
+          });
+        }
+      }, 100);
+      
+      return updatedState;
+    });
   }
 
   async function handleTestSms(phoneNumber: string) {
@@ -484,8 +555,8 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
           </div>
-          
-          <div className="space-y-8">
+
+          <div className="max-w-4xl mx-auto space-y-6">
             {/* Salon Notifications Section */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Salon Notifications</h2>
