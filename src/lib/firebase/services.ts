@@ -9,8 +9,7 @@ import {
   query, 
   where, 
   writeBatch,
-  serverTimestamp,
-  Timestamp
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation } from '@/types/firebase';

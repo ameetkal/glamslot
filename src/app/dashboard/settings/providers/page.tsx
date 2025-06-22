@@ -5,13 +5,6 @@ import { providerService, serviceService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService } from '@/types/firebase';
 import Modal from '@/components/ui/Modal';
 import DraggableList from '@/components/ui/DraggableList';
-import { PlusIcon, TrashIcon, PencilIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-
-interface ProviderAvailabilityDay {
-  start: string;
-  end: string;
-  isAvailable: boolean;
-}
 
 export default function ProvidersPage() {
   const { user } = useAuth();
@@ -20,11 +13,9 @@ export default function ProvidersPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Provider | null>(null);
-  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [isReordering, setIsReordering] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -41,7 +32,7 @@ export default function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
