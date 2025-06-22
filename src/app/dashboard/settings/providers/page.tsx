@@ -5,22 +5,13 @@ import { providerService, serviceService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService } from '@/types/firebase';
 import Modal from '@/components/ui/Modal';
 import DraggableList from '@/components/ui/DraggableList';
+import { PlusIcon, TrashIcon, PencilIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 interface ProviderAvailabilityDay {
   start: string;
   end: string;
   isAvailable: boolean;
 }
-
-const defaultAvailability: Record<string, ProviderAvailabilityDay> = {
-  monday: { start: '09:00', end: '17:00', isAvailable: false },
-  tuesday: { start: '09:00', end: '17:00', isAvailable: false },
-  wednesday: { start: '09:00', end: '17:00', isAvailable: false },
-  thursday: { start: '09:00', end: '17:00', isAvailable: false },
-  friday: { start: '09:00', end: '17:00', isAvailable: false },
-  saturday: { start: '10:00', end: '15:00', isAvailable: false },
-  sunday: { start: '10:00', end: '15:00', isAvailable: false },
-};
 
 export default function ProvidersPage() {
   const { user } = useAuth();
@@ -33,7 +24,7 @@ export default function ProvidersPage() {
   const [error, setError] = useState('');
   const [isReordering, setIsReordering] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     if (!user) return;
     
     try {
@@ -50,7 +41,7 @@ export default function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     if (user) {
@@ -164,7 +155,6 @@ export default function ProvidersPage() {
 
   const handleReorder = async (newProviders: Provider[]) => {
     setProviders(newProviders);
-    setIsReordering(true);
     
     try {
       // Update the order in the database
@@ -179,19 +169,8 @@ export default function ProvidersPage() {
       setError('Failed to save new order');
       // Revert to original order
       fetchData();
-    } finally {
-      setIsReordering(false);
     }
   };
-
-  function toggleProviderExpansion(providerId: string) {
-    setExpandedProvider(expandedProvider === providerId ? null : providerId);
-  }
-
-  function getServiceName(serviceId: string): string {
-    const service = services.find(s => s.id === serviceId);
-    return service?.name || 'Unknown Service';
-  }
 
   function updateProviderService(providerId: string, serviceId: string, updates: Partial<ProviderService>) {
     setEditing(prev => {
@@ -234,15 +213,6 @@ export default function ProvidersPage() {
       };
     });
   }
-
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins > 0 ? `${mins}m` : ''}`.trim();
-    }
-    return `${mins}m`;
-  };
 
   const renderProviderItem = (provider: Provider) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -305,12 +275,6 @@ export default function ProvidersPage() {
         </div>
       )}
 
-      {isReordering && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-sm text-blue-600">Saving new order...</p>
-        </div>
-      )}
-      
       {providers.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <p className="text-gray-500">No providers found. Add your first provider to get started.</p>

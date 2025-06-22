@@ -7,14 +7,7 @@ import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-const OTHER_SERVICE_ID = 'other'
 const OTHER_PROVIDER_ID = 'other'
-
-function getProvidersForService(providers: Provider[], serviceId: string): Provider[] {
-  return providers.filter((provider) => 
-    provider.services.some((ps) => ps.serviceId === serviceId)
-  )
-}
 
 function getMapping(provider: Provider, serviceId: string): ProviderService | undefined {
   return provider.services.find((ps) => ps.serviceId === serviceId)

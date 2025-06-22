@@ -8,9 +8,9 @@ import {
   deleteDoc, 
   query, 
   where, 
-  orderBy,
+  writeBatch,
   serverTimestamp,
-  writeBatch
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation } from '@/types/firebase';
