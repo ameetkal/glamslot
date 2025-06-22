@@ -105,8 +105,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   </span>
                 </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900 truncate">
+              <div className="ml-3 min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate" title={user?.email || ''}>
                   {user?.email}
                 </p>
                 <p className="text-xs text-gray-500">Salon Owner</p>

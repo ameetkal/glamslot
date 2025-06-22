@@ -41,12 +41,12 @@ function validatePhone(phone: string): string | undefined {
   return undefined
 }
 
-function validateService(selectedService: string | null, otherService: string, services: Service[]): string | undefined {
+function validateService(selectedServices: string[], otherService: string, isOtherSelected: boolean, services: Service[]): string | undefined {
   if (services.length === 0) {
-    if (!otherService.trim()) return 'Please describe the service you want'
+    if (!otherService.trim()) return 'Please describe the service(s) you want'
   } else {
-    if (!selectedService) return 'Please select a service'
-    if (selectedService === OTHER_SERVICE_ID && !otherService.trim()) return 'Please describe the service you want'
+    if (selectedServices.length === 0 && !otherService.trim()) return 'Please select at least one service or describe what you want'
+    if (isOtherSelected && !otherService.trim()) return 'Please describe the service you want'
   }
   return undefined
 }
@@ -54,8 +54,9 @@ function validateService(selectedService: string | null, otherService: string, s
 export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [step, setStep] = useState<Step>(1)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [otherService, setOtherService] = useState('')
+  const [isOtherSelected, setIsOtherSelected] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<'any' | string>('any')
   const [otherProvider, setOtherProvider] = useState('')
   const [form, setForm] = useState({
@@ -127,17 +128,21 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     fetchData()
   }, [slug])
 
-  // Providers for the selected service
-  const providerOptions = selectedService && selectedService !== OTHER_SERVICE_ID 
-    ? getProvidersForService(providers, selectedService) 
+  // Providers for the selected services
+  const providerOptions = selectedServices.length > 0 
+    ? providers.filter(provider => 
+        selectedServices.some(serviceId => 
+          provider.services.some(ps => ps.serviceId === serviceId)
+        )
+      )
     : providers
 
   // Mapping for selected provider/service
   const selectedProviderData = selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID
     ? providers.find(p => p.id === selectedProvider)
     : null
-  const mapping = selectedService && selectedService !== OTHER_SERVICE_ID && selectedProviderData
-    ? getMapping(selectedProviderData, selectedService)
+  const mapping = selectedServices.length > 0 && selectedProviderData
+    ? getMapping(selectedProviderData, selectedServices[0])
     : null
 
   function handleNext() {
@@ -181,27 +186,30 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       setStep(4)
     }
     else if (step === 4) {
-      // Validate name
-      if (!validateCurrentStep()) {
-        return // Don't proceed if validation fails
-      }
+      // Notes step - no validation needed
       setStep(5)
     }
     else if (step === 5) {
-      // Validate email
+      // Validate name
       if (!validateCurrentStep()) {
         return // Don't proceed if validation fails
       }
       setStep(6)
     }
     else if (step === 6) {
-      // Validate phone
+      // Validate email
       if (!validateCurrentStep()) {
         return // Don't proceed if validation fails
       }
       setStep(7)
     }
-    else if (step === 7) setStep(8)
+    else if (step === 7) {
+      // Validate phone
+      if (!validateCurrentStep()) {
+        return // Don't proceed if validation fails
+      }
+      setStep(8)
+    }
     else if (step === 8) setStep(9)
   }
   function handleBack() {
@@ -266,8 +274,16 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
 
   // Helper function to get service name
   const getServiceName = () => {
-    if (selectedService === OTHER_SERVICE_ID || !selectedService) return otherService
-    return services.find(s => s.id === selectedService)?.name || otherService
+    const selectedServiceNames = services
+      .filter(s => selectedServices.includes(s.id))
+      .map(s => s.name)
+    
+    const allServices = [...selectedServiceNames]
+    if (otherService.trim()) {
+      allServices.push(otherService.trim())
+    }
+    
+    return allServices.length > 0 ? allServices.join(', ') : 'No service selected'
   }
 
   // Helper function to get provider name
@@ -291,15 +307,15 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     const errors: typeof validationErrors = {}
     
     if (step === 1) {
-      const serviceError = validateService(selectedService, otherService, services)
+      const serviceError = validateService(selectedServices, otherService, isOtherSelected, services)
       if (serviceError) errors.service = serviceError
-    } else if (step === 4) {
+    } else if (step === 5) {
       const nameError = validateName(form.name)
       if (nameError) errors.name = nameError
-    } else if (step === 5) {
+    } else if (step === 6) {
       const emailError = validateEmail(form.email)
       if (emailError) errors.email = emailError
-    } else if (step === 6) {
+    } else if (step === 7) {
       const phoneError = validatePhone(form.phone)
       if (phoneError) errors.phone = phoneError
     }
@@ -358,7 +374,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
           <>
             <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Request an Appointment</h2>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Service</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">What service(s) would you like?</label>
               {services.length === 0 ? (
                 <input
                   type="text"
@@ -366,7 +382,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                   className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500 ${
                     showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Please describe the service you want"
+                  placeholder="Please describe the service(s) you want"
                   value={otherService}
                   onChange={e => setOtherService(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -374,35 +390,55 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 />
               ) : (
                 <>
-                  <select
-                    className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
-                    }`}
-                    value={selectedService ?? ''}
-                    onChange={e => {
-                      const val = e.target.value
-                      setSelectedService(val)
-                      setSelectedProvider('any')
-                      if (val !== OTHER_SERVICE_ID) setOtherService('')
-                    }}
-                    required
-                  >
-                    <option value="" disabled className="text-gray-500 bg-white">Select a service</option>
+                  <div className="space-y-3">
                     {services.map((service) => (
-                      <option key={service.id} value={service.id} className="text-gray-900 bg-white">{service.name}</option>
+                      <label key={service.id} className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedServices.includes(service.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedServices([...selectedServices, service.id])
+                            } else {
+                              setSelectedServices(selectedServices.filter(id => id !== service.id))
+                            }
+                            setSelectedProvider('any')
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm text-gray-900">{service.name}</span>
+                      </label>
                     ))}
-                    <option value={OTHER_SERVICE_ID} className="text-gray-900 bg-white">Other (please specify)</option>
-                  </select>
-                  {selectedService === OTHER_SERVICE_ID && (
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isOtherSelected}
+                        onChange={(e) => {
+                          setIsOtherSelected(e.target.checked)
+                          if (!e.target.checked) {
+                            setOtherService('')
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-900">Other (please specify)</span>
+                    </label>
+                  </div>
+                  {isOtherSelected && (
                     <input
                       type="text"
                       autoFocus
                       className={`mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500 ${
                         showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="Please describe the service you want"
+                      placeholder="Please describe the service(s) you want"
                       value={otherService}
-                      onChange={e => setOtherService(e.target.value)}
+                      onChange={e => {
+                        setOtherService(e.target.value)
+                        if (e.target.value.trim() !== '' && !isOtherSelected) {
+                          setIsOtherSelected(true)
+                        }
+                      }}
                       onKeyPress={handleKeyPress}
                       required
                     />
@@ -468,9 +504,9 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 </>
               )}
             </div>
-            {selectedService && selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID && mapping && (
+            {selectedServices.length > 0 && selectedProvider !== 'any' && selectedProvider !== OTHER_PROVIDER_ID && mapping && (
               <div className="rounded bg-gray-50 p-3 text-sm text-gray-700 mt-2">
-                <div>Service: <span className="font-medium">{services.find(s => s.id === selectedService)?.name}</span></div>
+                <div>Service: <span className="font-medium">{getServiceName()}</span></div>
                 <div>Estimated Duration: <span className="font-medium">{formatDuration(mapping.duration)}</span></div>
               </div>
             )}
@@ -514,8 +550,32 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 4: Name */}
+        {/* Step 4: Notes */}
         {step === 4 && (
+          <>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Any additional notes or preferences?</label>
+              <p className="text-sm text-gray-600 mb-3">
+                Feel free to share any special requests, allergies, previous experiences, or other information that might help us better serve you.
+              </p>
+              <textarea
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                placeholder="e.g., &apos;I have sensitive skin&apos;, &apos;This is for a special occasion&apos;, &apos;I prefer natural products&apos;, &apos;I&apos;m a returning client&apos;, etc."
+              />
+            </div>
+            <div className="flex justify-between gap-2 mt-4">
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
+                Next
+              </button>
+            </div>
+          </>
+        )}
+        {/* Step 5: Name */}
+        {step === 5 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your name?</h2>
             <div>
@@ -544,8 +604,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 5: Email */}
-        {step === 5 && (
+        {/* Step 6: Email */}
+        {step === 6 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your email?</h2>
             <div>
@@ -574,8 +634,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 6: Phone */}
-        {step === 6 && (
+        {/* Step 7: Phone */}
+        {step === 7 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your phone number?</h2>
             <div>
@@ -597,30 +657,6 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               )}
             </div>
             <div className="flex justify-between gap-2 mt-6">
-              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
-              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
-                Next
-              </button>
-            </div>
-          </>
-        )}
-        {/* Step 7: Notes */}
-        {step === 7 && (
-          <>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h2>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Any additional notes or preferences?</label>
-              <p className="text-sm text-gray-600 mb-3">
-                Feel free to share any special requests, allergies, previous experiences, or other information that might help us better serve you.
-              </p>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
-                value={form.notes}
-                onChange={e => setForm({ ...form, notes: e.target.value })}
-                placeholder="e.g., &apos;I have sensitive skin&apos;, &apos;This is for a special occasion&apos;, &apos;I prefer natural products&apos;, &apos;I&apos;m a returning client&apos;, etc."
-              />
-            </div>
-            <div className="flex justify-between gap-2 mt-4">
               <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
               <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
                 Next

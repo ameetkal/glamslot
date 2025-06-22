@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/lib/auth'
@@ -58,7 +58,7 @@ export default function BookingRequestsPage() {
       })
       
       // Update the local state
-      setRequests(requests.map(request => 
+      setRequests(requests.map((request: BookingRequest) => 
         request.id === requestId 
           ? { ...request, status: action }
           : request
@@ -66,7 +66,7 @@ export default function BookingRequestsPage() {
 
       // If there was a selected request, update it
       if (selectedRequest?.id === requestId) {
-        setSelectedRequest(prev => prev ? {
+        setSelectedRequest((prev: BookingRequest | null) => prev ? {
           ...prev,
           status: action
         } : null)
@@ -103,14 +103,14 @@ export default function BookingRequestsPage() {
       })
       
       // Update the local state
-      setRequests(requests.map(request => 
+      setRequests(requests.map((request: BookingRequest) => 
         request.id === selectedRequest.id 
           ? { ...request, status: 'not-booked', notes: `${request.notes || ''}\n\nNot Booked Reason: ${notBookedReason}` }
           : request
       ))
 
       // Update selected request
-      setSelectedRequest(prev => prev ? {
+      setSelectedRequest((prev: BookingRequest | null) => prev ? {
         ...prev,
         status: 'not-booked',
         notes: `${prev.notes || ''}\n\nNot Booked Reason: ${notBookedReason}`
@@ -206,7 +206,7 @@ export default function BookingRequestsPage() {
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Requests List */}
             <div className="space-y-4">
-              {requests.map((request) => (
+              {requests.map((request: BookingRequest) => (
                 <motion.div
                   key={request.id}
                   onClick={() => setSelectedRequest(request)}
@@ -425,7 +425,7 @@ export default function BookingRequestsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Why wasn&apos;t this booked?</h3>
               <textarea
                 value={notBookedReason}
-                onChange={(e) => setNotBookedReason(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotBookedReason(e.target.value)}
                 placeholder="Enter the reason why this appointment wasn't booked..."
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                 rows={4}

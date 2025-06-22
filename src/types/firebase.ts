@@ -8,6 +8,7 @@ export interface Provider {
   salonId: string;
   availability: Record<string, ProviderAvailabilityDay>;
   services: ProviderService[];
+  order?: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -25,6 +26,7 @@ export interface Service {
   defaultDuration?: number;
   requiresConsultation?: boolean;
   salonId: string;
+  order?: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { providerService, serviceService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService } from '@/types/firebase';
 import Modal from '@/components/ui/Modal';
+import DraggableList from '@/components/ui/DraggableList';
 
 interface ProviderAvailabilityDay {
   start: string;
@@ -30,6 +31,7 @@ export default function ProvidersPage() {
   const [editing, setEditing] = useState<Provider | null>(null);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -43,8 +45,8 @@ export default function ProvidersPage() {
       setProviders(providersData);
       setServices(servicesData);
     } catch (error) {
-      console.error('Error fetching providers:', error);
-      setError('Failed to load providers');
+      console.error('Error fetching data:', error);
+      setError('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -57,13 +59,13 @@ export default function ProvidersPage() {
   }, [user, fetchData]);
 
   function openAddModal() {
-    setEditing({ 
-      id: '', 
-      name: '', 
-      email: '', 
-      phone: '', 
+    setEditing({
+      id: '',
+      name: '',
+      email: '',
+      phone: '',
       salonId: user?.uid || '',
-      availability: { ...defaultAvailability },
+      availability: {},
       services: [],
       createdAt: new Date(),
       updatedAt: new Date()
@@ -160,6 +162,28 @@ export default function ProvidersPage() {
     }
   }
 
+  const handleReorder = async (newProviders: Provider[]) => {
+    setProviders(newProviders);
+    setIsReordering(true);
+    
+    try {
+      // Update the order in the database
+      const updates = newProviders.map((provider, index) => ({
+        id: provider.id,
+        order: index + 1
+      }));
+      
+      await providerService.updateProvidersOrder(updates);
+    } catch (error) {
+      console.error('Error updating provider order:', error);
+      setError('Failed to save new order');
+      // Revert to original order
+      fetchData();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   function toggleProviderExpansion(providerId: string) {
     setExpandedProvider(expandedProvider === providerId ? null : providerId);
   }
@@ -220,6 +244,36 @@ export default function ProvidersPage() {
     return `${mins}m`;
   };
 
+  const renderProviderItem = (provider: Provider) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-gray-900">{provider.name}</h3>
+          <p className="text-sm text-gray-500 mt-1">{provider.email} • {provider.phone}</p>
+          {provider.services.length > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              {provider.services.length} service{provider.services.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center space-x-2 ml-4">
+          <button 
+            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
+            onClick={() => openEditModal(provider)}
+          >
+            Edit
+          </button>
+          <button 
+            className="text-red-600 hover:text-red-900 transition-colors text-sm"
+            onClick={() => handleDelete(provider.id)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -231,9 +285,14 @@ export default function ProvidersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Providers</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Providers</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Drag and drop to reorder providers. The order will be reflected on your booking form.
+          </p>
+        </div>
         <button 
-          className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm" 
+          className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm"
           onClick={openAddModal}
         >
           Add Provider
@@ -245,80 +304,27 @@ export default function ProvidersPage() {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
-      
-      <div className="space-y-4">
-        {providers.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No providers found. Add your first provider to get started.</p>
-          </div>
-        ) : (
-          providers.map((provider) => (
-            <div key={provider.id} className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="p-4">
-                <div 
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded p-2 -m-2 transition-colors"
-                  onClick={() => toggleProviderExpansion(provider.id)}
-                >
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-                    <p className="text-sm text-gray-600">{provider.email}</p>
-                    <p className="text-sm text-gray-600">{provider.phone}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(provider);
-                      }}
-                      className="text-sm text-gray-700 hover:text-gray-900 font-medium"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(provider.id);
-                      }}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
 
-                {expandedProvider === provider.id && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Services</h4>
-                    {provider.services.length === 0 ? (
-                      <p className="text-sm text-gray-500">No services assigned</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {provider.services.map((providerService) => (
-                          <div key={providerService.serviceId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <div>
-                              <span className="text-sm font-medium text-gray-900">
-                                {getServiceName(providerService.serviceId)}
-                              </span>
-                              <span className="text-sm text-gray-500 ml-2">
-                                {formatDuration(providerService.duration || 60)}
-                              </span>
-                              {providerService.isSpecialty && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  Specialty
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      {isReordering && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-600">Saving new order...</p>
+        </div>
+      )}
+      
+      {providers.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <p className="text-gray-500">No providers found. Add your first provider to get started.</p>
+        </div>
+      ) : (
+        <DraggableList
+          items={providers}
+          onReorder={handleReorder}
+          renderItem={renderProviderItem}
+          getItemId={(provider) => provider.id}
+          className="space-y-3"
+          itemClassName=""
+        />
+      )}
 
       {/* Add/Edit Provider Modal */}
       <Modal 
@@ -330,7 +336,7 @@ export default function ProvidersPage() {
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Name *
+                Provider Name *
               </label>
               <input
                 type="text"
@@ -339,7 +345,7 @@ export default function ProvidersPage() {
                 value={editing?.name || ''}
                 onChange={(e) => setEditing(prev => prev ? { ...prev, name: e.target.value } : null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white placeholder:text-gray-500"
-                placeholder="Provider name"
+                placeholder="e.g., Sarah Johnson"
               />
             </div>
 
@@ -354,7 +360,7 @@ export default function ProvidersPage() {
                 value={editing?.email || ''}
                 onChange={(e) => setEditing(prev => prev ? { ...prev, email: e.target.value } : null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white placeholder:text-gray-500"
-                placeholder="provider@example.com"
+                placeholder="sarah@salon.com"
               />
             </div>
 
@@ -408,44 +414,46 @@ export default function ProvidersPage() {
                       {/* Second line: Duration and options (only show if service is selected) */}
                       {providerService && (
                         <div className="ml-7 space-y-2">
-                          {/* Duration input */}
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="number"
-                              min="15"
-                              step="15"
-                              value={providerService.duration || 60}
-                              onChange={(e) => updateProviderService(editing?.id || '', service.id, {
-                                duration: parseInt(e.target.value)
-                              })}
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-gray-900 bg-white"
-                            />
-                            <span className="text-sm text-gray-600">minutes</span>
+                          <div className="flex items-center space-x-4">
+                            <label className="text-xs text-gray-600">
+                              Duration:
+                              <input
+                                type="number"
+                                min="15"
+                                step="15"
+                                value={providerService.duration}
+                                onChange={(e) => updateProviderService(editing?.id || '', service.id, {
+                                  duration: parseInt(e.target.value) || 60
+                                })}
+                                className="ml-1 w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent-500"
+                              />
+                              min
+                            </label>
                           </div>
                           
-                          {/* Checkboxes on separate line */}
-                          <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center space-x-4">
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={providerService.isSpecialty || false}
+                                checked={providerService.isSpecialty}
                                 onChange={(e) => updateProviderService(editing?.id || '', service.id, {
                                   isSpecialty: e.target.checked
                                 })}
-                                className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                                className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                               />
-                              <span className="text-sm text-gray-700">Specialty</span>
+                              <span className="text-xs text-gray-600">Specialty</span>
                             </label>
+                            
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={providerService.requiresConsultation || false}
+                                checked={providerService.requiresConsultation}
                                 onChange={(e) => updateProviderService(editing?.id || '', service.id, {
                                   requiresConsultation: e.target.checked
                                 })}
-                                className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                                className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                               />
-                              <span className="text-sm text-gray-700">Consultation Required</span>
+                              <span className="text-xs text-gray-600">Requires consultation</span>
                             </label>
                           </div>
                         </div>

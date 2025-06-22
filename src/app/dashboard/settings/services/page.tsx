@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { serviceService } from '@/lib/firebase/services';
 import { Service } from '@/types/firebase';
 import Modal from '@/components/ui/Modal';
+import DraggableList from '@/components/ui/DraggableList';
 
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -13,6 +14,7 @@ export default function ServicesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
   const [error, setError] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
 
   const fetchServices = useCallback(async () => {
     if (!user) return;
@@ -100,6 +102,53 @@ export default function ServicesPage() {
     }
   };
 
+  const handleReorder = async (newServices: Service[]) => {
+    setServices(newServices);
+    setIsReordering(true);
+    
+    try {
+      // Update the order in the database
+      const updates = newServices.map((service, index) => ({
+        id: service.id,
+        order: index + 1
+      }));
+      
+      await serviceService.updateServicesOrder(updates);
+    } catch (error) {
+      console.error('Error updating service order:', error);
+      setError('Failed to save new order');
+      // Revert to original order
+      fetchServices();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const renderServiceItem = (service: Service) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-gray-900">{service.name}</h3>
+          <p className="text-sm text-gray-500 mt-1">{service.description || 'No description'}</p>
+        </div>
+        <div className="flex items-center space-x-2 ml-4">
+          <button 
+            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
+            onClick={() => openEditModal(service)}
+          >
+            Edit
+          </button>
+          <button 
+            className="text-red-600 hover:text-red-900 transition-colors text-sm"
+            onClick={() => handleDelete(service.id)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -113,6 +162,9 @@ export default function ServicesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Services</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Drag and drop to reorder services. The order will be reflected on your booking form.
+          </p>
         </div>
         <button 
           className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm"
@@ -127,52 +179,27 @@ export default function ServicesPage() {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
+
+      {isReordering && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-600">Saving new order...</p>
+        </div>
+      )}
       
-      <div className="overflow-x-auto rounded-lg shadow bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3" />
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {services.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-sm text-gray-500">
-                  No services found. Add your first service to get started.
-                </td>
-              </tr>
-            ) : (
-              services.map((service) => (
-                <tr key={service.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {service.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {service.description || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      className="text-gray-700 hover:text-gray-900 mr-4 transition-colors font-medium"
-                      onClick={() => openEditModal(service)}
-                    >
-                      Edit
-                    </button>
-                    <button 
-                      className="text-red-600 hover:text-red-900 transition-colors"
-                      onClick={() => handleDelete(service.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {services.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <p className="text-gray-500">No services found. Add your first service to get started.</p>
+        </div>
+      ) : (
+        <DraggableList
+          items={services}
+          onReorder={handleReorder}
+          renderItem={renderServiceItem}
+          getItemId={(service) => service.id}
+          className="space-y-3"
+          itemClassName=""
+        />
+      )}
 
       {/* Add/Edit Service Modal */}
       <Modal 

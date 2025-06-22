@@ -21,23 +21,42 @@ interface EmailData {
 }
 
 class MailjetService {
-  private mailjet: Mailjet;
+  private mailjet: Mailjet | null = null;
 
   constructor() {
+    this.initializeMailjet();
+  }
+
+  private initializeMailjet() {
     const apiKey = process.env.MAILJET_API_KEY;
     const apiSecret = process.env.MAILJET_API_SECRET;
 
     if (!apiKey || !apiSecret) {
-      throw new Error('Mailjet API credentials not found in environment variables');
+      console.error('Mailjet API credentials not found in environment variables');
+      console.error('Required: MAILJET_API_KEY, MAILJET_API_SECRET');
+      console.error('Optional: MAILJET_FROM_EMAIL, MAILJET_FROM_NAME');
+      this.mailjet = null;
+      return;
     }
 
-    this.mailjet = new Mailjet({
-      apiKey,
-      apiSecret
-    });
+    try {
+      this.mailjet = new Mailjet({
+        apiKey,
+        apiSecret
+      });
+      console.log('Mailjet service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Mailjet service:', error);
+      this.mailjet = null;
+    }
   }
 
   async sendEmail(data: EmailData): Promise<boolean> {
+    if (!this.mailjet) {
+      console.error('Mailjet service not initialized - check environment variables');
+      return false;
+    }
+
     try {
       const request = this.mailjet.post('send', { version: 'v3.1' }).request({
         Messages: [
@@ -70,6 +89,11 @@ class MailjetService {
   }
 
   async sendTestEmail(email: string): Promise<boolean> {
+    if (!this.mailjet) {
+      console.error('Mailjet service not initialized - check environment variables');
+      return false;
+    }
+
     try {
       const request = this.mailjet.post('send', { version: 'v3.1' }).request({
         Messages: [
@@ -107,6 +131,11 @@ class MailjetService {
   }
 
   async sendTeamInvitation(data: TeamInvitationEmail): Promise<boolean> {
+    if (!this.mailjet) {
+      console.error('Mailjet service not initialized - check environment variables');
+      return false;
+    }
+
     try {
       const request = this.mailjet.post('send', { version: 'v3.1' }).request({
         Messages: [

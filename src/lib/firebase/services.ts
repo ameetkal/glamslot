@@ -9,7 +9,8 @@ import {
   query, 
   where, 
   orderBy,
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation } from '@/types/firebase';
@@ -20,14 +21,33 @@ export const providerService = {
   async getProviders(salonId: string): Promise<Provider[]> {
     const q = query(
       collection(db, 'providers'),
-      where('salonId', '==', salonId),
-      orderBy('createdAt', 'desc')
+      where('salonId', '==', salonId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const providers = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Provider[];
+    
+    // Sort by order first, then by createdAt for items without order
+    return providers.sort((a, b) => {
+      const orderA = a.order || Number.MAX_SAFE_INTEGER;
+      const orderB = b.order || Number.MAX_SAFE_INTEGER;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Fallback to createdAt for items with same order
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(b.createdAt);
+      
+      return dateB.getTime() - dateA.getTime();
+    });
   },
 
   // Get a single provider
@@ -42,8 +62,15 @@ export const providerService = {
 
   // Create a new provider
   async createProvider(provider: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    // Get the highest order number and add 1
+    const existingProviders = await this.getProviders(provider.salonId);
+    const maxOrder = existingProviders.length > 0 
+      ? Math.max(...existingProviders.map(p => p.order || 0))
+      : 0;
+    
     const docRef = await addDoc(collection(db, 'providers'), {
       ...provider,
+      order: maxOrder + 1,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -59,6 +86,30 @@ export const providerService = {
     });
   },
 
+  // Update provider order
+  async updateProviderOrder(providerId: string, newOrder: number): Promise<void> {
+    const docRef = doc(db, 'providers', providerId);
+    await updateDoc(docRef, {
+      order: newOrder,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Update multiple providers order
+  async updateProvidersOrder(updates: { id: string; order: number }[]): Promise<void> {
+    const batch = writeBatch(db);
+    
+    updates.forEach(({ id, order }) => {
+      const docRef = doc(db, 'providers', id);
+      batch.update(docRef, {
+        order,
+        updatedAt: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
+  },
+
   // Delete a provider
   async deleteProvider(id: string): Promise<void> {
     const docRef = doc(db, 'providers', id);
@@ -72,14 +123,33 @@ export const serviceService = {
   async getServices(salonId: string): Promise<Service[]> {
     const q = query(
       collection(db, 'services'),
-      where('salonId', '==', salonId),
-      orderBy('createdAt', 'desc')
+      where('salonId', '==', salonId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const services = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Service[];
+    
+    // Sort by order first, then by createdAt for items without order
+    return services.sort((a, b) => {
+      const orderA = a.order || Number.MAX_SAFE_INTEGER;
+      const orderB = b.order || Number.MAX_SAFE_INTEGER;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Fallback to createdAt for items with same order
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(b.createdAt);
+      
+      return dateB.getTime() - dateA.getTime();
+    });
   },
 
   // Get a single service
@@ -94,8 +164,15 @@ export const serviceService = {
 
   // Create a new service
   async createService(service: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    // Get the highest order number and add 1
+    const existingServices = await this.getServices(service.salonId);
+    const maxOrder = existingServices.length > 0 
+      ? Math.max(...existingServices.map(s => s.order || 0))
+      : 0;
+    
     const docRef = await addDoc(collection(db, 'services'), {
       ...service,
+      order: maxOrder + 1,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -109,6 +186,30 @@ export const serviceService = {
       ...updates,
       updatedAt: serverTimestamp()
     });
+  },
+
+  // Update service order
+  async updateServiceOrder(serviceId: string, newOrder: number): Promise<void> {
+    const docRef = doc(db, 'services', serviceId);
+    await updateDoc(docRef, {
+      order: newOrder,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Update multiple services order
+  async updateServicesOrder(updates: { id: string; order: number }[]): Promise<void> {
+    const batch = writeBatch(db);
+    
+    updates.forEach(({ id, order }) => {
+      const docRef = doc(db, 'services', id);
+      batch.update(docRef, {
+        order,
+        updatedAt: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
   },
 
   // Delete a service
