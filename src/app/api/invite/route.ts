@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { teamService, salonService } from '@/lib/firebase/services'
+import { mailjetService } from '@/lib/mailjet'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,34 +39,40 @@ export async function POST(request: NextRequest) {
       invitedBy
     })
 
-    // TODO: Send email invitation
-    // This would typically use a service like SendGrid, Mailgun, or Firebase Functions
-    // For now, we'll just log the invitation details
-    console.log('Invitation created:', {
-      invitationId,
+    // Generate invitation URL
+    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/join/${invitationId}`
+
+    // Send email invitation via Mailjet
+    const emailSent = await mailjetService.sendTeamInvitation({
+      to: {
+        email,
+        name
+      },
       salonName: salon.name,
-      inviteeName: name,
-      inviteeEmail: email,
       invitedBy,
+      invitationUrl,
       salonUrl: salon.bookingUrl
     })
 
-    // In a real implementation, you would send an email like this:
-    /*
-    const emailService = EmailService.getInstance()
-    await emailService.sendTeamInvitation({
-      to: email,
-      name: name,
-      salonName: salon.name,
-      invitedBy: invitedBy,
-      invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/join/${invitationId}`,
-      salonUrl: salon.bookingUrl
-    })
-    */
+    if (!emailSent) {
+      console.error('Failed to send invitation email via Mailjet')
+      // Still return success since invitation was created, but log the issue
+      console.log('=== INVITATION CREATED (EMAIL FAILED) ===')
+      console.log('Invitation ID:', invitationId)
+      console.log('Salon Name:', salon.name)
+      console.log('Invitee Name:', name)
+      console.log('Invitee Email:', email)
+      console.log('Invited By:', invitedBy)
+      console.log('Invitation URL:', invitationUrl)
+      console.log('Salon URL:', salon.bookingUrl)
+      console.log('========================')
+    } else {
+      console.log('Invitation email sent successfully via Mailjet')
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Invitation sent successfully',
+      message: emailSent ? 'Invitation sent successfully' : 'Invitation created but email failed to send',
       invitationId
     })
   } catch (error) {

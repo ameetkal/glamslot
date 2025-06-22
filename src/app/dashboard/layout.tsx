@@ -99,8 +99,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="px-4 py-3 border-b border-gray-200">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-accent-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-accent-700">
+                <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                  <span className="text-sm font-medium text-white">
                     {user?.email?.charAt(0).toUpperCase()}
                   </span>
                 </div>

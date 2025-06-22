@@ -224,9 +224,32 @@ export default function NotificationsPage() {
   }, [user]);
 
   function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients' | 'emailRecipients'>) {
-    setSalonNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-    // Auto-save after a short delay to avoid too many API calls
-    setTimeout(() => saveNotificationSettings(), 500);
+    setSalonNotifications((prev) => {
+      const updatedState = { ...prev, [key]: !prev[key] };
+      
+      // Save immediately with the updated state
+      setTimeout(() => {
+        if (user && !loading) {
+          salonService.updateSalonSettings(user.uid, {
+            notifications: {
+              email: updatedState.email,
+              sms: updatedState.sms,
+              smsRecipients: updatedState.smsRecipients,
+              emailRecipients: updatedState.emailRecipients,
+              bookingConfirmation: true,
+              bookingReminders: true
+            }
+          }).then(() => {
+            console.log('Notification settings saved successfully');
+          }).catch((error) => {
+            console.error('Error saving notification settings:', error);
+            alert('Failed to save notification settings. Please try again.');
+          });
+        }
+      }, 100);
+      
+      return updatedState;
+    });
   }
 
   function handleAddSmsRecipient() {

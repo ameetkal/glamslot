@@ -7,7 +7,6 @@ import { db } from '@/lib/firebase'
 import { 
   ClipboardDocumentIcon,
   UserGroupIcon,
-  ClockIcon,
   CalendarIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
@@ -20,7 +19,6 @@ interface DashboardStats {
   appointmentsCreated: number
   requestedNotFulfilled: number
   totalClients: number
-  averageResponseTime: string
   totalUniqueSessions: number
   formCompletionRate: number
 }
@@ -63,7 +61,6 @@ export default function DashboardPage() {
     appointmentsCreated: 0,
     requestedNotFulfilled: 0,
     totalClients: 0,
-    averageResponseTime: '0 hours',
     totalUniqueSessions: 0,
     formCompletionRate: 0
   })
@@ -114,7 +111,6 @@ export default function DashboardPage() {
           appointmentsCreated: bookedRequests,
           requestedNotFulfilled: notBookedRequests + pendingRequests,
           totalClients: uniqueClients,
-          averageResponseTime: '2.3 hours',
           totalUniqueSessions: sessionData.totalSessions,
           formCompletionRate: sessionData.formCompletionRate
         })
@@ -144,21 +140,36 @@ export default function DashboardPage() {
     if (!timestamp) return 'Unknown time'
     
     let date: Date
-    if (typeof timestamp === 'string') {
-      date = new Date(timestamp)
-    } else if (typeof timestamp === 'object' && 'toDate' in timestamp) {
-      date = timestamp.toDate()
-    } else {
-      date = timestamp
+    try {
+      if (typeof timestamp === 'string') {
+        date = new Date(timestamp)
+      } else if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
+        date = timestamp.toDate()
+      } else if (timestamp instanceof Date) {
+        date = timestamp
+      } else {
+        console.warn('Unknown timestamp format:', timestamp)
+        return 'Unknown time'
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', timestamp)
+        return 'Unknown time'
+      }
+      
+      const now = new Date()
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+      
+      if (diffInMinutes < 0) return 'Just now' // Handle future dates
+      if (diffInMinutes < 1) return 'Just now'
+      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
+      return `${Math.floor(diffInMinutes / 1440)} days ago`
+    } catch (error) {
+      console.error('Error formatting time ago:', error, timestamp)
+      return 'Unknown time'
     }
-    
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
-    return `${Math.floor(diffInMinutes / 1440)} days ago`
   }
 
   const updateBookingUrl = async () => {
@@ -365,26 +376,6 @@ export default function DashboardPage() {
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {dashboardStats.totalClients}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ClockIcon className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">
-                      Avg Response Time
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {dashboardStats.averageResponseTime}
                     </dd>
                   </dl>
                 </div>

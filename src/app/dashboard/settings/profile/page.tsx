@@ -182,7 +182,7 @@ export default function ProfilePage() {
                     name="businessType"
                     value={formData.businessType}
                     onChange={handleInputChange}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
                   >
                     <option value="salon">Salon</option>
                     <option value="spa">Spa</option>
@@ -267,18 +267,25 @@ export default function ProfilePage() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Booking Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Your Booking URL
-                      </label>
-                      <div className="flex items-center">
-                        <GlobeAltIcon className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900 font-mono">
-                          {salon.bookingUrl}
-                        </span>
-                      </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Your Booking URL
+                  </label>
+                  
+                  {/* URL Display - Mobile Optimized */}
+                  <div className="space-y-3">
+                    <div className="flex items-center p-3 bg-white rounded-md border border-gray-200">
+                      <GlobeAltIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                      <a
+                        href={salon.bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 font-mono break-all flex-1"
+                      >
+                        {salon.bookingUrl}
+                      </a>
                     </div>
+                    
+                    {/* Copy Button - Full Width on Mobile */}
                     <button
                       type="button"
                       onClick={() => {
@@ -286,11 +293,18 @@ export default function ProfilePage() {
                         setSuccess('Booking URL copied to clipboard!')
                         setTimeout(() => setSuccess(''), 3000)
                       }}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-colors"
                     >
+                      <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
                       Copy URL
                     </button>
                   </div>
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Share this URL with your clients so they can request appointments
+                  </p>
                 </div>
               </div>
             )}

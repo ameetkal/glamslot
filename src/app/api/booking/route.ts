@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       : [];
     
     if (enabledEmailRecipients.length > 0) {
-      const bookingUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'http://localhost:3000'}/dashboard/booking-requests`;
+      const bookingUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'https://last-minute-app.vercel.app'}/dashboard/requests`;
       
       for (const recipient of enabledEmailRecipients) {
         try {

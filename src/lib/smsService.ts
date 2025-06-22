@@ -44,8 +44,7 @@ export class SMSService {
    * Send a booking request notification to salon
    */
   async sendBookingRequestNotification(
-    salonPhone: string,
-    salonSlug: string
+    salonPhone: string
   ): Promise<boolean> {
     try {
       // If Twilio is not available, log and return success (don't fail the booking)
@@ -54,8 +53,8 @@ export class SMSService {
         return true
       }
 
-      // Use dashboard URL instead of booking URL for salon notifications
-      const dashboardUrl = getBookingUrl(salonSlug).replace('/booking/', '/dashboard/requests');
+      // Use generic dashboard URL for salon notifications
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'https://last-minute-app.vercel.app'}/dashboard/requests`;
       const message = `🔔 New booking request! View now: ${dashboardUrl}`
 
       await this.twilioClient.messages.create({

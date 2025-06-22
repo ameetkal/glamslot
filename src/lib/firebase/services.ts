@@ -254,6 +254,16 @@ export const teamService = {
     })) as Invitation[];
   },
 
+  // Get a single invitation by ID
+  async getInvitation(invitationId: string): Promise<Invitation | null> {
+    const docRef = doc(db, 'invitations', invitationId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Invitation;
+    }
+    return null;
+  },
+
   // Create a new invitation
   async createInvitation(invitation: {
     email: string;

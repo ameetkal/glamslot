@@ -44,7 +44,7 @@ export default function BookingRequestsPage() {
     fetchRequests()
   }, [user])
 
-  const handleRequestAction = async (requestId: string, action: 'booked' | 'not-booked') => {
+  const handleRequestAction = async (requestId: string, action: 'booked' | 'not-booked' | 'pending') => {
     if (action === 'not-booked') {
       setShowReasonForm(true)
       return
@@ -54,13 +54,13 @@ export default function BookingRequestsPage() {
     try {
       // Update the request status in Firestore
       await bookingRequestService.updateBookingRequest(requestId, {
-        status: action === 'booked' ? 'booked' : 'not-booked'
+        status: action
       })
       
       // Update the local state
       setRequests(requests.map(request => 
         request.id === requestId 
-          ? { ...request, status: action === 'booked' ? 'booked' : 'not-booked' }
+          ? { ...request, status: action }
           : request
       ))
 
@@ -68,12 +68,15 @@ export default function BookingRequestsPage() {
       if (selectedRequest?.id === requestId) {
         setSelectedRequest(prev => prev ? {
           ...prev,
-          status: action === 'booked' ? 'booked' : 'not-booked'
+          status: action
         } : null)
       }
 
       // Show success message
-      alert(`Appointment marked as ${action === 'booked' ? 'booked' : 'not booked'} successfully!`)
+      const statusText = action === 'booked' ? 'booked' : 
+                        action === 'not-booked' ? 'not booked' : 
+                        'pending'
+      alert(`Appointment marked as ${statusText} successfully!`)
     } catch (error) {
       console.error(`Error updating appointment status:`, error)
       alert(`Failed to update appointment status. Please try again.`)
@@ -295,18 +298,18 @@ export default function BookingRequestsPage() {
                     <h3 className="font-medium text-gray-900 mb-2">Service Details</h3>
                     <div className="space-y-2 text-sm">
                       <div>
-                        <span className="font-medium">Service:</span> {selectedRequest.service}
+                        <span className="font-medium text-gray-900">Service:</span> <span className="text-gray-800">{selectedRequest.service}</span>
                       </div>
                       {selectedRequest.stylistPreference && selectedRequest.stylistPreference !== 'Any stylist' && (
                         <div>
-                          <span className="font-medium">Stylist Preference:</span> {selectedRequest.stylistPreference}
+                          <span className="font-medium text-gray-900">Stylist Preference:</span> <span className="text-gray-800">{selectedRequest.stylistPreference}</span>
                         </div>
                       )}
                       <div>
-                        <span className="font-medium">Date/Time Preference:</span> {selectedRequest.dateTimePreference}
+                        <span className="font-medium text-gray-900">Date/Time Preference:</span> <span className="text-gray-800">{selectedRequest.dateTimePreference}</span>
                       </div>
                       {selectedRequest.waitlistOptIn && (
-                        <div className="text-accent-600">
+                        <div className="text-blue-700">
                           <span className="font-medium">✓</span> Client opted for waitlist
                         </div>
                       )}
@@ -316,13 +319,13 @@ export default function BookingRequestsPage() {
                   {selectedRequest.notes && (
                     <div className="border-t pt-4">
                       <h3 className="font-medium text-gray-900 mb-2">Notes</h3>
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedRequest.notes}</p>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedRequest.notes}</p>
                     </div>
                   )}
 
                   <div className="border-t pt-4">
                     <h3 className="font-medium text-gray-900 mb-2">Request Info</h3>
-                    <div className="space-y-1 text-sm text-gray-600">
+                    <div className="space-y-1 text-sm text-gray-800">
                       <div>Submitted: {formatTimeAgo(selectedRequest.createdAt)}</div>
                       <div>Status: <span className="font-medium capitalize">{selectedRequest.status}</span></div>
                     </div>
@@ -358,6 +361,52 @@ export default function BookingRequestsPage() {
                         <XMarkIcon className="h-4 w-4 mr-2" />
                         Not Booked
                       </Button>
+                    </div>
+                  )}
+
+                  {/* Change Status Section for Completed Requests */}
+                  {(selectedRequest.status === 'booked' || selectedRequest.status === 'not-booked') && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-medium text-gray-700">Change Status</h3>
+                        <span className="text-xs text-gray-500">Need to update?</span>
+                      </div>
+                      <div className="space-y-2">
+                        {selectedRequest.status === 'booked' && (
+                          <Button
+                            onClick={() => handleRequestAction(selectedRequest.id, 'not-booked')}
+                            disabled={isProcessing}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
+                          >
+                            <XMarkIcon className="h-4 w-4 mr-2" />
+                            Mark as Not Booked
+                          </Button>
+                        )}
+                        {selectedRequest.status === 'not-booked' && (
+                          <Button
+                            onClick={() => handleRequestAction(selectedRequest.id, 'booked')}
+                            disabled={isProcessing}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-green-300 text-green-700 hover:bg-green-50 text-sm"
+                          >
+                            <CheckIcon className="h-4 w-4 mr-2" />
+                            Mark as Booked
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleRequestAction(selectedRequest.id, 'pending')}
+                          disabled={isProcessing}
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50 text-sm"
+                        >
+                          <ClockIcon className="h-4 w-4 mr-2" />
+                          Mark as Pending
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

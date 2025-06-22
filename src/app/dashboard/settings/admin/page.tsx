@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { teamService } from '@/lib/firebase/services'
+import { TeamMember, Invitation } from '@/types/firebase'
 import { 
   UserPlusIcon,
   EnvelopeIcon,
@@ -13,28 +14,6 @@ import {
   TrashIcon
 } from '@heroicons/react/24/outline'
 
-interface TeamMember {
-  id: string
-  name: string
-  email: string
-  role: 'owner' | 'admin' | 'member'
-  status: 'active' | 'pending' | 'invited'
-  invitedAt: Date
-  joinedAt?: Date
-  salonId: string
-}
-
-interface Invitation {
-  id: string
-  email: string
-  name: string
-  salonId: string
-  status: 'pending' | 'accepted' | 'expired'
-  invitedAt: Date
-  expiresAt: Date
-  invitedBy: string
-}
-
 export default function AdminPage() {
   const { user } = useAuth()
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -43,6 +22,7 @@ export default function AdminPage() {
   const [sendingInvite, setSendingInvite] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [invitationUrl, setInvitationUrl] = useState('')
   
   const [inviteForm, setInviteForm] = useState({
     name: '',
@@ -62,8 +42,29 @@ export default function AdminPage() {
           teamService.getInvitations(user.uid)
         ])
         
-        setTeamMembers(teamMembersData)
-        setInvitations(invitationsData)
+        // Convert Firestore timestamps to Date objects
+        const processedTeamMembers = teamMembersData.map(member => ({
+          ...member,
+          invitedAt: member.invitedAt instanceof Date ? member.invitedAt : 
+                    (member.invitedAt && typeof member.invitedAt === 'object' && 'toDate' in member.invitedAt ? 
+                     (member.invitedAt as { toDate: () => Date }).toDate() : new Date(member.invitedAt)),
+          joinedAt: member.joinedAt instanceof Date ? member.joinedAt : 
+                   (member.joinedAt && typeof member.joinedAt === 'object' && 'toDate' in member.joinedAt ? 
+                    (member.joinedAt as { toDate: () => Date }).toDate() : (member.joinedAt ? new Date(member.joinedAt) : undefined))
+        }))
+        
+        const processedInvitations = invitationsData.map(invitation => ({
+          ...invitation,
+          invitedAt: invitation.invitedAt instanceof Date ? invitation.invitedAt : 
+                    (invitation.invitedAt && typeof invitation.invitedAt === 'object' && 'toDate' in invitation.invitedAt ? 
+                     (invitation.invitedAt as { toDate: () => Date }).toDate() : new Date(invitation.invitedAt)),
+          expiresAt: invitation.expiresAt instanceof Date ? invitation.expiresAt : 
+                    (invitation.expiresAt && typeof invitation.expiresAt === 'object' && 'toDate' in invitation.expiresAt ? 
+                     (invitation.expiresAt as { toDate: () => Date }).toDate() : new Date(invitation.expiresAt))
+        }))
+        
+        setTeamMembers(processedTeamMembers)
+        setInvitations(processedInvitations)
       } catch (error) {
         console.error('Error fetching team data:', error)
         setError('Failed to load team information')
@@ -110,10 +111,17 @@ export default function AdminPage() {
         setInvitations(invitationsData)
         
         setInviteForm({ name: '', email: '' })
-        setSuccess(`Invitation sent to ${inviteForm.email}!`)
+        const invitationUrl = `${window.location.origin}/join/${result.invitationId}`
+        setInvitationUrl(invitationUrl)
         
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(''), 3000)
+        if (result.message.includes('email failed')) {
+          setSuccess(`Invitation created but email failed to send. Please send this link manually: ${invitationUrl}`)
+        } else {
+          setSuccess(`Invitation sent successfully to ${inviteForm.email}! The invitation link is: ${invitationUrl}`)
+        }
+        
+        // Clear success message after 10 seconds (longer to copy URL)
+        setTimeout(() => setSuccess(''), 10000)
       } else {
         throw new Error(result.message || 'Failed to send invitation')
       }
@@ -193,12 +201,35 @@ export default function AdminPage() {
     }
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (date: any) => {
+    let jsDate: Date;
+    if (!date) return '';
+    if (date instanceof Date) {
+      jsDate = date;
+    } else if (typeof date === 'object' && typeof date.toDate === 'function') {
+      jsDate = date.toDate();
+    } else if (typeof date === 'string' || typeof date === 'number') {
+      jsDate = new Date(date);
+    } else {
+      return '';
+    }
+    if (isNaN(jsDate.getTime())) return '';
+    return jsDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    })
+    });
+  }
+
+  const copyInvitationUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(invitationUrl)
+      setSuccess('Invitation URL copied to clipboard!')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (error) {
+      console.error('Failed to copy URL:', error)
+      setError('Failed to copy URL to clipboard')
+    }
   }
 
   if (loading) {
@@ -240,8 +271,24 @@ export default function AdminPage() {
           <div className="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
             <div className="flex">
               <CheckIcon className="h-5 w-5 text-green-400" />
-              <div className="ml-3">
+              <div className="ml-3 flex-1">
                 <p className="text-sm font-medium text-green-800">{success}</p>
+                {invitationUrl && (
+                  <div className="mt-2 flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={invitationUrl}
+                      readOnly
+                      className="flex-1 text-xs bg-white border border-green-200 rounded px-2 py-1 text-green-800"
+                    />
+                    <button
+                      onClick={copyInvitationUrl}
+                      className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

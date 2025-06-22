@@ -8,7 +8,8 @@ import {
   signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  sendPasswordResetEmail
 } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from './firebase'
@@ -20,6 +21,7 @@ interface AuthContextType {
   signup: (email: string, password: string, userData: UserData) => Promise<void>
   logout: () => Promise<void>
   loginWithGoogle: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
 }
 
 interface UserData {
@@ -112,13 +114,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Password reset failed')
+    }
+  }
+
   const value = {
     user,
     loading,
     login,
     signup,
     logout,
-    loginWithGoogle
+    loginWithGoogle,
+    resetPassword
   }
 
   return (
