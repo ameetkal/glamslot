@@ -201,13 +201,13 @@ export default function AdminPage() {
     }
   }
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: unknown) => {
     let jsDate: Date;
     if (!date) return '';
     if (date instanceof Date) {
       jsDate = date;
-    } else if (typeof date === 'object' && typeof date.toDate === 'function') {
-      jsDate = date.toDate();
+    } else if (typeof date === 'object' && date !== null && 'toDate' in date && typeof (date as { toDate: () => Date }).toDate === 'function') {
+      jsDate = (date as { toDate: () => Date }).toDate();
     } else if (typeof date === 'string' || typeof date === 'number') {
       jsDate = new Date(date);
     } else {

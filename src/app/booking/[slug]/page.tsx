@@ -5,7 +5,7 @@ import { salonService, serviceService, providerService } from '@/lib/firebase/se
 import { SessionTrackingService } from '@/lib/sessionTracking'
 import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
 
 const OTHER_SERVICE_ID = 'other'
 const OTHER_PROVIDER_ID = 'other'
@@ -18,6 +18,37 @@ function getProvidersForService(providers: Provider[], serviceId: string): Provi
 
 function getMapping(provider: Provider, serviceId: string): ProviderService | undefined {
   return provider.services.find((ps) => ps.serviceId === serviceId)
+}
+
+// Validation functions
+function validateName(name: string): string | undefined {
+  if (!name.trim()) return 'Please enter your full name'
+  if (name.trim().length < 2) return 'Name must be at least 2 characters'
+  return undefined
+}
+
+function validateEmail(email: string): string | undefined {
+  if (!email.trim()) return 'Please enter a valid email address'
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) return 'Please enter a valid email address'
+  return undefined
+}
+
+function validatePhone(phone: string): string | undefined {
+  if (!phone.trim()) return 'Please enter a phone number'
+  const digitsOnly = phone.replace(/\D/g, '')
+  if (digitsOnly.length < 10) return 'Please enter a phone number with at least 10 digits'
+  return undefined
+}
+
+function validateService(selectedService: string | null, otherService: string, services: Service[]): string | undefined {
+  if (services.length === 0) {
+    if (!otherService.trim()) return 'Please describe the service you want'
+  } else {
+    if (!selectedService) return 'Please select a service'
+    if (selectedService === OTHER_SERVICE_ID && !otherService.trim()) return 'Please describe the service you want'
+  }
+  return undefined
 }
 
 export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -33,10 +64,19 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     email: '',
     dateTimePreference: '',
     notes: '',
-    waitlistOptIn: false,
+    waitlistOptIn: true,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string
+    email?: string
+    phone?: string
+    service?: string
+  }>({})
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   
   // Data from Firestore
   const [salon, setSalon] = useState<Salon | null>(null)
@@ -101,7 +141,16 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     : null
 
   function handleNext() {
-    if (step === 1 && (selectedService || (services.length === 0 && otherService.trim()))) {
+    // Clear previous validation errors when moving to next step
+    setShowValidationErrors(false)
+    setValidationErrors({})
+    
+    if (step === 1) {
+      // Validate service selection
+      if (!validateCurrentStep()) {
+        return // Don't proceed if validation fails
+      }
+      
       // Track form start when user selects a service
       if (salon) {
         const sessionTracking = SessionTrackingService.getInstance()
@@ -131,19 +180,30 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       }
       setStep(4)
     }
-    else if (step === 4 && form.name && form.phone && form.email) {
-      // Track form progress
-      if (salon) {
-        const sessionTracking = SessionTrackingService.getInstance()
-        sessionTracking.trackFormProgress(salon.id, 4, {
-          service: getServiceName(),
-          provider: getProviderName()
-        })
+    else if (step === 4) {
+      // Validate name
+      if (!validateCurrentStep()) {
+        return // Don't proceed if validation fails
       }
       setStep(5)
     }
-    else if (step === 5) setStep(6)
-    else if (step === 6) setStep(7)
+    else if (step === 5) {
+      // Validate email
+      if (!validateCurrentStep()) {
+        return // Don't proceed if validation fails
+      }
+      setStep(6)
+    }
+    else if (step === 6) {
+      // Validate phone
+      if (!validateCurrentStep()) {
+        return // Don't proceed if validation fails
+      }
+      setStep(7)
+    }
+    else if (step === 7) setStep(8)
+    else if (step === 8) setStep(9)
+    else if (step === 9) setStep(10)
   }
   function handleBack() {
     if (step > 1) setStep((s) => (s - 1) as Step)
@@ -227,6 +287,37 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     return `${mins}m`
   }
 
+  // Validation functions
+  const validateCurrentStep = (): boolean => {
+    const errors: typeof validationErrors = {}
+    
+    if (step === 1) {
+      const serviceError = validateService(selectedService, otherService, services)
+      if (serviceError) errors.service = serviceError
+    } else if (step === 4) {
+      const nameError = validateName(form.name)
+      if (nameError) errors.name = nameError
+    } else if (step === 5) {
+      const emailError = validateEmail(form.email)
+      if (emailError) errors.email = emailError
+    } else if (step === 6) {
+      const phoneError = validatePhone(form.phone)
+      if (phoneError) errors.phone = phoneError
+    }
+    
+    setValidationErrors(errors)
+    setShowValidationErrors(true)
+    
+    return Object.keys(errors).length === 0
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleNext()
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
@@ -272,16 +363,22 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               {services.length === 0 ? (
                 <input
                   type="text"
-                  className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
+                  autoFocus
+                  className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500 ${
+                    showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Please describe the service you want"
                   value={otherService}
                   onChange={e => setOtherService(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   required
                 />
               ) : (
                 <>
                   <select
-                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                    }`}
                     value={selectedService ?? ''}
                     onChange={e => {
                       const val = e.target.value
@@ -300,14 +397,21 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                   {selectedService === OTHER_SERVICE_ID && (
                     <input
                       type="text"
-                      className="mt-3 w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
+                      autoFocus
+                      className={`mt-3 w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500 ${
+                        showValidationErrors && validationErrors.service ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                      }`}
                       placeholder="Please describe the service you want"
                       value={otherService}
                       onChange={e => setOtherService(e.target.value)}
+                      onKeyPress={handleKeyPress}
                       required
                     />
                   )}
                 </>
+              )}
+              {showValidationErrors && validationErrors.service && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.service}</p>
               )}
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -315,10 +419,6 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 type="button"
                 className="px-4 sm:px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base min-h-[44px] w-full sm:w-auto"
                 onClick={handleNext}
-                disabled={
-                  (services.length === 0 && !otherService.trim()) ||
-                  (services.length > 0 && (!selectedService || (selectedService === OTHER_SERVICE_ID && !otherService.trim())))
-                }
               >
                 Next
               </button>
@@ -400,10 +500,11 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 Please note that we cannot guarantee your date/time but we will do our best to match your preferences and will reach out to confirm details.
               </p>
               <textarea
+                autoFocus
                 className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
                 value={form.dateTimePreference}
                 onChange={e => setForm({ ...form, dateTimePreference: e.target.value })}
-                placeholder="e.g., 'Weekdays after 5pm', 'Saturday mornings', 'Any time next week', 'Prefer Tuesday or Thursday evenings'"
+                placeholder="e.g., &apos;Weekdays after 5pm&apos;, &apos;Saturday mornings&apos;, &apos;Any time next week&apos;, &apos;Prefer Tuesday or Thursday evenings&apos;"
                 required
               />
             </div>
@@ -415,62 +516,98 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 4: Contact Info */}
+        {/* Step 4: Name */}
         {step === 4 && (
           <>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Contact Information</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your name?</h2>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+                className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  showValidationErrors && validationErrors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
+                onKeyPress={handleKeyPress}
+                placeholder="Enter your full name"
                 required
               />
+              {showValidationErrors && validationErrors.name && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-              <input
-                type="tel"
-                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex items-start gap-2">
-              <input
-                type="checkbox"
-                id="waitlistOptIn"
-                checked={form.waitlistOptIn}
-                onChange={e => setForm({ ...form, waitlistOptIn: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500 mt-1"
-              />
-              <label htmlFor="waitlistOptIn" className="text-sm text-gray-700">
-                Include me in the waitlist for future appointment gaps that open up in my preferred window
-              </label>
-            </div>
-            <div className="flex justify-between gap-2 mt-4">
+            <div className="flex justify-between gap-2 mt-6">
               <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
-              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext} disabled={!form.name || !form.phone || !form.email}>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
                 Next
               </button>
             </div>
           </>
         )}
-        {/* Step 5: Notes */}
+        {/* Step 5: Email */}
         {step === 5 && (
+          <>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your email?</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+              <input
+                type="email"
+                autoFocus
+                className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  showValidationErrors && validationErrors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                onKeyPress={handleKeyPress}
+                placeholder="Enter your email address"
+                required
+              />
+              {showValidationErrors && validationErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+              )}
+            </div>
+            <div className="flex justify-between gap-2 mt-6">
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
+                Next
+              </button>
+            </div>
+          </>
+        )}
+        {/* Step 6: Phone */}
+        {step === 6 && (
+          <>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your phone number?</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+              <input
+                type="tel"
+                autoFocus
+                className={`w-full border rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  showValidationErrors && validationErrors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+                onKeyPress={handleKeyPress}
+                placeholder="Enter your phone number"
+                required
+              />
+              {showValidationErrors && validationErrors.phone && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.phone}</p>
+              )}
+            </div>
+            <div className="flex justify-between gap-2 mt-6">
+              <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
+              <button type="button" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleNext}>
+                Next
+              </button>
+            </div>
+          </>
+        )}
+        {/* Step 8: Notes */}
+        {step === 8 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h2>
             <div>
@@ -482,7 +619,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-y placeholder:text-gray-500"
                 value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
-                placeholder="e.g., 'I have sensitive skin', 'This is for a special occasion', 'I prefer natural products', 'I'm a returning client', etc."
+                placeholder="e.g., &apos;I have sensitive skin&apos;, &apos;This is for a special occasion&apos;, &apos;I prefer natural products&apos;, &apos;I&apos;m a returning client&apos;, etc."
               />
             </div>
             <div className="flex justify-between gap-2 mt-4">
@@ -493,8 +630,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 6: Review Request */}
-        {step === 6 && (
+        {/* Step 9: Review Request */}
+        {step === 9 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Review Your Request</h2>
             
@@ -547,12 +684,6 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     <span className="ml-2 text-sm text-gray-900">{form.notes}</span>
                   </div>
                 )}
-                {form.waitlistOptIn && (
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Waitlist:</span>
-                    <span className="ml-2 text-sm text-gray-900">Yes, include me on waitlist</span>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -571,6 +702,19 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               </div>
             </div>
             
+            <div className="flex items-start gap-2 mt-4">
+              <input
+                type="checkbox"
+                id="waitlistOptIn"
+                checked={form.waitlistOptIn}
+                onChange={e => setForm({ ...form, waitlistOptIn: e.target.checked })}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1"
+              />
+              <label htmlFor="waitlistOptIn" className="text-sm text-gray-700">
+                Include me in the waitlist for future appointment gaps that open up in my preferred window
+              </label>
+            </div>
+            
             <div className="flex justify-between gap-2 mt-4">
               <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>
               <button type="submit" className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none" disabled={isSubmitting}>
@@ -579,8 +723,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 7: Confirmation */}
-        {step === 7 && (
+        {/* Step 10: Confirmation */}
+        {step === 10 && (
           <div className="text-center">
             <div className="mb-6">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">

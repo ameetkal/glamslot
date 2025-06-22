@@ -73,9 +73,12 @@ export default function BookingRequestsPage() {
       }
 
       // Show success message
-      const statusText = action === 'booked' ? 'booked' : 
-                        action === 'not-booked' ? 'not booked' : 
-                        'pending'
+      const statusTextMap = {
+        booked: 'booked',
+        'not-booked': 'not booked',
+        pending: 'pending',
+      } as const;
+      const statusText = statusTextMap[action];
       alert(`Appointment marked as ${statusText} successfully!`)
     } catch (error) {
       console.error(`Error updating appointment status:`, error)
