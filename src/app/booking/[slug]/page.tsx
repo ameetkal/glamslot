@@ -252,7 +252,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
           const sessionTracking = SessionTrackingService.getInstance()
           sessionTracking.trackFormComplete(salon.id)
         }
-        setStep(7)
+        setStep(9)
       } else {
         throw new Error(result.message || 'Failed to submit booking request')
       }
