@@ -16,6 +16,7 @@
     "firebase": "^11.9.1",
     "framer-motion": "^12.17.0",
     "next": "15.3.3",
+    "node-mailjet": "^6.0.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",

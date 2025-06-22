@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { bookingRequestService, salonService } from '@/lib/firebase/services'
 import { smsService } from '@/lib/smsService'
+import { sendEmail } from '@/lib/mailjet'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Received booking request:', body)
     
     // Extract booking data
     const {
@@ -21,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!service || !dateTimePreference || !name || !phone || !email || !salonSlug) {
+      console.log('Missing required fields:', { service, dateTimePreference, name, phone, email, salonSlug })
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
@@ -28,13 +31,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get salon by slug
+    console.log('Looking up salon with slug:', salonSlug)
     const salon = await salonService.getSalonBySlug(salonSlug)
     if (!salon) {
+      console.log('Salon not found for slug:', salonSlug)
       return NextResponse.json(
         { success: false, message: 'Salon not found' },
         { status: 404 }
       )
     }
+    console.log('Found salon:', salon.name)
 
     // Create booking request
     const bookingRequest = {
@@ -50,18 +56,20 @@ export async function POST(request: NextRequest) {
       salonId: salon.id
     }
 
+    console.log('Creating booking request:', bookingRequest)
     const requestId = await bookingRequestService.createBookingRequest(bookingRequest)
+    console.log('Booking request created with ID:', requestId)
 
     // Send SMS notification to all enabled numbers in smsRecipients
     const smsRecipients = salon.settings?.notifications?.smsRecipients || [];
-    const enabledRecipients = Array.isArray(smsRecipients)
+    const enabledSmsRecipients = Array.isArray(smsRecipients)
       ? smsRecipients.filter(r => r.enabled)
       : [];
-    if (enabledRecipients.length > 0) {
-      for (const recipient of enabledRecipients) {
+    if (enabledSmsRecipients.length > 0) {
+      for (const recipient of enabledSmsRecipients) {
         try {
           const formattedPhone = smsService.formatPhoneNumber(recipient.phone);
-          await smsService.sendBookingRequestNotification(formattedPhone);
+          await smsService.sendBookingRequestNotification(formattedPhone, salonSlug);
           console.log(`SMS notification sent to ${formattedPhone} for booking request`);
         } catch (smsError) {
           console.error('Failed to send SMS notification:', smsError);
@@ -72,7 +80,42 @@ export async function POST(request: NextRequest) {
       console.log(`No enabled SMS recipients configured for salon ${salon.name}, skipping SMS notification`);
     }
 
-    // TODO: Send email notification if configured
+    // Send email notification to all enabled email recipients
+    const emailRecipients = salon.settings?.notifications?.emailRecipients || [];
+    const enabledEmailRecipients = Array.isArray(emailRecipients)
+      ? emailRecipients.filter(r => r.enabled)
+      : [];
+    
+    if (enabledEmailRecipients.length > 0) {
+      const bookingUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'http://localhost:3000'}/dashboard/booking-requests`;
+      
+      for (const recipient of enabledEmailRecipients) {
+        try {
+          await sendEmail({
+            to: recipient.email,
+            subject: `New Booking Request - ${salon.name}`,
+            text: `New booking request received from ${name} for ${service}. Visit ${bookingUrl} to view and manage the request.`,
+            html: `
+              <h2>New Booking Request</h2>
+              <p><strong>Client:</strong> ${name}</p>
+              <p><strong>Service:</strong> ${service}</p>
+              <p><strong>Stylist Preference:</strong> ${stylist || 'Any stylist'}</p>
+              <p><strong>Date/Time:</strong> ${dateTimePreference}</p>
+              <p><strong>Phone:</strong> ${phone}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
+              <p><a href="${bookingUrl}" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">View Booking Request</a></p>
+            `
+          });
+          console.log(`Email notification sent to ${recipient.email} for booking request`);
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+          // Don't fail the booking request if email fails
+        }
+      }
+    } else {
+      console.log(`No enabled email recipients configured for salon ${salon.name}, skipping email notification`);
+    }
 
     return NextResponse.json({
       success: true,

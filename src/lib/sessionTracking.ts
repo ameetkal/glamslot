@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, getDocs, query, where, serverTimestamp, FieldValue } from 'firebase/firestore'
 import { db } from './firebase'
 
 export interface SessionData {
@@ -37,15 +37,31 @@ export class SessionTrackingService {
     const sessionId = this.generateSessionId()
     
     try {
-      await addDoc(collection(db, 'sessions'), {
+      const sessionData: {
+        salonId: string;
+        sessionId: string;
+        userAgent: string;
+        timestamp: FieldValue;
+        type: string;
+        ipAddress?: string;
+        referrer?: string;
+      } = {
         salonId,
         sessionId,
         userAgent,
-        ipAddress,
-        referrer,
         timestamp: serverTimestamp(),
         type: 'session_start'
-      })
+      }
+      
+      // Only add ipAddress and referrer if they have values
+      if (ipAddress) {
+        sessionData.ipAddress = ipAddress
+      }
+      if (referrer) {
+        sessionData.referrer = referrer
+      }
+      
+      await addDoc(collection(db, 'sessions'), sessionData)
       
       // Store session ID in localStorage for this session
       if (typeof window !== 'undefined') {

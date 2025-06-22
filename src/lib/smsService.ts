@@ -2,6 +2,7 @@
 // In a real implementation, this would integrate with services like Twilio, AWS SNS, etc.
 
 import twilio from 'twilio'
+import { getBookingUrl } from '@/lib/utils'
 
 
 export interface SMSNotification {
@@ -12,13 +13,24 @@ export interface SMSNotification {
 
 export class SMSService {
   private static instance: SMSService
-  private twilioClient: twilio.Twilio
+  private twilioClient: twilio.Twilio | null = null
 
   private constructor() {
-    this.twilioClient = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
-    )
+    // Only initialize Twilio if we have the required environment variables
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      try {
+        this.twilioClient = twilio(
+          process.env.TWILIO_ACCOUNT_SID,
+          process.env.TWILIO_AUTH_TOKEN
+        )
+      } catch (error) {
+        console.warn('Failed to initialize Twilio client:', error)
+        this.twilioClient = null
+      }
+    } else {
+      console.warn('Twilio credentials not found, SMS notifications will be disabled')
+      this.twilioClient = null
+    }
   }
 
   public static getInstance(): SMSService {
@@ -32,10 +44,19 @@ export class SMSService {
    * Send a booking request notification to salon
    */
   async sendBookingRequestNotification(
-    salonPhone: string
+    salonPhone: string,
+    salonSlug: string
   ): Promise<boolean> {
     try {
-      const message = `🔔 New booking request! View now: last-minute-app.vercel.app`
+      // If Twilio is not available, log and return success (don't fail the booking)
+      if (!this.twilioClient) {
+        console.log(`SMS notification skipped (Twilio not available) - would send to ${salonPhone}`)
+        return true
+      }
+
+      // Use dashboard URL instead of booking URL for salon notifications
+      const dashboardUrl = getBookingUrl(salonSlug).replace('/booking/', '/dashboard/requests');
+      const message = `🔔 New booking request! View now: ${dashboardUrl}`
 
       await this.twilioClient.messages.create({
         body: message,
@@ -56,6 +77,12 @@ export class SMSService {
    */
   async sendNotification(notification: SMSNotification): Promise<boolean> {
     try {
+      // If Twilio is not available, log and return success
+      if (!this.twilioClient) {
+        console.log(`SMS notification skipped (Twilio not available) - would send to ${notification.to}`)
+        return true
+      }
+
       await this.twilioClient.messages.create({
         body: notification.message,
         from: process.env.TWILIO_PHONE_NUMBER!,
@@ -99,8 +126,8 @@ export class SMSService {
 export const smsService = SMSService.getInstance()
 
 // Helper function to get the booking URL
-export function getBookingUrl(salonSlug: string): string {
-  return `https://last-minute-app.vercel.app/booking/${salonSlug}`;
+export function getBookingUrlForSMS(salonSlug: string): string {
+  return getBookingUrl(salonSlug);
 }
 
 // Helper function to format phone numbers

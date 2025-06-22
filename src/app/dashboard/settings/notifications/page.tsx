@@ -413,27 +413,35 @@ export default function NotificationsPage() {
     setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'sending' }));
     
     try {
-      const response = await fetch('/api/email/test', {
+      const response = await fetch('/api/test-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ emailAddress }),
+        body: JSON.stringify({ email: emailAddress }),
       });
 
       const data = await response.json();
-      const success = response.ok && data.success;
       
-      setTestEmailStatus(prev => ({ 
-        ...prev, 
-        [emailAddress]: success ? 'success' : 'error' 
-      }));
+      if (response.ok) {
+        setTestEmailStatus(prev => ({ 
+          ...prev, 
+          [emailAddress]: 'success' 
+        }));
+      } else {
+        console.error('Test email failed:', data.error);
+        setTestEmailStatus(prev => ({ 
+          ...prev, 
+          [emailAddress]: 'error' 
+        }));
+      }
 
       // Reset status after 3 seconds
       setTimeout(() => {
         setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'idle' }));
       }, 3000);
-    } catch {
+    } catch (error) {
+      console.error('Error sending test email:', error);
       setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'error' }));
       setTimeout(() => {
         setTestEmailStatus(prev => ({ ...prev, [emailAddress]: 'idle' }));
@@ -478,6 +486,91 @@ export default function NotificationsPage() {
                     <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
                   </label>
                 </div>
+
+                {/* Email Recipients Management */}
+                {salonNotifications.email && (
+                  <div className="pl-4 border-l-2 border-accent-200 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Email Recipients</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Add email addresses that should receive email notifications for new booking requests.
+                      </p>
+                      {/* Current Recipients */}
+                      <div className="space-y-2 mb-4">
+                        {salonNotifications.emailRecipients.map((recipient, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                            <div className="flex items-center">
+                              <EnvelopeIcon className="h-4 w-4 text-gray-500 mr-2" />
+                              <span className="text-sm text-gray-900">{recipient.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="relative inline-flex cursor-pointer items-center mr-2">
+                                <input
+                                  type="checkbox"
+                                  checked={recipient.enabled}
+                                  onChange={() => handleToggleEmailRecipient(recipient.email)}
+                                  className="peer sr-only"
+                                />
+                                <div className="peer h-5 w-10 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleTestEmail(recipient.email)}
+                                disabled={testEmailStatus[recipient.email] === 'sending'}
+                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                              >
+                                {testEmailStatus[recipient.email] === 'sending' && 'Sending...'}
+                                {testEmailStatus[recipient.email] === 'success' && '✓ Sent'}
+                                {testEmailStatus[recipient.email] === 'error' && '✗ Failed'}
+                                {testEmailStatus[recipient.email] === 'idle' && 'Test Email'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEmailRecipient(recipient.email)}
+                                className="text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <XMarkIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add New Recipient */}
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="email"
+                            value={newEmailAddress}
+                            onChange={(e) => {
+                              setNewEmailAddress(e.target.value);
+                              if (emailError) setEmailError('');
+                            }}
+                            placeholder="Enter email address"
+                            className={`flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                              emailError ? 'border-red-300' : 'border-gray-300'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddEmailRecipient}
+                            disabled={!newEmailAddress.trim()}
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {emailError && (
+                          <p className="text-sm text-red-600">{emailError}</p>
+                        )}
+                      </div>
+                      
+                      <p className="text-xs text-gray-500 mt-2">
+                        Email notification: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -577,92 +670,6 @@ export default function NotificationsPage() {
                         
                         <p className="text-xs text-gray-500 mt-2">
                           SMS message: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Email Recipients Management */}
-                  {salonNotifications.email && (
-                    <div className="pl-4 border-l-2 border-accent-200 space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Email Recipients</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Add email addresses that should receive email notifications for new booking requests.
-                        </p>
-                        
-                        {/* Current Recipients */}
-                        <div className="space-y-2 mb-4">
-                          {salonNotifications.emailRecipients.map((recipient, index) => (
-                            <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                              <div className="flex items-center">
-                                <EnvelopeIcon className="h-4 w-4 text-gray-500 mr-2" />
-                                <span className="text-sm text-gray-900">{recipient.email}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <label className="relative inline-flex cursor-pointer items-center mr-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={recipient.enabled}
-                                    onChange={() => handleToggleEmailRecipient(recipient.email)}
-                                    className="peer sr-only"
-                                  />
-                                  <div className="peer h-5 w-10 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 peer-focus:ring-offset-2" />
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() => handleTestEmail(recipient.email)}
-                                  disabled={testEmailStatus[recipient.email] === 'sending'}
-                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
-                                >
-                                  {testEmailStatus[recipient.email] === 'sending' && 'Sending...'}
-                                  {testEmailStatus[recipient.email] === 'success' && '✓ Sent'}
-                                  {testEmailStatus[recipient.email] === 'error' && '✗ Failed'}
-                                  {testEmailStatus[recipient.email] === 'idle' && 'Test Email'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveEmailRecipient(recipient.email)}
-                                  className="text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                  <XMarkIcon className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Add New Recipient */}
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <input
-                              type="email"
-                              value={newEmailAddress}
-                              onChange={(e) => {
-                                setNewEmailAddress(e.target.value);
-                                if (emailError) setEmailError('');
-                              }}
-                              placeholder="Enter email address"
-                              className={`flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                                emailError ? 'border-red-300' : 'border-gray-300'
-                              }`}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleAddEmailRecipient}
-                              disabled={!newEmailAddress.trim()}
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <PlusIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                          {emailError && (
-                            <p className="text-sm text-red-600">{emailError}</p>
-                          )}
-                        </div>
-                        
-                        <p className="text-xs text-gray-500 mt-2">
-                          Email notification: &ldquo;New Booking Request: visit [booking URL] to view&rdquo;
                         </p>
                       </div>
                     </div>

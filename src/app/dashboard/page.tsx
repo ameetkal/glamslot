@@ -14,6 +14,7 @@ import {
 import { bookingRequestService } from '@/lib/firebase/services'
 import { BookingRequest } from '@/types/firebase'
 import { SessionTrackingService } from '@/lib/sessionTracking'
+import { getBookingUrl } from '@/lib/utils'
 
 interface DashboardStats {
   appointmentsCreated: number
@@ -160,8 +161,28 @@ export default function DashboardPage() {
     return `${Math.floor(diffInMinutes / 1440)} days ago`
   }
 
+  const updateBookingUrl = async () => {
+    if (!user || !salonData) return;
+    
+    try {
+      const newBookingUrl = getBookingUrl(salonData.slug);
+      console.log('Updating booking URL to:', newBookingUrl);
+      
+      await setDoc(doc(db, 'salons', user.uid), {
+        ...salonData,
+        bookingUrl: newBookingUrl,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      console.log('Booking URL updated successfully!');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating booking URL:', error);
+    }
+  };
+
   const copyBookingUrl = () => {
-    const bookingUrl = salonData?.bookingUrl || `https://last-minute-app.vercel.app/booking/${salonData?.slug}`
+    const bookingUrl = salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')
     if (bookingUrl) {
       navigator.clipboard.writeText(bookingUrl).then(() => {
         setCopied(true)
@@ -178,7 +199,7 @@ export default function DashboardPage() {
         id: user.uid,
         name: user.displayName || user.email?.split('@')[0] || 'My Salon',
         slug: (user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-'),
-        bookingUrl: `https://last-minute-app.vercel.app/booking/${(user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')}`,
+        bookingUrl: getBookingUrl((user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')),
         ownerName: user.displayName || 'Salon Owner',
         ownerEmail: user.email || '',
         businessType: 'salon',
@@ -265,7 +286,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <input
                   readOnly
-                  value={salonData?.bookingUrl || `https://last-minute-app.vercel.app/booking/${salonData?.slug}`}
+                  value={salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')}
                   className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
                 />
                 <button
@@ -279,6 +300,12 @@ export default function DashboardPage() {
               {copied && (
                 <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
               )}
+              <button
+                onClick={updateBookingUrl}
+                className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Update URL
+              </button>
             </div>
           )
         })()}
