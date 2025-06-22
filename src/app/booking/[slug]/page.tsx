@@ -5,7 +5,7 @@ import { salonService, serviceService, providerService } from '@/lib/firebase/se
 import { SessionTrackingService } from '@/lib/sessionTracking'
 import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 const OTHER_SERVICE_ID = 'other'
 const OTHER_PROVIDER_ID = 'other'
@@ -203,7 +203,6 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     }
     else if (step === 7) setStep(8)
     else if (step === 8) setStep(9)
-    else if (step === 9) setStep(10)
   }
   function handleBack() {
     if (step > 1) setStep((s) => (s - 1) as Step)
@@ -482,8 +481,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[44px] flex-1 sm:flex-none"
                 onClick={handleNext}
                 disabled={
-                  (providerOptions.length === 0 && !otherProvider.trim()) ||
-                  (providerOptions.length > 0 && (!selectedProvider || (selectedProvider === OTHER_PROVIDER_ID && !otherProvider.trim())))
+                  providerOptions.length > 0 && selectedProvider === OTHER_PROVIDER_ID && !otherProvider.trim()
                 }
               >
                 Next
@@ -606,8 +604,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 8: Notes */}
-        {step === 8 && (
+        {/* Step 7: Notes */}
+        {step === 7 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Notes (Optional)</h2>
             <div>
@@ -630,8 +628,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 9: Review Request */}
-        {step === 9 && (
+        {/* Step 8: Review Request */}
+        {step === 8 && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Review Your Request</h2>
             
@@ -723,8 +721,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 10: Confirmation */}
-        {step === 10 && (
+        {/* Step 9: Confirmation */}
+        {step === 9 && (
           <div className="text-center">
             <div className="mb-6">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
