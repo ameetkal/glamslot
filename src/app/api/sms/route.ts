@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
     // Handle different types of notifications
     if (type === 'booking_request' && salonPhone && salonSlug) {
       success = await smsService.sendBookingRequestNotification(
-        salonPhone,
-        salonSlug
+        salonPhone
       )
     } else {
       // Send general notification

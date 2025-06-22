@@ -13,6 +13,13 @@ interface TeamInvitationEmail {
   salonUrl: string;
 }
 
+interface EmailData {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}
+
 class MailjetService {
   private mailjet: Mailjet;
 
@@ -28,6 +35,75 @@ class MailjetService {
       apiKey,
       apiSecret
     });
+  }
+
+  async sendEmail(data: EmailData): Promise<boolean> {
+    try {
+      const request = this.mailjet.post('send', { version: 'v3.1' }).request({
+        Messages: [
+          {
+            From: {
+              Email: process.env.MAILJET_FROM_EMAIL || 'noreply@yourdomain.com',
+              Name: process.env.MAILJET_FROM_NAME || 'Salon Booking System'
+            },
+            To: [
+              {
+                Email: data.to,
+                Name: data.to.split('@')[0] // Use email prefix as name
+              }
+            ],
+            Subject: data.subject,
+            HTMLPart: data.html || data.text,
+            TextPart: data.text
+          }
+        ]
+      });
+
+      const response = await request;
+      console.log('Mailjet response:', response.body);
+      
+      return response.response.status === 200;
+    } catch (error) {
+      console.error('Error sending email via Mailjet:', error);
+      return false;
+    }
+  }
+
+  async sendTestEmail(email: string): Promise<boolean> {
+    try {
+      const request = this.mailjet.post('send', { version: 'v3.1' }).request({
+        Messages: [
+          {
+            From: {
+              Email: process.env.MAILJET_FROM_EMAIL || 'noreply@yourdomain.com',
+              Name: process.env.MAILJET_FROM_NAME || 'Salon Booking System'
+            },
+            To: [
+              {
+                Email: email,
+                Name: email.split('@')[0]
+              }
+            ],
+            Subject: 'Test Email from Salon Booking System',
+            HTMLPart: `
+              <h2>Test Email</h2>
+              <p>This is a test email from your salon booking system.</p>
+              <p>If you received this email, your email notifications are working correctly!</p>
+              <p>Sent at: ${new Date().toLocaleString()}</p>
+            `,
+            TextPart: `Test Email\n\nThis is a test email from your salon booking system.\n\nIf you received this email, your email notifications are working correctly!\n\nSent at: ${new Date().toLocaleString()}`
+          }
+        ]
+      });
+
+      const response = await request;
+      console.log('Mailjet API Response:', response.body);
+      
+      return response.response.status === 200;
+    } catch (error) {
+      console.error('Error sending test email via Mailjet:', error);
+      return false;
+    }
   }
 
   async sendTeamInvitation(data: TeamInvitationEmail): Promise<boolean> {
@@ -160,4 +236,8 @@ If you didn't expect this invitation, please ignore this email.
 }
 
 // Export singleton instance
-export const mailjetService = new MailjetService(); 
+export const mailjetService = new MailjetService();
+
+// Export standalone functions for API routes
+export const sendEmail = (data: EmailData) => mailjetService.sendEmail(data);
+export const sendTestEmail = (email: string) => mailjetService.sendTestEmail(email); 

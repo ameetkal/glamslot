@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       for (const recipient of enabledSmsRecipients) {
         try {
           const formattedPhone = smsService.formatPhoneNumber(recipient.phone);
-          await smsService.sendBookingRequestNotification(formattedPhone, salonSlug);
+          await smsService.sendBookingRequestNotification(formattedPhone);
           console.log(`SMS notification sent to ${formattedPhone} for booking request`);
         } catch (smsError) {
           console.error('Failed to send SMS notification:', smsError);
