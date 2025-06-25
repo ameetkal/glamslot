@@ -13,7 +13,8 @@ import {
   ShieldCheckIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  GiftIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -31,6 +32,7 @@ const settingsSubItems = [
 
 const navigation = [
   { name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon },
+  { name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon },
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems },
 ]

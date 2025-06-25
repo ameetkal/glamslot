@@ -16,4 +16,21 @@ export function getBookingUrl(slug: string): string {
     : 'https://last-minute-app.vercel.app';
   
   return `${baseUrl}/booking/${slug}`;
+}
+
+/**
+ * Generate a unique pass ID for loyalty program QR codes
+ * Format: LOYAL-[SALON_ID]-[RANDOM_STRING]
+ */
+export function generatePassId(salonId: string): string {
+  const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `LOYAL-${salonId.substring(0, 8)}-${randomString}`;
+}
+
+/**
+ * Validate if a string is a valid pass ID format
+ */
+export function isValidPassId(passId: string): boolean {
+  const passIdRegex = /^LOYAL-[A-Z0-9]{8}-[A-Z0-9]{6}$/;
+  return passIdRegex.test(passId);
 } 

@@ -12,7 +12,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation } from '@/types/firebase';
+import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client } from '@/types/firebase';
 
 // Provider Services
 export const providerService = {
@@ -424,5 +424,325 @@ export const teamService = {
   async removeTeamMember(id: string): Promise<void> {
     const docRef = doc(db, 'teamMembers', id);
     await deleteDoc(docRef);
+  }
+};
+
+// Loyalty Program Services
+export const loyaltyProgramService = {
+  // Get all loyalty programs for a salon
+  async getLoyaltyPrograms(salonId: string): Promise<LoyaltyProgram[]> {
+    const q = query(
+      collection(db, 'loyaltyPrograms'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    const programs = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as LoyaltyProgram[];
+    
+    // Sort by createdAt (newest first)
+    return programs.sort((a, b) => {
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
+
+  // Get a single loyalty program
+  async getLoyaltyProgram(id: string): Promise<LoyaltyProgram | null> {
+    const docRef = doc(db, 'loyaltyPrograms', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as LoyaltyProgram;
+    }
+    return null;
+  },
+
+  // Create a new loyalty program
+  async createLoyaltyProgram(program: Omit<LoyaltyProgram, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'loyaltyPrograms'), {
+      ...program,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  },
+
+  // Update a loyalty program
+  async updateLoyaltyProgram(id: string, updates: Partial<LoyaltyProgram>): Promise<void> {
+    const docRef = doc(db, 'loyaltyPrograms', id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Delete a loyalty program
+  async deleteLoyaltyProgram(id: string): Promise<void> {
+    const docRef = doc(db, 'loyaltyPrograms', id);
+    await deleteDoc(docRef);
+  }
+};
+
+// Customer Pass Services
+export const customerPassService = {
+  // Get all customer passes for a salon
+  async getCustomerPasses(salonId: string): Promise<CustomerPass[]> {
+    const q = query(
+      collection(db, 'customerPasses'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as CustomerPass[];
+  },
+
+  // Get customer pass by pass ID (for QR code validation)
+  async getCustomerPassByPassId(passId: string): Promise<CustomerPass | null> {
+    const q = query(
+      collection(db, 'customerPasses'),
+      where('passId', '==', passId)
+    );
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as CustomerPass;
+    }
+    return null;
+  },
+
+  // Get customer pass by ID
+  async getCustomerPass(id: string): Promise<CustomerPass | null> {
+    const docRef = doc(db, 'customerPasses', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as CustomerPass;
+    }
+    return null;
+  },
+
+  // Create a new customer pass
+  async createCustomerPass(pass: Omit<CustomerPass, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'customerPasses'), {
+      ...pass,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  },
+
+  // Update a customer pass
+  async updateCustomerPass(id: string, updates: Partial<CustomerPass>): Promise<void> {
+    const docRef = doc(db, 'customerPasses', id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Record a visit (increment visit count)
+  async recordVisit(passId: string, visitData: {
+    recordedBy: string;
+    method: 'qr_scan' | 'manual_entry';
+    notes?: string;
+  }): Promise<void> {
+    const pass = await this.getCustomerPassByPassId(passId);
+    if (!pass) {
+      throw new Error('Customer pass not found');
+    }
+
+    const batch = writeBatch(db);
+    
+    // Update customer pass
+    const passRef = doc(db, 'customerPasses', pass.id);
+    const newVisitCount = pass.currentVisits + 1;
+    const isRedeemed = newVisitCount >= pass.totalVisits;
+    
+    batch.update(passRef, {
+      currentVisits: newVisitCount,
+      isRedeemed,
+      redeemedAt: isRedeemed ? serverTimestamp() : null,
+      updatedAt: serverTimestamp()
+    });
+
+    // Create visit record
+    const visitRecord: Omit<VisitRecord, 'id' | 'recordedAt'> = {
+      customerPassId: pass.id,
+      salonId: pass.salonId,
+      loyaltyProgramId: pass.loyaltyProgramId,
+      customerName: pass.customerName,
+      recordedBy: visitData.recordedBy,
+      method: visitData.method,
+      notes: visitData.notes
+    };
+
+    const visitRef = doc(collection(db, 'visitRecords'));
+    batch.set(visitRef, {
+      ...visitRecord,
+      recordedAt: serverTimestamp()
+    });
+
+    await batch.commit();
+  },
+
+  // Delete a customer pass
+  async deleteCustomerPass(id: string): Promise<void> {
+    const docRef = doc(db, 'customerPasses', id);
+    await deleteDoc(docRef);
+  }
+};
+
+// Visit Record Services
+export const visitRecordService = {
+  // Get recent visit records for a salon
+  async getRecentVisits(salonId: string, limit: number = 10): Promise<VisitRecord[]> {
+    const q = query(
+      collection(db, 'visitRecords'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    const visits = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as VisitRecord[];
+    
+    // Sort by recordedAt (newest first) and limit
+    return visits.sort((a, b) => {
+      const dateA = typeof a.recordedAt === 'object' && 'toDate' in a.recordedAt 
+        ? (a.recordedAt as { toDate: () => Date }).toDate() 
+        : new Date(a.recordedAt);
+      const dateB = typeof b.recordedAt === 'object' && 'toDate' in b.recordedAt 
+        ? (b.recordedAt as { toDate: () => Date }).toDate() 
+        : new Date(b.recordedAt);
+      return dateB.getTime() - dateA.getTime();
+    }).slice(0, limit);
+  },
+
+  // Get visit records for a specific customer pass
+  async getVisitsForPass(customerPassId: string): Promise<VisitRecord[]> {
+    const q = query(
+      collection(db, 'visitRecords'),
+      where('customerPassId', '==', customerPassId)
+    );
+    const querySnapshot = await getDocs(q);
+    const visits = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as VisitRecord[];
+    
+    // Sort by recordedAt (newest first)
+    return visits.sort((a, b) => {
+      const dateA = typeof a.recordedAt === 'object' && 'toDate' in a.recordedAt 
+        ? (a.recordedAt as { toDate: () => Date }).toDate() 
+        : new Date(a.recordedAt);
+      const dateB = typeof b.recordedAt === 'object' && 'toDate' in b.recordedAt 
+        ? (b.recordedAt as { toDate: () => Date }).toDate() 
+        : new Date(b.recordedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }
+};
+
+// Client Services
+export const clientService = {
+  // Get all clients for a salon
+  async getClients(salonId: string): Promise<Client[]> {
+    console.log('clientService.getClients called with salonId:', salonId);
+    const q = query(
+      collection(db, 'clients'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    const clients = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Client[];
+    console.log('clientService.getClients returning:', clients.length, 'clients', clients);
+    return clients;
+  },
+
+  // Get a single client
+  async getClient(id: string): Promise<Client | null> {
+    const docRef = doc(db, 'clients', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Client;
+    }
+    return null;
+  },
+
+  // Find client by email or phone
+  async findClientByEmailOrPhone(salonId: string, email: string, phone: string): Promise<Client | null> {
+    // First try to find by email
+    const emailQuery = query(
+      collection(db, 'clients'),
+      where('salonId', '==', salonId),
+      where('email', '==', email.toLowerCase())
+    );
+    const emailSnapshot = await getDocs(emailQuery);
+    if (!emailSnapshot.empty) {
+      const doc = emailSnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Client;
+    }
+
+    // Then try to find by phone
+    const phoneQuery = query(
+      collection(db, 'clients'),
+      where('salonId', '==', salonId),
+      where('phone', '==', phone)
+    );
+    const phoneSnapshot = await getDocs(phoneQuery);
+    if (!phoneSnapshot.empty) {
+      const doc = phoneSnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Client;
+    }
+
+    return null;
+  },
+
+  // Create a new client
+  async createClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'clients'), {
+      ...client,
+      email: client.email?.toLowerCase(), // Normalize email
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  },
+
+  // Update a client
+  async updateClient(id: string, updates: Partial<Client>): Promise<void> {
+    const docRef = doc(db, 'clients', id);
+    const updateData = { ...updates };
+    if (updateData.email) {
+      updateData.email = updateData.email.toLowerCase(); // Normalize email
+    }
+    await updateDoc(docRef, {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Delete a client
+  async deleteClient(id: string): Promise<void> {
+    const docRef = doc(db, 'clients', id);
+    await deleteDoc(docRef);
+  },
+
+  // Add or update loyalty data for a client
+  async updateClientLoyalty(clientId: string, loyaltyData: Client['loyalty']): Promise<void> {
+    const docRef = doc(db, 'clients', clientId);
+    await updateDoc(docRef, {
+      loyalty: loyaltyData,
+      updatedAt: serverTimestamp()
+    });
   }
 }; 
