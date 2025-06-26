@@ -266,7 +266,7 @@ export default function LoyaltyPage() {
                 </p>
                 {currentProgram?.welcomeMessage && (
                   <p className="text-sm text-gray-600 mt-1 italic">
-                    "{currentProgram.welcomeMessage}"
+                    &quot;{currentProgram.welcomeMessage}&quot;
                   </p>
                 )}
               </div>
@@ -308,7 +308,7 @@ export default function LoyaltyPage() {
                 <CameraIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <h4 className="text-base font-medium text-gray-900 mb-2">Scan QR Code</h4>
                 <p className="text-sm text-gray-600 mb-4">
-                  Use camera to scan customer's loyalty pass QR code
+                  Use camera to scan customer&apos;s loyalty pass QR code
                 </p>
                 <button
                   type="button"
@@ -327,7 +327,7 @@ export default function LoyaltyPage() {
                 </svg>
                 <h4 className="text-base font-medium text-gray-900 mb-2">Manual Entry</h4>
                 <p className="text-sm text-gray-600 mb-4">
-                  Enter customer's unique pass ID manually
+                  Enter customer&apos;s unique pass ID manually
                 </p>
                 <button
                   type="button"

@@ -151,7 +151,7 @@ export default function QRCodeScanner({
                 <div className="text-center">
                   <CameraIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-sm text-gray-600 mb-4">
-                    Point your camera at the customer's loyalty pass QR code
+                    Point your camera at the customer&apos;s loyalty pass QR code
                   </p>
                 </div>
                 
@@ -196,7 +196,7 @@ export default function QRCodeScanner({
                   
                   {scanResult.program.customMessage && (
                     <p className="text-sm text-gray-500 italic">
-                      "{scanResult.program.customMessage}"
+                      &quot;{scanResult.program.customMessage}&quot;
                     </p>
                   )}
                   

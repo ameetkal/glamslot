@@ -221,7 +221,7 @@ export default function LoyaltyProgramForm({
               </p>
               {formData.welcomeMessage && (
                 <p className="text-sm text-gray-500 mt-1 italic">
-                  "{formData.welcomeMessage}"
+                  &quot;{formData.welcomeMessage}&quot;
                 </p>
               )}
             </div>
