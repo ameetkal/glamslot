@@ -224,7 +224,7 @@ export default function LoyaltyPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Loyalty Program</h1>
         <p className="text-gray-600 mt-2">
-          Create and manage your salon's loyalty program to reward repeat customers
+          Create and manage your salon&apos;s loyalty program to reward repeat customers
         </p>
       </div>
 
