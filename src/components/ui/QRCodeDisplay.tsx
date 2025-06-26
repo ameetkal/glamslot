@@ -24,9 +24,6 @@ export default function QRCodeDisplay({
   const generateQRCode = async () => {
     setIsGenerating(true)
     try {
-      // Create a sample pass ID for demonstration
-      const passId = `LOYAL-${programData.salonId.substring(0, 8)}-DEMO123`
-      
       // Create the registration URL
       const registrationUrl = `${window.location.origin}/loyalty/${programData.id}`
       

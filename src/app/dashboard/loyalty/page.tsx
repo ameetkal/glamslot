@@ -159,7 +159,7 @@ export default function LoyaltyPage() {
     }
   }
 
-  const handleScanSuccess = (scannedData: any) => {
+  const handleScanSuccess = (scannedData: { customerName?: string; currentVisits?: number; program: { visitsRequired: number } }) => {
     // TODO: Process the scan and update customer visit count in Firebase
     console.log('Scan successful:', scannedData)
     

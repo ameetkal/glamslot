@@ -163,9 +163,9 @@ export default function LoyaltyRegistrationPage({ params }: { params: Promise<{ 
               Visit {program.visitsRequired} times, get <strong>{rewardText}</strong>
             </p>
             {program.welcomeMessage && (
-              <p className="text-blue-100 text-sm mt-2 italic">
-                "{program.welcomeMessage}"
-              </p>
+                              <p className="text-blue-100 text-sm mt-2 italic">
+                  &quot;{program.welcomeMessage}&quot;
+                </p>
             )}
           </div>
         )}
