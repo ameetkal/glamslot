@@ -116,14 +116,26 @@ export default function DashboardPage() {
         })
 
         // Create recent activity from booking requests
-        const activity: RecentActivity[] = bookingRequests.slice(0, 4).map((req: BookingRequest) => ({
-          id: req.id,
-          type: req.status === 'booked' ? 'appointment_booked' : 
-                req.status === 'not-booked' ? 'appointment_not_booked' : 'booking_request',
-          message: `Booking request from ${req.clientName}`,
-          timestamp: req.createdAt ? new Date(req.createdAt) : new Date(),
-          status: req.status === 'pending' ? 'pending' : 'completed'
-        }))
+        const activity: RecentActivity[] = bookingRequests.slice(0, 4).map((req: BookingRequest) => {
+          // Properly handle Firestore timestamp objects
+          let timestamp: Date
+          if (req.createdAt && typeof req.createdAt === 'object' && 'toDate' in req.createdAt) {
+            timestamp = (req.createdAt as { toDate: () => Date }).toDate()
+          } else if (req.createdAt) {
+            timestamp = new Date(req.createdAt)
+          } else {
+            timestamp = new Date()
+          }
+
+          return {
+            id: req.id,
+            type: req.status === 'booked' ? 'appointment_booked' : 
+                  req.status === 'not-booked' ? 'appointment_not_booked' : 'booking_request',
+            message: `Booking request from ${req.clientName}`,
+            timestamp,
+            status: req.status === 'pending' ? 'pending' : 'completed'
+          }
+        })
 
         setRecentActivity(activity)
       } catch (error) {

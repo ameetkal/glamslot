@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import Link from 'next/link'
 import { 
   CalendarIcon, 
   UserIcon, 
@@ -13,7 +14,8 @@ import {
   CheckIcon,
   XMarkIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 
 interface BookingRequest {
@@ -37,6 +39,7 @@ export default function RequestsPage() {
   const [requests, setRequests] = useState<BookingRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
+  const [showRecentlyCompleted, setShowRecentlyCompleted] = useState(false)
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -85,7 +88,7 @@ export default function RequestsPage() {
     fetchRequests()
   }, [user])
 
-  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked', e?: React.MouseEvent) => {
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending', e?: React.MouseEvent) => {
     e?.stopPropagation() // Prevent card expansion when clicking buttons
     
     try {
@@ -139,6 +142,192 @@ export default function RequestsPage() {
     }
   }
 
+  const isRecentlyCompleted = (request: BookingRequest) => {
+    if (request.status === 'pending') return false
+    
+    // Check if completed within last 48 hours
+    const updatedDate = typeof request.updatedAt === 'object' && 'toDate' in request.updatedAt 
+      ? (request.updatedAt as { toDate: () => Date }).toDate() 
+      : new Date(request.updatedAt);
+    
+    const hoursAgo = (new Date().getTime() - updatedDate.getTime()) / (1000 * 60 * 60)
+    return hoursAgo <= 48
+  }
+
+  // Separate requests into categories
+  const pendingRequests = requests.filter(req => req.status === 'pending')
+  const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
+  
+  const renderRequestCard = (request: BookingRequest) => (
+    <li key={request.id}>
+      <div 
+        className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => toggleExpanded(request.id)}
+      >
+        {/* Mobile-optimized main card content */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+          {/* Left side - Essential info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <UserIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {request.clientName}
+                </p>
+                <div className="flex items-center space-x-3 mt-1">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <ClockIcon className="h-4 w-4 mr-1" />
+                    {formatDate(request.createdAt)}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <CalendarIcon className="h-4 w-4 mr-1" />
+                    {request.service}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right side - Status and actions */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+              {request.status === 'pending' ? 'Pending' : 
+               request.status === 'booked' ? 'Booked' : 'Not Booked'}
+            </span>
+            
+            {/* Action buttons - always visible on mobile */}
+            {request.status === 'pending' && (
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Appointment Made</span>
+                  <span className="sm:hidden">Booked</span>
+                </button>
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Not Booked</span>
+                  <span className="sm:hidden">Not Booked</span>
+                </button>
+              </div>
+            )}
+
+            {/* Status change buttons for completed requests */}
+            {request.status !== 'pending' && (
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, request.status === 'booked' ? 'not-booked' : 'booked', e)}
+                  className={`inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md ${
+                    request.status === 'booked' 
+                      ? 'text-red-700 bg-red-100 hover:bg-red-200' 
+                      : 'text-green-700 bg-green-100 hover:bg-green-200'
+                  }`}
+                >
+                  {request.status === 'booked' ? (
+                    <>
+                      <XMarkIcon className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Mark Not Booked</span>
+                      <span className="sm:hidden">Not Booked</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Mark Booked</span>
+                      <span className="sm:hidden">Booked</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'pending', e)}
+                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200"
+                >
+                  <ClockIcon className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Mark Pending</span>
+                  <span className="sm:hidden">Pending</span>
+                </button>
+              </div>
+            )}
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleExpanded(request.id)
+              }}
+              className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+            >
+              {expandedRequest === request.id ? (
+                <ChevronUpIcon className="h-4 w-4" />
+              ) : (
+                <ChevronDownIcon className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded details */}
+        {expandedRequest === request.id && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Client Information</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <EnvelopeIcon className="h-4 w-4 mr-2" />
+                    {request.clientEmail}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <PhoneIcon className="h-4 w-4 mr-2" />
+                    {request.clientPhone}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-700">Service:</span>
+                    <span className="ml-2 text-gray-600">{request.service}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-700">Stylist Preference:</span>
+                    <span className="ml-2 text-gray-600">{request.stylistPreference}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-700">Preferred Date/Time:</span>
+                    <span className="ml-2 text-gray-600">{request.dateTimePreference}</span>
+                  </div>
+                  {request.waitlistOptIn && (
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700">Waitlist:</span>
+                      <span className="ml-2 text-gray-600">Yes, include me on waitlist</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {request.notes && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-900 mb-2">Additional Notes</h4>
+                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                  {request.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  )
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-6">
@@ -164,154 +353,80 @@ export default function RequestsPage() {
           </div>
         </div>
 
-        <div className="mt-8">
-          {requests.length > 0 ? (
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-              <ul className="divide-y divide-gray-200">
-                {requests.map((request) => (
-                  <li key={request.id}>
-                    <div 
-                      className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => toggleExpanded(request.id)}
-                    >
-                      {/* Mobile-optimized main card content */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                        {/* Left side - Essential info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              <UserIcon className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {request.clientName}
-                              </p>
-                              <div className="flex items-center space-x-3 mt-1">
-                                <div className="flex items-center text-sm text-gray-500">
-                                  <ClockIcon className="h-4 w-4 mr-1" />
-                                  {formatDate(request.createdAt)}
-                                </div>
-                                <div className="flex items-center text-sm text-gray-500">
-                                  <CalendarIcon className="h-4 w-4 mr-1" />
-                                  {request.service}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Right side - Status and actions */}
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                            {request.status === 'pending' ? 'Pending' : 
-                             request.status === 'booked' ? 'Booked' : 'Not Booked'}
-                          </span>
-                          
-                          {/* Action buttons - always visible on mobile */}
-                          {request.status === 'pending' && (
-                            <div className="flex items-center space-x-1 sm:space-x-2">
-                                                             <button
-                                 onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
-                                 className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                               >
-                                 <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                 <span className="hidden sm:inline">Appointment Made</span>
-                                 <span className="sm:hidden">Booked</span>
-                               </button>
-                               <button
-                                 onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
-                                 className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                               >
-                                 <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                 <span className="hidden sm:inline">Not Booked</span>
-                                 <span className="sm:hidden">Not Booked</span>
-                               </button>
-                            </div>
-                          )}
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleExpanded(request.id)
-                            }}
-                            className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
-                          >
-                            {expandedRequest === request.id ? (
-                              <ChevronUpIcon className="h-4 w-4" />
-                            ) : (
-                              <ChevronDownIcon className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Expanded details */}
-                      {expandedRequest === request.id && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="font-medium text-gray-900 mb-2">Client Information</h4>
-                              <div className="space-y-2">
-                                <div className="flex items-center text-sm text-gray-600">
-                                  <EnvelopeIcon className="h-4 w-4 mr-2" />
-                                  {request.clientEmail}
-                                </div>
-                                <div className="flex items-center text-sm text-gray-600">
-                                  <PhoneIcon className="h-4 w-4 mr-2" />
-                                  {request.clientPhone}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
-                              <div className="space-y-2">
-                                <div className="text-sm">
-                                  <span className="font-medium text-gray-700">Service:</span>
-                                  <span className="ml-2 text-gray-600">{request.service}</span>
-                                </div>
-                                <div className="text-sm">
-                                  <span className="font-medium text-gray-700">Stylist Preference:</span>
-                                  <span className="ml-2 text-gray-600">{request.stylistPreference}</span>
-                                </div>
-                                <div className="text-sm">
-                                  <span className="font-medium text-gray-700">Preferred Date/Time:</span>
-                                  <span className="ml-2 text-gray-600">{request.dateTimePreference}</span>
-                                </div>
-                                {request.waitlistOptIn && (
-                                  <div className="text-sm">
-                                    <span className="font-medium text-gray-700">Waitlist:</span>
-                                    <span className="ml-2 text-gray-600">Yes, include me on waitlist</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {request.notes && (
-                            <div className="mt-4">
-                              <h4 className="font-medium text-gray-900 mb-2">Additional Notes</h4>
-                              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                                {request.notes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+        <div className="mt-8 space-y-8">
+          {/* Pending Requests Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Pending Requests</h2>
+              {pendingRequests.length > 0 && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  {pendingRequests.length} pending
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No booking requests</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by sharing your booking URL with clients.
-              </p>
+            
+            {pendingRequests.length > 0 ? (
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                <ul className="divide-y divide-gray-200">
+                  {pendingRequests.map(renderRequestCard)}
+                </ul>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-8 text-center">
+                <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No pending requests</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  New booking requests will appear here when submitted.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Recently Completed Section */}
+          {recentlyCompletedRequests.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowRecentlyCompleted(!showRecentlyCompleted)}
+                className="flex items-center justify-between w-full mb-4 p-3 text-left bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <div className="flex items-center">
+                  <h2 className="text-lg font-medium text-gray-900">Recently Completed</h2>
+                  <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+                    {recentlyCompletedRequests.length} recent
+                  </span>
+                </div>
+                {showRecentlyCompleted ? (
+                  <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              
+              {showRecentlyCompleted && (
+                <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <p className="text-sm text-gray-600">
+                      Requests completed in the last 48 hours. You can still change their status if needed.
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-gray-200">
+                    {recentlyCompletedRequests.map(renderRequestCard)}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
+
+          {/* View All History Link */}
+          <div className="text-center">
+            <Link
+              href="/dashboard/requests/history"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+            >
+              <DocumentTextIcon className="h-4 w-4 mr-2" />
+              View All Booking History
+            </Link>
+          </div>
         </div>
       </div>
     </div>
