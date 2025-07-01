@@ -1,15 +1,16 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
-// Firebase configuration for GlamSlot (same as your .env.local)
+// Load environment variables (you may need to install dotenv and configure it)
+// Or manually replace these with your actual values
 const firebaseConfig = {
-  apiKey: "AIzaSyDGc0Bmf94Ws5DkSh0hTEeGhH-5pfBeREI",
-  authDomain: "last-minute-app-93f61.firebaseapp.com",
-  projectId: "last-minute-app-93f61",
-  storageBucket: "last-minute-app-93f61.firebasestorage.app",
-  messagingSenderId: "916728653067",
-  appId: "1:916728653067:web:08e03dfc04cec1b1786e0e",
-  measurementId: "G-C6SHWDM5WQ"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDGc0Bmf94Ws5DkSh0hTEeGhH-5pfBeREI",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "last-minute-app-93f61.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "last-minute-app-93f61",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "last-minute-app-93f61.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "916728653067",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:916728653067:web:08e03dfc04cec1b1786e0e",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-C6SHWDM5WQ"
 };
 
 // Initialize Firebase
