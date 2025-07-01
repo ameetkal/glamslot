@@ -21,7 +21,7 @@ const db = getFirestore(app);
 const testSalon = {
   name: "Elegant Cuts Salon",
   slug: "test", // This matches the URL you're using
-      bookingUrl: "https://glamslot.vercel.app/booking/test",
+      bookingUrl: "https://last-minute-app.vercel.app/booking/test",
   settings: {
     notifications: {
       email: true,

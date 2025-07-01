@@ -13,7 +13,7 @@ export function getBookingUrl(slug: string): string {
   
   const baseUrl = isDevelopment 
     ? 'http://localhost:3000' 
-    : 'https://glamslot.vercel.app';
+    : 'https://last-minute-app.vercel.app';
   
   return `${baseUrl}/booking/${slug}`;
 }
