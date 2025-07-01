@@ -46,7 +46,7 @@ async function updateBookingUrls() {
         // Update the bookingUrl to use the correct domain
         const newBookingUrl = salonData.bookingUrl.replace(
           'booking.glammatic.com',
-          'last-minute-app.vercel.app'
+          'glamslot.vercel.app'
         );
         
         console.log(`   New bookingUrl: ${newBookingUrl}`);

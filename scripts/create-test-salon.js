@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
-// Firebase configuration (same as your .env.local)
+// Firebase configuration for GlamSlot (same as your .env.local)
 const firebaseConfig = {
   apiKey: "AIzaSyDGc0Bmf94Ws5DkSh0hTEeGhH-5pfBeREI",
   authDomain: "last-minute-app-93f61.firebaseapp.com",
@@ -20,7 +20,7 @@ const db = getFirestore(app);
 const testSalon = {
   name: "Elegant Cuts Salon",
   slug: "test", // This matches the URL you're using
-  bookingUrl: "https://last-minute-app.vercel.app/booking/test",
+      bookingUrl: "https://glamslot.vercel.app/booking/test",
   settings: {
     notifications: {
       email: true,

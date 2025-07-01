@@ -32,7 +32,7 @@ async function fixBookingUrl(userId) {
       // Replace localhost with production domain
       const newBookingUrl = salonData.bookingUrl.replace(
         'http://localhost:3000',
-        'https://last-minute-app.vercel.app'
+        'https://glamslot.vercel.app'
       );
       
       console.log('New booking URL:', newBookingUrl);

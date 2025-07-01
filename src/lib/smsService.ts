@@ -54,7 +54,7 @@ export class SMSService {
       }
 
       // Use generic dashboard URL for salon notifications
-      const dashboardUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'https://last-minute-app.vercel.app'}/dashboard/requests`;
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL || 'https://glamslot.vercel.app'}/dashboard/requests`;
       const message = `🔔 New booking request! View now: ${dashboardUrl}`
 
       await this.twilioClient.messages.create({

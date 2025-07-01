@@ -6,8 +6,8 @@ import { AuthProvider } from '@/lib/auth'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'LastMinute - Fill Your Appointment Gaps',
-  description: 'Help salons and beauty professionals fill cancelled appointment slots',
+  title: 'GlamSlot - Beauty Appointment Booking System',
+  description: 'Professional booking platform for salons and beauty professionals to manage client appointments and requests',
 }
 
 export default function RootLayout({

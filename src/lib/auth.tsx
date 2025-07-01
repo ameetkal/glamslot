@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: user.uid,
         name: userData.businessName,
         slug: businessSlug,
-        bookingUrl: `https://last-minute-app.vercel.app/booking/${businessSlug}`,
+        bookingUrl: `https://glamslot.vercel.app/booking/${businessSlug}`,
         ownerName: userData.name,
         ownerEmail: email,
         ownerPhone: userData.phone,

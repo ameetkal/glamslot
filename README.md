@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GlamSlot - Beauty Appointment Booking System
+
+GlamSlot is a professional booking platform designed for salons and beauty professionals to efficiently manage client appointments and requests.
+
+## Features
+
+- 📅 **Smart Booking Requests** - Clients can submit booking requests with their preferred services and times
+- 💄 **Salon Management** - Complete dashboard for managing appointments, clients, and business settings
+- 🎯 **Loyalty Programs** - Built-in loyalty system with QR code scanning and rewards tracking
+- 📱 **Mobile Optimized** - Responsive design that works perfectly on all devices
+- 🔔 **Smart Notifications** - Email and SMS notifications for new bookings and updates
+- 📊 **Analytics Dashboard** - Track booking stats, client activity, and business metrics
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ and npm
+- Firebase account for backend services
+- Twilio account for SMS notifications (optional)
+- Mailjet account for email notifications (optional)
+
+### Installation
+
+1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/glamslot.git
+cd glamslot
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Configure your Firebase, Twilio, and Mailjet credentials in `.env.local`
 
-## Learn More
+5. Run the development server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Open [http://localhost:3000](http://localhost:3000) to see the app
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Firebase (Firestore, Authentication)
+- **Notifications**: Twilio (SMS), Mailjet (Email)
+- **Deployment**: Vercel
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License.
