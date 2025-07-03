@@ -81,10 +81,11 @@ export default function JoinTeamPage() {
       setError('')
 
       // Add user to team
-      await teamService.addTeamMember({
+      const teamMemberId = await teamService.addTeamMember({
         name: invitation.name,
         email: invitation.email,
-        role: 'member',
+        phone: invitation.phone,
+        role: invitation.role as 'owner' | 'admin' | 'front_desk' | 'service_provider' | 'member' || 'member',
         salonId: invitation.salonId,
         userId: user.uid
       })
@@ -93,6 +94,11 @@ export default function JoinTeamPage() {
       await teamService.updateInvitation(invitation.id, {
         status: 'accepted'
       })
+
+      // If this is a service provider, link them to their provider record
+      if (invitation.role === 'service_provider') {
+        await teamService.linkProviderToTeamMember(invitation.name, invitation.salonId, teamMemberId);
+      }
 
       setSuccess('Successfully joined the team!')
       

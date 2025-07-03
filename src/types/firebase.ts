@@ -9,6 +9,10 @@ export interface Provider {
   availability: Record<string, ProviderAvailabilityDay>;
   services: ProviderService[];
   order?: number;
+  isTeamMember: boolean;
+  teamMemberId?: string;
+  receiveNotifications: boolean;
+  userId?: string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -108,18 +112,58 @@ export interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: 'owner' | 'admin' | 'member';
+  phone?: string;
+  role: 'owner' | 'admin' | 'front_desk' | 'service_provider' | 'member';
   status: 'active' | 'pending' | 'invited';
   invitedAt: Date;
   joinedAt?: Date;
   salonId: string;
   userId: string;
+  permissions?: TeamMemberPermissions;
+}
+
+export interface TeamMemberPermissions {
+  // Dashboard Access
+  canViewRequests: boolean;
+  canManageRequests: boolean;
+  canViewClients: boolean;
+  canManageClients: boolean;
+  canViewLoyalty: boolean;
+  canManageLoyalty: boolean;
+  
+  // Settings Access
+  canViewSettings: boolean;
+  canManageServices: boolean;
+  canManageProviders: boolean;
+  canManageNotifications: boolean;
+  canManageTeam: boolean;
+  canManageSalon: boolean;
+  
+  // Admin Access
+  canViewAnalytics: boolean;
+  canManageBilling: boolean;
+  canAccessAdmin: boolean;
+  
+  // Provider-specific permissions
+  canManageOwnSchedule: boolean;
+  canViewOwnBookings: boolean;
+  canManageOwnServices: boolean;
+}
+
+export interface RoleDefinition {
+  name: string;
+  description: string;
+  permissions: TeamMemberPermissions;
+  color: string;
 }
 
 export interface Invitation {
   id: string;
   email: string;
   name: string;
+  phone?: string;
+  role?: string;
+  permissions?: TeamMemberPermissions;
   salonId: string;
   status: 'pending' | 'accepted' | 'expired';
   invitedAt: Date;
