@@ -14,6 +14,8 @@ import {
   ChatBubbleLeftIcon,
   GiftIcon,
   FunnelIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 
@@ -43,7 +45,7 @@ interface Client {
 export default function ClientsPage() {
   const { user } = useAuth()
   const [clients, setClients] = useState<Client[]>([])
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'loyalty' | 'bookings'>('all')
   const [loading, setLoading] = useState(true)
@@ -79,6 +81,10 @@ export default function ClientsPage() {
         const clientKey = request.clientEmail.toLowerCase()
         
         if (!clientMap.has(clientKey)) {
+          const initialDate = typeof request.createdAt === 'object' && 'toDate' in request.createdAt 
+            ? (request.createdAt as { toDate: () => Date }).toDate().toISOString()
+            : new Date(request.createdAt).toISOString()
+          
           clientMap.set(clientKey, {
             id: clientKey,
             name: request.clientName,
@@ -87,7 +93,7 @@ export default function ClientsPage() {
             totalRequests: 0,
             completedRequests: 0,
             totalSpent: 0,
-            lastRequest: request.createdAt.toString(),
+            lastRequest: initialDate,
             notes: request.notes || '',
             requests: [],
             hasLoyalty: false
@@ -99,10 +105,12 @@ export default function ClientsPage() {
         client.requests.push(request)
         
         // Update last request date
-        const requestDate = new Date(request.createdAt)
+        const requestDate = typeof request.createdAt === 'object' && 'toDate' in request.createdAt 
+          ? (request.createdAt as { toDate: () => Date }).toDate()
+          : new Date(request.createdAt)
         const lastRequestDate = new Date(client.lastRequest)
         if (requestDate > lastRequestDate) {
-          client.lastRequest = request.createdAt.toString()
+          client.lastRequest = requestDate.toISOString()
         }
         
         // Count completed requests (booked status)
@@ -150,6 +158,12 @@ export default function ClientsPage() {
               : undefined
           } : undefined
           
+          const loyaltyDate = loyaltyClient.createdAt 
+            ? typeof loyaltyClient.createdAt === 'object' && 'toDate' in loyaltyClient.createdAt
+              ? (loyaltyClient.createdAt as { toDate: () => Date }).toDate().toISOString()
+              : new Date(loyaltyClient.createdAt).toISOString()
+            : ''
+          
           clientMap.set(clientKey, {
             id: loyaltyClient.id,
             name: loyaltyClient.name,
@@ -158,7 +172,7 @@ export default function ClientsPage() {
             totalRequests: 0,
             completedRequests: 0,
             totalSpent: 0,
-            lastRequest: loyaltyClient.createdAt?.toString() || '',
+            lastRequest: loyaltyDate,
             notes: '',
             requests: [],
             loyalty: normalizedLoyalty,
@@ -188,6 +202,10 @@ export default function ClientsPage() {
     }
   }, [user, fetchClients])
 
+  const toggleExpanded = (clientId: string) => {
+    setExpandedClient(expandedClient === clientId ? null : clientId)
+  }
+
   const filteredClients = clients.filter(client => {
     // Apply search filter
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -210,12 +228,21 @@ export default function ClientsPage() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Never'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+    
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return 'Invalid date'
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString)
+      return 'Invalid date'
+    }
   }
 
   if (loading) {
@@ -295,198 +322,220 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Clients List */}
-          <div className="space-y-4">
-            {filteredClients.length === 0 ? (
-              <div className="text-center py-8">
-                <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No clients found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {searchQuery ? 'Try adjusting your search terms.' : 'Clients will appear here once they submit booking requests.'}
-                </p>
-              </div>
-            ) : (
-              filteredClients.map((client) => (
-                <motion.div
-                  key={client.id}
-                  onClick={() => setSelectedClient(client)}
-                  className={`w-full rounded-lg border p-4 text-left transition-all cursor-pointer ${
-                    selectedClient?.id === client.id
-                      ? 'border-accent-500 bg-accent-50'
-                      : 'border-gray-200 bg-white hover:border-accent-300'
-                  }`}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <UserIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                        <span className="font-medium text-gray-900 truncate">
-                          {client.name}
-                        </span>
-                        {client.hasLoyalty && (
-                          <GiftIcon className="h-4 w-4 text-accent-600 flex-shrink-0" title="Loyalty Member" />
-                        )}
-                      </div>
-                      <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-700">
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span>{client.completedRequests} completed</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CurrencyDollarIcon className="h-4 w-4" />
-                          <span>${client.totalSpent}</span>
-                        </div>
-                        {client.hasLoyalty && client.loyalty && (
-                          <div className="flex items-center gap-1">
-                            <GiftIcon className="h-4 w-4" />
-                            <span>{client.loyalty.currentVisits}/{client.loyalty.totalVisits} visits</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right ml-4 flex-shrink-0">
-                      <div className="text-sm text-gray-700">
-                        Last request: {formatDate(client.lastRequest)}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-
-          {/* Client Details */}
-          <div className="rounded-lg bg-white p-4 sm:p-6 shadow">
-            <h2 className="text-lg font-medium text-gray-900">Client Details</h2>
-            {selectedClient ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4"
-              >
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700">Contact Information</h3>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <UserIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">{selectedClient.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <EnvelopeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <a href={`mailto:${selectedClient.email}`} className="text-accent-600 hover:text-accent-500 truncate">
-                          {selectedClient.email}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <PhoneIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <a href={`tel:${selectedClient.phone}`} className="text-accent-600 hover:text-accent-500">
-                          {selectedClient.phone}
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700">Booking History</h3>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">
-                          {selectedClient.completedRequests} of {selectedClient.totalRequests} requests completed
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CurrencyDollarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">Estimated total spent: ${selectedClient.totalSpent}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900">Last request: {formatDate(selectedClient.lastRequest)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedClient.hasLoyalty && selectedClient.loyalty && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-700">Loyalty Program</h3>
-                      <div className="mt-2 space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-900">
-                            {selectedClient.loyalty.currentVisits} of {selectedClient.loyalty.totalVisits} visits completed
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-900">
-                            Pass ID: {selectedClient.loyalty.passId}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-900">
-                            Joined: {formatDate(selectedClient.loyalty.passAddedAt)}
-                          </span>
-                        </div>
-                        {selectedClient.loyalty.lastVisitAt && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-900">
-                              Last visit: {formatDate(selectedClient.loyalty.lastVisitAt)}
-                            </span>
-                          </div>
-                        )}
-                        {selectedClient.loyalty.rewardsEarned > 0 && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-900">
-                              {selectedClient.loyalty.rewardsEarned} rewards earned
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedClient.notes && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-700">Latest Notes</h3>
-                      <div className="mt-2 flex items-start gap-2 text-sm">
-                        <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-gray-900">{selectedClient.notes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700">Recent Requests</h3>
-                    <div className="mt-2 space-y-2">
-                      {selectedClient.requests.slice(0, 3).map((request, index) => (
-                        <div key={index} className="text-sm bg-gray-50 p-2 rounded">
-                          <div className="font-medium">{request.service}</div>
-                          <div className="text-gray-600">
-                            {request.stylistPreference} • {formatDate(request.createdAt.toString())}
-                          </div>
-                          <div className="text-xs text-gray-500 capitalize">
-                            Status: {request.status}
+        <div className="mt-8">
+          {filteredClients.length === 0 ? (
+            <div className="text-center py-8">
+              <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No clients found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {searchQuery ? 'Try adjusting your search terms.' : 'Clients will appear here once they submit booking requests.'}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <ul className="divide-y divide-gray-200">
+                {filteredClients.map((client) => (
+                  <li key={client.id}>
+                    <div 
+                      className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => toggleExpanded(client.id)}
+                    >
+                      {/* Main client card content */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                        {/* Left side - Client info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              <UserIcon className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {client.name}
+                                </span>
+                                {client.hasLoyalty && (
+                                  <GiftIcon className="h-4 w-4 text-accent-600 flex-shrink-0" title="Loyalty Member" />
+                                )}
+                              </div>
+                              <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  <span>{client.completedRequests} completed</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <CurrencyDollarIcon className="h-4 w-4" />
+                                  <span>${client.totalSpent}</span>
+                                </div>
+                                {client.hasLoyalty && client.loyalty && (
+                                  <div className="flex items-center gap-1">
+                                    <GiftIcon className="h-4 w-4" />
+                                    <span>{client.loyalty.currentVisits}/{client.loyalty.totalVisits} visits</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      ))}
+                        
+                        {/* Right side - Last request date and expand button */}
+                        <div className="flex items-center space-x-3">
+                          <div className="text-right">
+                            <div className="text-sm text-gray-700">
+                              Last request: {formatDate(client.lastRequest)}
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleExpanded(client.id)
+                            }}
+                            className="inline-flex items-center p-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+                          >
+                            {expandedClient === client.id ? (
+                              <ChevronUpIcon className="h-4 w-4" />
+                            ) : (
+                              <ChevronDownIcon className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expanded details */}
+                      {expandedClient === client.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-4 pt-4 border-t border-gray-200"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-3">Contact Information</h4>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <UserIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-900">{client.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <EnvelopeIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <a href={`mailto:${client.email}`} className="text-accent-600 hover:text-accent-500 truncate">
+                                    {client.email}
+                                  </a>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <PhoneIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <a href={`tel:${client.phone}`} className="text-accent-600 hover:text-accent-500">
+                                    {client.phone}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-3">Booking History</h4>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-900">
+                                    {client.completedRequests} of {client.totalRequests} requests completed
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CurrencyDollarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-900">Estimated total spent: ${client.totalSpent}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-900">Last request: {formatDate(client.lastRequest)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {client.hasLoyalty && client.loyalty && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-gray-900 mb-3">Loyalty Program</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-900">
+                                      {client.loyalty.currentVisits} of {client.loyalty.totalVisits} visits completed
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-900">
+                                      Pass ID: {client.loyalty.passId}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-900">
+                                      Joined: {formatDate(client.loyalty.passAddedAt)}
+                                    </span>
+                                  </div>
+                                  {client.loyalty.lastVisitAt && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                      <span className="text-gray-900">
+                                        Last visit: {formatDate(client.loyalty.lastVisitAt)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {client.loyalty.rewardsEarned > 0 && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <GiftIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                      <span className="text-gray-900">
+                                        {client.loyalty.rewardsEarned} rewards earned
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {client.notes && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-gray-900 mb-2">Latest Notes</h4>
+                              <div className="flex items-start gap-2 text-sm">
+                                <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-gray-900 bg-gray-50 p-3 rounded-md">{client.notes}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="mt-4">
+                            <h4 className="font-medium text-gray-900 mb-2">Recent Requests</h4>
+                            <div className="space-y-2">
+                              {client.requests.slice(0, 3).map((request, index) => (
+                                <div key={index} className="text-sm bg-gray-50 p-3 rounded-md">
+                                  <div className="font-medium">{request.service}</div>
+                                  <div className="text-gray-600 mt-1">
+                                    {request.stylistPreference} • {formatDate(request.createdAt.toString())}
+                                  </div>
+                                  <div className="text-xs text-gray-500 capitalize mt-1">
+                                    Status: {request.status}
+                                  </div>
+                                </div>
+                              ))}
+                              {client.requests.length === 0 && (
+                                <p className="text-sm text-gray-500 italic">No booking requests yet</p>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="mt-4 text-center text-gray-500">
-                <UserIcon className="mx-auto h-8 w-8 text-gray-400" />
-                <p className="mt-2 text-sm">Select a client to view details</p>
-              </div>
-            )}
-          </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>
