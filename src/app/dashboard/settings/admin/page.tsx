@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { teamService } from '@/lib/firebase/services'
-import { TeamMember, Invitation } from '@/types/firebase'
+import { TeamMember, Invitation, TeamMemberPermissions } from '@/types/firebase'
 import { getAvailableRoles, getRoleDefinition, getPermissionsForRole } from '@/lib/permissions'
 import { 
   UserPlusIcon,
@@ -293,12 +293,12 @@ export default function AdminPage() {
               <div className="space-y-1">
                 {group.permissions.map((permission) => (
                   <div key={permission.key} className="flex items-center text-xs">
-                    {permissions[permission.key] ? (
+                    {permissions[permission.key as keyof TeamMemberPermissions] ? (
                       <CheckIcon className="h-3 w-3 text-green-500 mr-2" />
                     ) : (
                       <XMarkIcon className="h-3 w-3 text-red-500 mr-2" />
                     )}
-                    <span className={permissions[permission.key] ? 'text-green-700' : 'text-red-700'}>
+                    <span className={permissions[permission.key as keyof TeamMemberPermissions] ? 'text-green-700' : 'text-red-700'}>
                       {permission.label}
                     </span>
                   </div>

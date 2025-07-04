@@ -45,19 +45,15 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating invitation in Firestore...')
     // Create invitation in Firestore - filter out undefined fields
-    const invitationData: Record<string, unknown> = {
+    const invitationData = {
       email,
       name,
       phone,
       role,
       salonId,
-      invitedBy
+      invitedBy,
+      ...(permissions !== undefined && { permissions })
     };
-    
-    // Only include permissions if it's defined
-    if (permissions !== undefined) {
-      invitationData.permissions = permissions;
-    }
     
     console.log('Invitation data being saved:', invitationData);
     const invitationId = await teamService.createInvitation(invitationData)
