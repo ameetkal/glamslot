@@ -59,12 +59,12 @@ const getNavigation = (userRole: string): NavigationItem[] => {
     navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
   }
   
-  // Add provider-specific pages
-  if (permissions.canManageOwnSchedule) {
+  // Add provider-specific pages (only for non-owners)
+  if (permissions.canManageOwnSchedule && userRole !== 'owner') {
     navigation.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
   }
   
-  if (permissions.canViewOwnBookings) {
+  if (permissions.canViewOwnBookings && userRole !== 'owner') {
     navigation.push({ name: 'My Bookings', href: '/dashboard/bookings', icon: ChatBubbleLeftRightIcon })
   }
   
