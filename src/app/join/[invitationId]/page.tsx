@@ -11,13 +11,19 @@ import { CheckIcon, XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 export default function JoinTeamPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, loginWithGoogle } = useAuth()
+  const { user, loginWithGoogle, createAccountForInvite } = useAuth()
   const [invitation, setInvitation] = useState<Invitation | null>(null)
   const [salon, setSalon] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    password: '',
+    confirmPassword: ''
+  })
+  const [creatingAccount, setCreatingAccount] = useState(false)
 
   const invitationId = params.invitationId as string
 
@@ -124,6 +130,33 @@ export default function JoinTeamPage() {
     }
   }
 
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!invitation) return
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (passwordForm.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      return
+    }
+
+    try {
+      setCreatingAccount(true)
+      setError('')
+      await createAccountForInvite(invitation.email, passwordForm.password)
+      // After successful account creation, the component will re-render and user will be available
+    } catch (error) {
+      console.error('Error creating account:', error)
+      setError('Failed to create account. Please try again.')
+    } finally {
+      setCreatingAccount(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col justify-center py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
@@ -157,7 +190,7 @@ export default function JoinTeamPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50" style={{ paddingTop: '10vh' }}>
+    <div className="min-h-screen flex flex-col justify-center py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
       <motion.div 
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -207,19 +240,98 @@ export default function JoinTeamPage() {
             </div>
 
             {!user ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-sm text-gray-600 text-center">
                   Please sign in to accept this invitation
                 </p>
-                <button
-                  onClick={handleGoogleSignIn}
-                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <svg className="h-5 w-5 mr-2" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
-                  </svg>
-                  Sign in with Google
-                </button>
+                
+                {!showPasswordForm ? (
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleGoogleSignIn}
+                      className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <svg className="h-5 w-5 mr-2" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
+                      </svg>
+                      Sign in with Google
+                    </button>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Or</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => setShowPasswordForm(true)}
+                      className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Create Password
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCreateAccount} className="space-y-3">
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                        Create Password
+                      </label>
+                      <input
+                        type="password"
+                        id="password"
+                        required
+                        value={passwordForm.password}
+                        onChange={(e) => setPasswordForm(prev => ({ ...prev, password: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder:text-gray-500"
+                        placeholder="Enter password"
+                        minLength={6}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm Password
+                      </label>
+                      <input
+                        type="password"
+                        id="confirmPassword"
+                        required
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder:text-gray-500"
+                        placeholder="Confirm password"
+                        minLength={6}
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordForm(false)}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={creatingAccount}
+                        className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {creatingAccount ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Creating...
+                          </>
+                        ) : (
+                          'Create Account'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             ) : (
               <button

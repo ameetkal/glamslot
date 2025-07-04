@@ -25,19 +25,8 @@ export default function Navbar({ className = '' }: NavbarProps) {
         <div className="flex h-14 items-center justify-center sm:hidden">
           <div className="text-center">
             <Link href="/" className="text-xl font-bold text-gray-900">
-              LastMinute
+              GlamSlot
             </Link>
-            <div className="text-xs text-gray-500">
-              by{' '}
-              <a
-                href="https://glammatic.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent-600 hover:text-accent-500"
-              >
-                Glammatic
-              </a>
-            </div>
           </div>
         </div>
 
@@ -47,19 +36,8 @@ export default function Navbar({ className = '' }: NavbarProps) {
             <div className="flex flex-shrink-0 items-center">
               <div>
                 <Link href="/" className="text-xl font-bold text-gray-900 hover:text-accent-600">
-                  LastMinute
+                  GlamSlot
                 </Link>
-                <div className="text-xs text-gray-500">
-                  by{' '}
-                  <a
-                    href="https://glammatic.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent-600 hover:text-accent-500"
-                  >
-                    Glammatic
-                  </a>
-                </div>
               </div>
             </div>
             <div className="ml-6 flex space-x-8">

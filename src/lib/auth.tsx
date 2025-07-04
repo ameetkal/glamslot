@@ -19,6 +19,7 @@ interface AuthContextType {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string, userData: UserData) => Promise<void>
+  createAccountForInvite: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   loginWithGoogle: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -122,11 +123,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const createAccountForInvite = async (email: string, password: string) => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Account creation failed')
+    }
+  }
+
   const value = {
     user,
     loading,
     login,
     signup,
+    createAccountForInvite,
     logout,
     loginWithGoogle,
     resetPassword

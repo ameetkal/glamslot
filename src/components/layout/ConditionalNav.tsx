@@ -11,6 +11,7 @@ export default function ConditionalNav({ children }: { children: React.ReactNode
   const isLoyaltyPage = pathname.startsWith('/loyalty');
   const isDashboardPage = pathname.startsWith('/dashboard');
   const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isJoinPage = pathname.startsWith('/join');
 
   // For dashboard pages, render children directly without any navigation or padding
   if (isDashboardPage) {
@@ -19,14 +20,14 @@ export default function ConditionalNav({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-full flex flex-col pb-16 sm:pb-0">
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && <Navbar />}
+      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <Navbar />}
       <main className="flex-grow">
         <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
           {children}
         </div>
       </main>
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && <Footer />}
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && <BottomNav />}
+      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <Footer />}
+      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <BottomNav />}
     </div>
   );
 } 
