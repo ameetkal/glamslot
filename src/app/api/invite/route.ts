@@ -4,7 +4,10 @@ import { smsService } from '@/lib/smsService'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== INVITATION REQUEST STARTED ===');
+    
     const body = await request.json()
+    console.log('Request body:', JSON.stringify(body, null, 2))
     
     // Extract invitation data
     const {
@@ -17,44 +20,65 @@ export async function POST(request: NextRequest) {
       invitedBy
     } = body
 
+    console.log('Extracted data:', { name, email, phone, role, salonId, invitedBy })
+
     // Validate required fields
     if (!name || !email || !salonId || !invitedBy) {
+      console.error('Missing required fields:', { name: !!name, email: !!email, salonId: !!salonId, invitedBy: !!invitedBy })
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
       )
     }
 
+    console.log('Getting salon information...')
     // Get salon information for the invitation email
     const salon = await salonService.getSalon(salonId)
     if (!salon) {
+      console.error('Salon not found for ID:', salonId)
       return NextResponse.json(
         { success: false, message: 'Salon not found' },
         { status: 404 }
       )
     }
+    console.log('Salon found:', salon.name)
 
-    // Create invitation in Firestore
-    const invitationId = await teamService.createInvitation({
+    console.log('Creating invitation in Firestore...')
+    // Create invitation in Firestore - filter out undefined fields
+    const invitationData: any = {
       email,
       name,
       phone,
       role,
-      permissions,
       salonId,
       invitedBy
-    })
+    };
+    
+    // Only include permissions if it's defined
+    if (permissions !== undefined) {
+      invitationData.permissions = permissions;
+    }
+    
+    console.log('Invitation data being saved:', invitationData);
+    const invitationId = await teamService.createInvitation(invitationData)
+    console.log('Invitation created with ID:', invitationId)
 
     // Generate invitation URL
     const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/join/${invitationId}`
+    console.log('Invitation URL:', invitationUrl)
 
     // Send SMS invitation
     let smsSent = false;
     if (phone) {
       try {
+        console.log('Formatting phone number...')
         const formattedPhone = smsService.formatPhoneNumber(phone);
-        const message = `🔔 You've been invited to join ${salon.name}! Click here to join and view appointment booking requests: ${invitationUrl}`;
+        console.log('Formatted phone:', formattedPhone)
         
+        const message = `🔔 You've been invited to join ${salon.name}! Click here to join and view appointment booking requests: ${invitationUrl}`;
+        console.log('SMS message:', message)
+        
+        console.log('Sending SMS notification...')
         smsSent = await smsService.sendNotification({
           to: formattedPhone,
           message: message,
@@ -92,7 +116,13 @@ export async function POST(request: NextRequest) {
       invitationId
     })
   } catch (error) {
-    console.error('Error sending invitation:', error)
+    console.error('=== INVITATION ERROR ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Full error object:', error);
+    console.error('========================');
+    
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

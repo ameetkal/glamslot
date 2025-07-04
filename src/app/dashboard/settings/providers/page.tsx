@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { providerService, serviceService, teamService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService, TeamMember } from '@/types/firebase';
+import { getAvailableRoles, getPermissionsForRole } from '@/lib/permissions';
 import Modal from '@/components/ui/Modal';
 import DraggableList from '@/components/ui/DraggableList';
 
@@ -19,7 +20,8 @@ export default function ProvidersPage() {
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    role: 'service_provider'
   });
   const [sendingInvite, setSendingInvite] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -89,14 +91,15 @@ export default function ProvidersPage() {
     setInviteForm({
       name: providerName,
       email: '',
-      phone: ''
+      phone: '',
+      role: 'service_provider'
     });
     setInviteModalOpen(true);
   }
 
   function closeInviteModal() {
     setInviteModalOpen(false);
-    setInviteForm({ name: '', email: '', phone: '' });
+    setInviteForm({ name: '', email: '', phone: '', role: 'service_provider' });
     setError('');
   }
 
@@ -135,6 +138,9 @@ export default function ProvidersPage() {
       setSendingInvite(true);
       setError('');
 
+      // Get permissions for the selected role
+      const permissions = getPermissionsForRole(inviteForm.role);
+
       // Send invitation via API
       const response = await fetch('/api/invite', {
         method: 'POST',
@@ -145,7 +151,8 @@ export default function ProvidersPage() {
           name: inviteForm.name,
           email: inviteForm.email,
           phone: inviteForm.phone,
-          role: 'service_provider',
+          role: inviteForm.role,
+          permissions: permissions,
           salonId: user.uid,
           invitedBy: user.email
         }),
@@ -159,7 +166,8 @@ export default function ProvidersPage() {
       
       if (result.success) {
         // Update the provider to enable notifications (will be active when they join)
-        if (editing) {
+        // Only update if the provider has a valid ID (not a new provider being created)
+        if (editing && editing.id) {
           await providerService.updateProvider(editing.id, {
             receiveNotifications: true
           });
@@ -718,6 +726,27 @@ export default function ProvidersPage() {
               />
               <p className="text-xs text-gray-500 mt-1">
                 Used for SMS notifications about appointments
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="invite-role" className="block text-sm font-medium text-gray-700 mb-1">
+                Role *
+              </label>
+              <select
+                id="invite-role"
+                value={inviteForm.role}
+                onChange={(e) => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-gray-900 bg-white"
+              >
+                {getAvailableRoles().map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label} - {role.description}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Determines the provider's access permissions
               </p>
             </div>
 
