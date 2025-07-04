@@ -20,7 +20,7 @@ import {
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
-import { salonService } from '@/lib/firebase/services'
+import { salonService, teamService } from '@/lib/firebase/services'
 import { getPermissionsForRole } from '@/lib/permissions'
 
 interface NavigationItem {
@@ -99,9 +99,27 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const fetchUserRole = async () => {
       if (!user) return
       
-      // For now, assume owner role for the main user
-      // In a real implementation, you'd fetch the user's role from the team members collection
-      setUserRole('owner')
+      try {
+        // Try to find the user in team members collection to get their actual role
+        const teamMembers = await teamService.getTeamMembers(user.uid)
+        const userTeamMember = teamMembers.find((member: any) => member.userId === user.uid)
+        
+        if (userTeamMember) {
+          setUserRole(userTeamMember.role)
+        } else {
+          // If not found in team members, check if they're a salon owner
+          const salon = await salonService.getSalon(user.uid)
+          if (salon) {
+            setUserRole('owner')
+          } else {
+            // Default to member if we can't determine role
+            setUserRole('member')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error)
+        setUserRole('member')
+      }
     }
     fetchUserRole()
   }, [user])
@@ -163,7 +181,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-medium text-gray-900 truncate" title={user?.email || ''}>
                   {user?.email}
                 </p>
-                <p className="text-xs text-gray-500">Salon Owner</p>
+                <p className="text-xs text-gray-500">
+                  {userRole === 'owner' ? 'Salon Owner' : 
+                   userRole === 'admin' ? 'Admin' : 
+                   userRole === 'service_provider' ? 'Service Provider' : 
+                   userRole === 'front_desk' ? 'Front Desk' : 
+                   'Team Member'}
+                </p>
               </div>
             </div>
           </div>

@@ -108,10 +108,8 @@ export default function JoinTeamPage() {
 
       setSuccess('Successfully joined the team!')
       
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 2000)
+      // Redirect to dashboard immediately
+      router.push('/dashboard')
     } catch (error) {
       console.error('Error accepting invitation:', error)
       setError('Failed to accept invitation. Please try again.')
@@ -147,8 +145,20 @@ export default function JoinTeamPage() {
     try {
       setCreatingAccount(true)
       setError('')
+      
+      // Create account
       await createAccountForInvite(invitation.email, passwordForm.password)
-      // After successful account creation, the component will re-render and user will be available
+      
+      // Wait a moment for the user to be available, then accept invitation
+      setTimeout(async () => {
+        try {
+          await handleAcceptInvitation()
+        } catch (error) {
+          console.error('Error accepting invitation after account creation:', error)
+          setError('Account created but failed to accept invitation. Please try again.')
+        }
+      }, 1000)
+      
     } catch (error) {
       console.error('Error creating account:', error)
       setError('Failed to create account. Please try again.')
@@ -190,7 +200,7 @@ export default function JoinTeamPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen flex flex-col justify-start pt-16 py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
       <motion.div 
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -235,7 +245,7 @@ export default function JoinTeamPage() {
                 <div><span className="font-medium">Name:</span> {invitation?.name}</div>
                 <div><span className="font-medium">Email:</span> {invitation?.email}</div>
                 <div><span className="font-medium">Salon:</span> {salon?.name}</div>
-                <div><span className="font-medium">Role:</span> Team Member</div>
+                <div><span className="font-medium">Role:</span> {invitation?.role === 'service_provider' ? 'Service Provider' : invitation?.role === 'admin' ? 'Admin' : invitation?.role === 'front_desk' ? 'Front Desk' : 'Team Member'}</div>
               </div>
             </div>
 
@@ -326,7 +336,7 @@ export default function JoinTeamPage() {
                             Creating...
                           </>
                         ) : (
-                          'Create Account'
+                          'Create Account & Join Team'
                         )}
                       </button>
                     </div>
