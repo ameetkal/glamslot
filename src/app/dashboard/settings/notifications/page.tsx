@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { salonService } from '@/lib/firebase/services';
 import { PhoneIcon, PlusIcon, XMarkIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
@@ -561,7 +562,11 @@ export default function NotificationsPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Salon Notifications</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Internal notifications for salon staff and management when new booking requests arrive.
+                Internal notifications for salon front desk and management when new booking requests arrive. To add individual notifications for service providers, edit their settings directly from the{' '}
+                <Link href="/dashboard/settings/providers" className="text-accent-600 hover:text-accent-500 underline">
+                  Providers
+                </Link>{' '}
+                tab.
               </p>
               
               <div className="space-y-6">

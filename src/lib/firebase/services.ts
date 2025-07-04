@@ -376,11 +376,15 @@ export const teamService = {
   async createInvitation(invitation: {
     email: string;
     name: string;
+    phone?: string;
+    role?: string;
+    permissions?: import('@/types/firebase').TeamMemberPermissions;
     salonId: string;
     invitedBy: string;
   }): Promise<string> {
     const docRef = await addDoc(collection(db, 'invitations'), {
       ...invitation,
+      role: invitation.role || 'member',
       status: 'pending',
       invitedAt: serverTimestamp(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
@@ -407,7 +411,9 @@ export const teamService = {
   async addTeamMember(member: {
     name: string;
     email: string;
-    role: 'owner' | 'admin' | 'member';
+    phone?: string;
+    role: 'owner' | 'admin' | 'front_desk' | 'service_provider' | 'member';
+    permissions?: import('@/types/firebase').TeamMemberPermissions;
     salonId: string;
     userId: string;
   }): Promise<string> {
@@ -424,6 +430,20 @@ export const teamService = {
   async removeTeamMember(id: string): Promise<void> {
     const docRef = doc(db, 'teamMembers', id);
     await deleteDoc(docRef);
+  },
+
+  // Link provider to team member
+  async linkProviderToTeamMember(providerName: string, salonId: string, teamMemberId: string): Promise<void> {
+    // Find provider by name and salon
+    const providers = await providerService.getProviders(salonId);
+    const provider = providers.find(p => p.name === providerName);
+    
+    if (provider) {
+      await providerService.updateProvider(provider.id, {
+        teamMemberId: teamMemberId,
+        isTeamMember: true
+      });
+    }
   }
 };
 

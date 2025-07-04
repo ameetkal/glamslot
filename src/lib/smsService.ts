@@ -72,6 +72,39 @@ export class SMSService {
   }
 
   /**
+   * Send a booking request notification to a specific provider
+   */
+  async sendProviderBookingNotification(
+    providerPhone: string,
+    providerName: string,
+    clientName: string,
+    service: string,
+    dateTimePreference: string
+  ): Promise<boolean> {
+    try {
+      // If Twilio is not available, log and return success (don't fail the booking)
+      if (!this.twilioClient) {
+        console.log(`SMS notification skipped (Twilio not available) - would send to ${providerPhone}`)
+        return true
+      }
+
+      const message = `🔔 New appointment request for ${providerName}!\n\nClient: ${clientName}\nService: ${service}\nWhen: ${dateTimePreference}\n\nCheck your dashboard to respond.`
+
+      await this.twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: providerPhone
+      })
+
+      console.log(`SMS notification sent to ${providerPhone} for provider booking request`)
+      return true
+    } catch (error) {
+      console.error('Error sending provider SMS notification:', error)
+      return false
+    }
+  }
+
+  /**
    * Send a general SMS notification
    */
   async sendNotification(notification: SMSNotification): Promise<boolean> {

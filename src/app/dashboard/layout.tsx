@@ -14,12 +14,21 @@ import {
   Bars3Icon,
   XMarkIcon,
   ArrowRightOnRectangleIcon,
-  GiftIcon
+  GiftIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { salonService } from '@/lib/firebase/services'
+import { getPermissionsForRole } from '@/lib/permissions'
+
+interface NavigationItem {
+  name: string
+  href: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  subItems?: NavigationItem[]
+}
 
 const settingsSubItems = [
   { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
@@ -30,12 +39,43 @@ const settingsSubItems = [
   { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
 ]
 
-const navigation = [
-  { name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon },
-  { name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon },
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems },
-]
+const getNavigation = (userRole: string): NavigationItem[] => {
+  const permissions = getPermissionsForRole(userRole)
+  
+  const navigation: NavigationItem[] = []
+  
+  // Add Requests if user can view them
+  if (permissions.canViewRequests) {
+    navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon })
+  }
+  
+  // Add Loyalty if user can view it
+  if (permissions.canViewLoyalty) {
+    navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
+  }
+  
+  // Add Dashboard (always available)
+  navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
+  
+  // Add provider-specific pages
+  if (permissions.canManageOwnSchedule) {
+    navigation.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
+  }
+  
+  if (permissions.canViewOwnBookings) {
+    navigation.push({ name: 'My Bookings', href: '/dashboard/bookings', icon: ChatBubbleLeftRightIcon })
+  }
+  
+  // Add Settings if user can view settings
+  if (permissions.canViewSettings) {
+    navigation.push({ name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems })
+  } else if (permissions.canManageOwnServices) {
+    // For providers, show a simplified settings link to their provider settings
+    navigation.push({ name: 'Settings', href: '/dashboard/settings/provider', icon: Cog6ToothIcon })
+  }
+  
+  return navigation
+}
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
@@ -44,6 +84,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'))
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [salonName, setSalonName] = useState<string>('')
+  const [userRole, setUserRole] = useState<string>('owner')
 
   useEffect(() => {
     const fetchSalon = async () => {
@@ -52,6 +93,17 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       if (salon && salon.name) setSalonName(salon.name)
     }
     fetchSalon()
+  }, [user])
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user) return
+      
+      // For now, assume owner role for the main user
+      // In a real implementation, you'd fetch the user's role from the team members collection
+      setUserRole('owner')
+    }
+    fetchUserRole()
   }, [user])
 
   const handleLogout = async () => {
@@ -117,7 +169,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
-            {navigation.map((item) => {
+            {getNavigation(userRole).map((item: NavigationItem) => {
               if (!item.subItems) {
                 const isActive = pathname === item.href
                 return (
@@ -173,7 +225,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   </button>
                   {settingsOpen && (
                     <div className="ml-6 mt-1 space-y-1">
-                      {item.subItems.map((sub) => {
+                      {item.subItems.map((sub: NavigationItem) => {
                         const isSubActive = pathname === sub.href
                         return (
                           <Link

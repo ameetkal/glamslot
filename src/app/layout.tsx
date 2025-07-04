@@ -10,7 +10,7 @@ export const metadata = {
   title: 'GlamSlot - Beauty Appointment Booking System',
   description: 'Professional booking platform for salons and beauty professionals to manage client appointments and requests',
   manifest: '/manifest.json',
-  themeColor: '#9333ea',
+  themeColor: '#ffffff',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -42,7 +42,7 @@ export default function RootLayout({
     <html lang="en" className="h-full bg-gray-50">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#9333ea" />
+        <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="GlamSlot" />

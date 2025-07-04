@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { bookingRequestService, salonService } from '@/lib/firebase/services'
+import { bookingRequestService, salonService, providerService, teamService } from '@/lib/firebase/services'
 import { smsService } from '@/lib/smsService'
 import { sendEmail } from '@/lib/mailjet'
 
@@ -130,6 +130,45 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.log(`No enabled email recipients configured for salon ${salon.name}, skipping email notification`);
+    }
+
+    // Send provider-specific notifications if a specific stylist was requested
+    if (stylist && stylist !== 'Any stylist') {
+      try {
+        // Get all providers for this salon
+        const providers = await providerService.getProviders(salon.id);
+        const requestedProvider = providers.find(p => p.name === stylist);
+        
+                 if (requestedProvider && requestedProvider.receiveNotifications && requestedProvider.isTeamMember) {
+           // Get the team member record to get the phone number
+           const teamMembers = await teamService.getTeamMembers(salon.id);
+           const teamMember = teamMembers.find((tm: import('@/types/firebase').TeamMember) => tm.id === requestedProvider.teamMemberId);
+          
+          if (teamMember && teamMember.phone) {
+            try {
+              const formattedPhone = smsService.formatPhoneNumber(teamMember.phone);
+              await smsService.sendProviderBookingNotification(
+                formattedPhone,
+                requestedProvider.name,
+                name,
+                service,
+                dateTimePreference
+              );
+              console.log(`Provider SMS notification sent to ${formattedPhone} for ${requestedProvider.name}`);
+            } catch (providerSmsError) {
+              console.error('Failed to send provider SMS notification:', providerSmsError);
+              // Don't fail the booking request if provider SMS fails
+            }
+          } else {
+            console.log(`Provider ${requestedProvider.name} has notifications enabled but no phone number found`);
+          }
+        } else {
+          console.log(`Provider ${stylist} notifications not enabled or not a team member`);
+        }
+      } catch (providerError) {
+        console.error('Error sending provider notifications:', providerError);
+        // Don't fail the booking request if provider notifications fail
+      }
     }
 
     return NextResponse.json({

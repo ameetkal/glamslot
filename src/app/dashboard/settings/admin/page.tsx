@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { teamService } from '@/lib/firebase/services'
-import { TeamMember, Invitation } from '@/types/firebase'
+import { TeamMember, Invitation, TeamMemberPermissions } from '@/types/firebase'
+import { getAvailableRoles, getRoleDefinition, getPermissionsForRole } from '@/lib/permissions'
 import { 
   UserPlusIcon,
   EnvelopeIcon,
@@ -11,8 +12,10 @@ import {
   CheckIcon,
   XMarkIcon,
   ClockIcon,
-  TrashIcon
+  TrashIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -23,11 +26,15 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [invitationUrl, setInvitationUrl] = useState('')
+  const [showPermissions, setShowPermissions] = useState<{ [key: string]: boolean }>({})
   
   const [inviteForm, setInviteForm] = useState({
     name: '',
-    email: ''
+    email: '',
+    role: 'member'
   })
+
+  const availableRoles = getAvailableRoles()
 
   useEffect(() => {
     const fetchTeamData = async () => {
@@ -85,6 +92,9 @@ export default function AdminPage() {
       setError('')
       setSuccess('')
 
+      // Get permissions for the selected role
+      const permissions = getPermissionsForRole(inviteForm.role)
+
       // Send invitation via API
       const response = await fetch('/api/invite', {
         method: 'POST',
@@ -94,6 +104,8 @@ export default function AdminPage() {
         body: JSON.stringify({
           name: inviteForm.name,
           email: inviteForm.email,
+          role: inviteForm.role,
+          permissions: permissions,
           salonId: user.uid,
           invitedBy: user.email
         }),
@@ -110,7 +122,7 @@ export default function AdminPage() {
         const invitationsData = await teamService.getInvitations(user.uid)
         setInvitations(invitationsData)
         
-        setInviteForm({ name: '', email: '' })
+        setInviteForm({ name: '', email: '', role: 'member' })
         const invitationUrl = `${window.location.origin}/join/${result.invitationId}`
         setInvitationUrl(invitationUrl)
         
@@ -176,16 +188,8 @@ export default function AdminPage() {
   }
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'owner':
-        return 'bg-purple-100 text-purple-800'
-      case 'admin':
-        return 'bg-blue-100 text-blue-800'
-      case 'member':
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+    const roleDef = getRoleDefinition(role)
+    return roleDef.color
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -232,6 +236,82 @@ export default function AdminPage() {
     }
   }
 
+  const togglePermissions = (memberId: string) => {
+    setShowPermissions(prev => ({
+      ...prev,
+      [memberId]: !prev[memberId]
+    }))
+  }
+
+  const renderPermissions = (permissions: TeamMemberPermissions) => {
+    const permissionGroups = [
+      {
+        title: 'Dashboard Access',
+        permissions: [
+          { key: 'canViewRequests', label: 'View Requests' },
+          { key: 'canManageRequests', label: 'Manage Requests' },
+          { key: 'canViewClients', label: 'View Clients' },
+          { key: 'canManageClients', label: 'Manage Clients' },
+          { key: 'canViewLoyalty', label: 'View Loyalty' },
+          { key: 'canManageLoyalty', label: 'Manage Loyalty' },
+        ]
+      },
+      {
+        title: 'Settings Access',
+        permissions: [
+          { key: 'canViewSettings', label: 'View Settings' },
+          { key: 'canManageServices', label: 'Manage Services' },
+          { key: 'canManageProviders', label: 'Manage Providers' },
+          { key: 'canManageNotifications', label: 'Manage Notifications' },
+          { key: 'canManageTeam', label: 'Manage Team' },
+          { key: 'canManageSalon', label: 'Manage Salon' },
+        ]
+      },
+      {
+        title: 'Admin Access',
+        permissions: [
+          { key: 'canViewAnalytics', label: 'View Analytics' },
+          { key: 'canManageBilling', label: 'Manage Billing' },
+          { key: 'canAccessAdmin', label: 'Access Admin' },
+        ]
+      },
+      {
+        title: 'Provider Access',
+        permissions: [
+          { key: 'canManageOwnSchedule', label: 'Manage Own Schedule' },
+          { key: 'canViewOwnBookings', label: 'View Own Bookings' },
+          { key: 'canManageOwnServices', label: 'Manage Own Services' },
+        ]
+      }
+    ]
+
+    return (
+      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {permissionGroups.map((group) => (
+            <div key={group.title}>
+              <h5 className="text-sm font-medium text-gray-700 mb-2">{group.title}</h5>
+              <div className="space-y-1">
+                {group.permissions.map((permission) => (
+                  <div key={permission.key} className="flex items-center text-xs">
+                    {permissions[permission.key as keyof TeamMemberPermissions] ? (
+                      <CheckIcon className="h-3 w-3 text-green-500 mr-2" />
+                    ) : (
+                      <XMarkIcon className="h-3 w-3 text-red-500 mr-2" />
+                    )}
+                    <span className={permissions[permission.key as keyof TeamMemberPermissions] ? 'text-green-700' : 'text-red-700'}>
+                      {permission.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-6">
@@ -251,6 +331,9 @@ export default function AdminPage() {
         <div className="sm:flex sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Team Management</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Manage team members and their access permissions
+            </p>
           </div>
           <div className="mt-4 sm:mt-0">
             <button
@@ -311,7 +394,7 @@ export default function AdminPage() {
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Invite Team Member</h3>
               <p className="mt-1 text-sm text-gray-700">
-                Send an invitation to join your salon dashboard
+                Send an invitation to join your salon dashboard with specific role permissions
               </p>
             </div>
             <form onSubmit={handleInviteSubmit} className="p-6 space-y-4">
@@ -355,6 +438,33 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                  Role *
+                </label>
+                <select
+                  id="role"
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
+                >
+                  {availableRoles.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label} - {role.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-2">
+                  <Link 
+                    href="/dashboard/settings/admin/roles"
+                    className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                  >
+                    <ShieldCheckIcon className="h-4 w-4 mr-1" />
+                    View detailed role permissions
+                  </Link>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={sendingInvite}
@@ -395,35 +505,55 @@ export default function AdminPage() {
               ) : (
                 <div className="space-y-4">
                   {teamMembers.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-accent-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-accent-700">
-                              {member.name.charAt(0).toUpperCase()}
-                            </span>
+                    <div key={member.id} className="border border-gray-200 rounded-lg">
+                      <div className="flex items-center justify-between p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-accent-100 flex items-center justify-center">
+                              <span className="text-sm font-medium text-accent-700">
+                                {member.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                            <p className="text-sm text-gray-600">{member.email}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}>
+                                {getRoleDefinition(member.role).name}
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(member.status)}`}>
+                                {member.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                          <p className="text-sm text-gray-600">{member.email}</p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}>
-                              {member.role}
-                            </span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(member.status)}`}>
-                              {member.status}
-                            </span>
-                          </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => togglePermissions(member.id)}
+                            className="text-gray-600 hover:text-gray-800"
+                            title="View permissions"
+                          >
+                            <ShieldCheckIcon className="h-5 w-5" />
+                          </button>
+                          {member.role !== 'owner' && (
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Remove member"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      {member.role !== 'owner' && (
-                        <button
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
+                      
+                      {/* Permissions Section */}
+                      {showPermissions[member.id] && member.permissions && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <h5 className="text-sm font-medium text-gray-700 mt-3 mb-2">Permissions</h5>
+                          {renderPermissions(member.permissions)}
+                        </div>
                       )}
                     </div>
                   ))}

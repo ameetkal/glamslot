@@ -1,82 +1,125 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { teamService, salonService } from '@/lib/firebase/services'
-import { mailjetService } from '@/lib/mailjet'
+import { smsService } from '@/lib/smsService'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== INVITATION REQUEST STARTED ===');
+    
     const body = await request.json()
+    console.log('Request body:', JSON.stringify(body, null, 2))
     
     // Extract invitation data
     const {
       name,
       email,
+      phone,
+      role = 'member',
+      permissions,
       salonId,
       invitedBy
     } = body
 
+    console.log('Extracted data:', { name, email, phone, role, salonId, invitedBy })
+
     // Validate required fields
     if (!name || !email || !salonId || !invitedBy) {
+      console.error('Missing required fields:', { name: !!name, email: !!email, salonId: !!salonId, invitedBy: !!invitedBy })
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
       )
     }
 
+    console.log('Getting salon information...')
     // Get salon information for the invitation email
     const salon = await salonService.getSalon(salonId)
     if (!salon) {
+      console.error('Salon not found for ID:', salonId)
       return NextResponse.json(
         { success: false, message: 'Salon not found' },
         { status: 404 }
       )
     }
+    console.log('Salon found:', salon.name)
 
-    // Create invitation in Firestore
-    const invitationId = await teamService.createInvitation({
+    console.log('Creating invitation in Firestore...')
+    // Create invitation in Firestore - filter out undefined fields
+    const invitationData = {
       email,
       name,
+      phone,
+      role,
       salonId,
-      invitedBy
-    })
-
-    // Generate invitation URL
-    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/join/${invitationId}`
-
-    // Send email invitation via Mailjet
-    const emailSent = await mailjetService.sendTeamInvitation({
-      to: {
-        email,
-        name
-      },
-      salonName: salon.name,
       invitedBy,
-      invitationUrl,
-      salonUrl: salon.bookingUrl
-    })
+      ...(permissions !== undefined && { permissions })
+    };
+    
+    console.log('Invitation data being saved:', invitationData);
+    const invitationId = await teamService.createInvitation(invitationData)
+    console.log('Invitation created with ID:', invitationId)
 
-    if (!emailSent) {
-      console.error('Failed to send invitation email via Mailjet')
-      // Still return success since invitation was created, but log the issue
-      console.log('=== INVITATION CREATED (EMAIL FAILED) ===')
-      console.log('Invitation ID:', invitationId)
-      console.log('Salon Name:', salon.name)
-      console.log('Invitee Name:', name)
-      console.log('Invitee Email:', email)
-      console.log('Invited By:', invitedBy)
-      console.log('Invitation URL:', invitationUrl)
-      console.log('Salon URL:', salon.bookingUrl)
-      console.log('========================')
+    // Generate invitation URL using request origin
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const invitationUrl = `${baseUrl}/join/${invitationId}`
+    console.log('Invitation URL:', invitationUrl)
+
+    // Send SMS invitation
+    let smsSent = false;
+    if (phone) {
+      try {
+        console.log('Formatting phone number...')
+        const formattedPhone = smsService.formatPhoneNumber(phone);
+        console.log('Formatted phone:', formattedPhone)
+        
+        const message = `🔔 You've been invited to join ${salon.name}! Click here to join and view appointment booking requests: ${invitationUrl}`;
+        console.log('SMS message:', message)
+        
+        console.log('Sending SMS notification...')
+        smsSent = await smsService.sendNotification({
+          to: formattedPhone,
+          message: message,
+          salonName: salon.name
+        });
+        
+        if (smsSent) {
+          console.log(`SMS invitation sent successfully to ${formattedPhone}`);
+        } else {
+          console.error('Failed to send SMS invitation');
+        }
+      } catch (smsError) {
+        console.error('Error sending SMS invitation:', smsError);
+        smsSent = false;
+      }
     } else {
-      console.log('Invitation email sent successfully via Mailjet')
+      console.log('No phone number provided, skipping SMS invitation');
     }
+
+    // Log invitation details for debugging
+    console.log('=== INVITATION CREATED ===');
+    console.log('Invitation ID:', invitationId);
+    console.log('Salon Name:', salon.name);
+    console.log('Invitee Name:', name);
+    console.log('Invitee Email:', email);
+    console.log('Invitee Phone:', phone);
+    console.log('Invited By:', invitedBy);
+    console.log('Invitation URL:', invitationUrl);
+    console.log('SMS Sent:', smsSent);
+    console.log('========================');
 
     return NextResponse.json({
       success: true,
-      message: emailSent ? 'Invitation sent successfully' : 'Invitation created but email failed to send',
+      message: smsSent ? 'SMS invitation sent successfully' : 'Invitation created but SMS failed to send',
       invitationId
     })
   } catch (error) {
-    console.error('Error sending invitation:', error)
+    console.error('=== INVITATION ERROR ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Full error object:', error);
+    console.error('========================');
+    
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
