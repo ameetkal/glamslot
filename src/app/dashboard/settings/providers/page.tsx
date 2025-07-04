@@ -746,7 +746,7 @@ export default function ProvidersPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Determines the provider's access permissions
+                Determines the provider&apos;s access permissions
               </p>
             </div>
 

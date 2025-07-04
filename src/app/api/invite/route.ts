@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating invitation in Firestore...')
     // Create invitation in Firestore - filter out undefined fields
-    const invitationData: any = {
+    const invitationData: Record<string, unknown> = {
       email,
       name,
       phone,
