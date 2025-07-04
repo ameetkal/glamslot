@@ -102,7 +102,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       try {
         // Try to find the user in team members collection to get their actual role
         const teamMembers = await teamService.getTeamMembers(user.uid)
-        const userTeamMember = teamMembers.find((member: any) => member.userId === user.uid)
+        const userTeamMember = teamMembers.find((member) => member.userId === user.uid)
         
         if (userTeamMember) {
           setUserRole(userTeamMember.role)
