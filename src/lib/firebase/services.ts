@@ -349,6 +349,20 @@ export const teamService = {
     })) as TeamMember[];
   },
 
+  // Get team member by userId
+  async getTeamMemberByUserId(userId: string): Promise<TeamMember | null> {
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('userId', '==', userId)
+    );
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as TeamMember;
+    }
+    return null;
+  },
+
   // Get all invitations for a salon
   async getInvitations(salonId: string): Promise<Invitation[]> {
     const q = query(

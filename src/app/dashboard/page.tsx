@@ -10,7 +10,7 @@ import {
   CalendarIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import { bookingRequestService } from '@/lib/firebase/services'
+import { bookingRequestService, teamService } from '@/lib/firebase/services'
 import { BookingRequest } from '@/types/firebase'
 import { SessionTrackingService } from '@/lib/sessionTracking'
 import { getBookingUrl } from '@/lib/utils'
@@ -66,6 +66,7 @@ export default function DashboardPage() {
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [isTeamMember, setIsTeamMember] = useState(false)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -78,9 +79,23 @@ export default function DashboardPage() {
       setLoading(true)
 
       try {
-        // Fetch salon data using user UID as document ID
-        const salonDocRef = doc(db, 'salons', user.uid)
-        console.log('Fetching salon document with ID:', user.uid)
+        // First, check if user is a team member
+        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+        let salonId = user.uid // Default to user.uid for salon owners
+        
+        if (userTeamMember) {
+          // User is a team member, use their salonId
+          salonId = userTeamMember.salonId
+          setIsTeamMember(true)
+          console.log('User is a team member, using salonId:', salonId)
+        } else {
+          setIsTeamMember(false)
+          console.log('User is a salon owner, using user.uid as salonId')
+        }
+
+        // Fetch salon data using the correct salon ID
+        const salonDocRef = doc(db, 'salons', salonId)
+        console.log('Fetching salon document with ID:', salonId)
         const salonDoc = await getDoc(salonDocRef)
         if (salonDoc.exists()) {
           const salon = salonDoc.data() as Salon
@@ -89,12 +104,12 @@ export default function DashboardPage() {
           console.log('Salon bookingUrl:', salon.bookingUrl)
           setSalonData(salon)
         } else {
-          console.log('No salon document found for user:', user.uid)
+          console.log('No salon document found for salonId:', salonId)
           setSalonData(null)
         }
 
         // Fetch booking requests for this salon
-        const bookingRequests = await bookingRequestService.getBookingRequests(user.uid)
+        const bookingRequests = await bookingRequestService.getBookingRequests(salonId)
         
         // Calculate stats
         const bookedRequests = bookingRequests.filter((req: BookingRequest) => req.status === 'booked').length
@@ -275,7 +290,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Booking URL Section */}
+        {/* Booking URL Section - Only show for salon owners */}
         {(() => {
           console.log('Rendering booking URL section check:')
           console.log('salonData:', salonData)
@@ -284,53 +299,62 @@ export default function DashboardPage() {
           console.log('Should show booking URL:', (salonData?.bookingUrl || salonData?.name))
           
           if (!salonData) {
+            // Only show setup required for salon owners, not team members
+            if (!isTeamMember) {
+              return (
+                <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
+                  <h2 className="text-lg font-semibold text-yellow-900 mb-2">Setup Required</h2>
+                  <p className="text-sm text-yellow-700 mb-4">
+                    Your salon profile hasn&apos;t been set up yet. Click the button below to create your salon profile and get your booking URL.
+                  </p>
+                  <button
+                    onClick={createSalonDocument}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                  >
+                    Create Salon Profile
+                  </button>
+                </div>
+              )
+            }
+            return null
+          }
+          
+          // Only show booking URL section for salon owners
+          if (!isTeamMember && (salonData?.bookingUrl || salonData?.name)) {
             return (
-              <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
-                <h2 className="text-lg font-semibold text-yellow-900 mb-2">Setup Required</h2>
-                <p className="text-sm text-yellow-700 mb-4">
-                  Your salon profile hasn&apos;t been set up yet. Click the button below to create your salon profile and get your booking URL.
+              <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Share this link with your clients so they can request appointments
                 </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')}
+                    className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                  />
+                  <button
+                    onClick={copyBookingUrl}
+                    className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
+                    aria-label="Copy booking URL"
+                  >
+                    <ClipboardDocumentIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                {copied && (
+                  <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
+                )}
                 <button
-                  onClick={createSalonDocument}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                  onClick={updateBookingUrl}
+                  className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  Create Salon Profile
+                  Update URL
                 </button>
               </div>
             )
           }
           
-          return (salonData?.bookingUrl || salonData?.name) && (
-            <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Share this link with your clients so they can request appointments
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')}
-                  className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
-                />
-                <button
-                  onClick={copyBookingUrl}
-                  className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
-                  aria-label="Copy booking URL"
-                >
-                  <ClipboardDocumentIcon className="h-5 w-5" />
-                </button>
-              </div>
-              {copied && (
-                <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
-              )}
-              <button
-                onClick={updateBookingUrl}
-                className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Update URL
-              </button>
-            </div>
-          )
+          return null
         })()}
 
         {/* Stats Cards */}

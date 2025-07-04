@@ -161,7 +161,12 @@ export default function JoinTeamPage() {
       
     } catch (error) {
       console.error('Error creating account:', error)
-      setError('Failed to create account. Please try again.')
+      if (error instanceof Error && error.message.includes('already exists')) {
+        setError('This email is already registered. Please try signing in with Google instead.')
+        setShowPasswordForm(false) // Go back to the main options
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to create account. Please try again.')
+      }
     } finally {
       setCreatingAccount(false)
     }
@@ -249,7 +254,14 @@ export default function JoinTeamPage() {
               </div>
             </div>
 
-            {!user ? (
+            {creatingAccount ? (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Creating account and joining team...</p>
+                </div>
+              </div>
+            ) : !user ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 text-center">
                   Please sign in to accept this invitation

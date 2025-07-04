@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { Salon } from '@/types/firebase'
+import { teamService, salonService } from '@/lib/firebase/services'
 import { 
   UserIcon, 
   EnvelopeIcon, 
@@ -24,11 +23,19 @@ export default function SettingsPage() {
       if (!user) return
 
       try {
-        const docRef = doc(db, 'salons', user.uid)
-        const docSnap = await getDoc(docRef)
+        // First, check if user is a team member
+        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+        let salonId = user.uid // Default to user.uid for salon owners
         
-        if (docSnap.exists()) {
-          setSalonData({ id: docSnap.id, ...docSnap.data() } as Salon)
+        if (userTeamMember) {
+          // User is a team member, use their salonId
+          salonId = userTeamMember.salonId
+        }
+
+        // Fetch salon data using the correct salon ID
+        const salonData = await salonService.getSalon(salonId)
+        if (salonData) {
+          setSalonData(salonData)
         }
       } catch (error: unknown) {
         console.error('Error fetching salon data:', error)

@@ -24,8 +24,7 @@ export default function ProviderSettingsPage() {
       setLoading(true);
       
       // Get team member info to find the provider
-      const teamMembers = await teamService.getTeamMembers(user.uid);
-      const teamMember = teamMembers.find(tm => tm.userId === user.uid);
+      const teamMember = await teamService.getTeamMemberByUserId(user.uid);
       
       if (!teamMember) {
         setError('You are not a team member of this salon');
@@ -183,43 +182,34 @@ export default function ProviderSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Provider Settings</h1>
-        <p className="text-sm text-gray-600 mt-1">
+    <div className="max-w-4xl mx-auto px-4">
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-gray-900">Provider Settings</h1>
+        <p className="text-sm text-gray-600">
           Manage your profile, services, and availability
         </p>
       </div>
-
-      {success && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md"
-        >
-          <p className="text-sm text-green-600">{success}</p>
-        </motion.div>
-      )}
 
       {error && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md"
+          className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md"
         >
           <p className="text-sm text-red-600">{error}</p>
         </motion.div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-8">
-        {/* Profile Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-6">
-            <UserIcon className="h-6 w-6 text-gray-400 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSave} className="space-y-4">
+        {/* Profile & Booking URL Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Profile Section */}
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center mb-3">
+              <UserIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <h2 className="text-base font-semibold text-gray-900">Profile</h2>
+            </div>
+            
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Provider Name *
@@ -228,59 +218,50 @@ export default function ProviderSettingsPage() {
                 type="text"
                 id="name"
                 required
-                value={provider.name}
+                value={provider.name || ''}
                 onChange={(e) => setProvider(prev => prev ? { ...prev, name: e.target.value } : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 text-sm"
               />
             </div>
           </div>
-        </div>
 
-        {/* Booking URL Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-6">
-            <GlobeAltIcon className="h-6 w-6 text-gray-400 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Booking URL</h2>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-700 mb-1">Your Booking Link</p>
-                <p className="text-sm text-gray-600 break-all">{salon?.bookingUrl}</p>
-              </div>
+          {/* Booking URL Section */}
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center mb-3">
+              <GlobeAltIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <h2 className="text-base font-semibold text-gray-900">Booking URL</h2>
+            </div>
+            
+            <div className="bg-gray-50 rounded p-3">
+              <p className="text-xs font-medium text-gray-700 mb-1">Your Booking Link</p>
+              <p className="text-xs text-gray-600 break-all mb-2">{salon?.bookingUrl}</p>
               <button
                 type="button"
                 onClick={copyBookingUrl}
-                className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
               >
                 Copy URL
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Share this link with clients to book appointments with you
-            </p>
           </div>
         </div>
 
         {/* SMS Notifications Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-6">
-            <PhoneIcon className="h-6 w-6 text-gray-400 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">SMS Notifications</h2>
-          </div>
-          
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="text-sm font-medium text-gray-900">Receive SMS notifications</p>
-              <p className="text-xs text-gray-600 mt-1">
-                Get notified when clients request appointments with you
-              </p>
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">SMS Notifications</h2>
+                <p className="text-xs text-gray-600">
+                  Get notified when clients request appointments
+                </p>
+              </div>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
-                checked={provider.receiveNotifications}
+                checked={provider.receiveNotifications || false}
                 onChange={(e) => setProvider(prev => prev ? { 
                   ...prev, 
                   receiveNotifications: e.target.checked 
@@ -293,19 +274,19 @@ export default function ProviderSettingsPage() {
         </div>
 
         {/* Services Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-6">
-            <CogIcon className="h-6 w-6 text-gray-400 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">My Services</h2>
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="flex items-center mb-3">
+            <CogIcon className="h-5 w-5 text-gray-400 mr-2" />
+            <h2 className="text-base font-semibold text-gray-900">My Services</h2>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-2">
             {services.map((service) => {
               const providerService = provider.services.find(s => s.serviceId === service.id);
               return (
-                <div key={service.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
+                <div key={service.id} className="border border-gray-200 rounded p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         checked={!!providerService}
@@ -327,47 +308,47 @@ export default function ProviderSettingsPage() {
                   </div>
                   
                   {providerService && (
-                    <div className="ml-7 space-y-3">
-                      <div className="flex items-center space-x-4">
-                        <label className="text-sm text-gray-600">
+                    <div className="ml-6 space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <label className="text-xs text-gray-600">
                           Duration:
                           <input
                             type="number"
                             min="15"
                             step="15"
-                            value={providerService.duration}
+                            value={providerService.duration || 60}
                             onChange={(e) => updateProviderService(service.id, {
                               duration: parseInt(e.target.value) || 60
                             })}
-                            className="ml-2 w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent-500"
+                            className="ml-1 w-12 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent-500"
                           />
                           min
                         </label>
                       </div>
                       
                       <div className="flex items-center space-x-4">
-                        <label className="flex items-center space-x-2">
+                        <label className="flex items-center space-x-1">
                           <input
                             type="checkbox"
-                            checked={providerService.isSpecialty}
+                            checked={providerService.isSpecialty || false}
                             onChange={(e) => updateProviderService(service.id, {
                               isSpecialty: e.target.checked
                             })}
-                            className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                           />
-                          <span className="text-sm text-gray-600">Specialty</span>
+                          <span className="text-xs text-gray-600">Specialty</span>
                         </label>
                         
-                        <label className="flex items-center space-x-2">
+                        <label className="flex items-center space-x-1">
                           <input
                             type="checkbox"
-                            checked={providerService.requiresConsultation}
+                            checked={providerService.requiresConsultation || false}
                             onChange={(e) => updateProviderService(service.id, {
                               requiresConsultation: e.target.checked
                             })}
-                            className="h-4 w-4 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
+                            className="h-3 w-3 text-accent-600 focus:ring-accent-500 border-gray-300 rounded"
                           />
-                          <span className="text-sm text-gray-600">Requires consultation</span>
+                          <span className="text-xs text-gray-600">Requires consultation</span>
                         </label>
                       </div>
                     </div>
@@ -379,11 +360,20 @@ export default function ProviderSettingsPage() {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-2 relative">
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="absolute right-20 top-0 p-2 bg-green-50 border border-green-200 rounded-md"
+            >
+              <p className="text-sm text-green-600">{success}</p>
+            </motion.div>
+          )}
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

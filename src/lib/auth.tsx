@@ -127,7 +127,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'Account creation failed')
+      if (error instanceof Error) {
+        // Handle specific Firebase auth errors
+        if (error.message.includes('auth/email-already-in-use')) {
+          throw new Error('An account with this email already exists. Please try signing in with Google instead.')
+        } else if (error.message.includes('auth/weak-password')) {
+          throw new Error('Password is too weak. Please choose a stronger password (at least 6 characters).')
+        } else if (error.message.includes('auth/invalid-email')) {
+          throw new Error('Invalid email address. Please check your email and try again.')
+        } else {
+          throw new Error(`Account creation failed: ${error.message}`)
+        }
+      } else {
+        throw new Error('Account creation failed. Please try again.')
+      }
     }
   }
 

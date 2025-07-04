@@ -54,8 +54,10 @@ const getNavigation = (userRole: string): NavigationItem[] => {
     navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
   }
   
-  // Add Dashboard (always available)
-  navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
+  // Add Dashboard (only for owners and admins)
+  if (userRole === 'owner' || userRole === 'admin') {
+    navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
+  }
   
   // Add provider-specific pages
   if (permissions.canManageOwnSchedule) {
@@ -89,8 +91,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchSalon = async () => {
       if (!user) return
-      const salon = await salonService.getSalon(user.uid)
-      if (salon && salon.name) setSalonName(salon.name)
+      
+      try {
+        // First, try to find the user in team members to get their salon ID
+        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+        
+        if (userTeamMember) {
+          // User is a team member, get salon using their salonId
+          const salon = await salonService.getSalon(userTeamMember.salonId)
+          if (salon && salon.name) setSalonName(salon.name)
+        } else {
+          // User might be a salon owner, try using their uid as salon ID
+          const salon = await salonService.getSalon(user.uid)
+          if (salon && salon.name) setSalonName(salon.name)
+        }
+      } catch (error) {
+        console.error('Error fetching salon name:', error)
+      }
     }
     fetchSalon()
   }, [user])
@@ -100,21 +117,20 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       if (!user) return
       
       try {
-        // Try to find the user in team members collection to get their actual role
-        const teamMembers = await teamService.getTeamMembers(user.uid)
-        const userTeamMember = teamMembers.find((member) => member.userId === user.uid)
+        // First check if they're a salon owner (this takes precedence)
+        const salon = await salonService.getSalon(user.uid)
+        if (salon) {
+          setUserRole('owner')
+          return
+        }
         
+        // If not an owner, check if they're a team member
+        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
         if (userTeamMember) {
           setUserRole(userTeamMember.role)
         } else {
-          // If not found in team members, check if they're a salon owner
-          const salon = await salonService.getSalon(user.uid)
-          if (salon) {
-            setUserRole('owner')
-          } else {
-            // Default to member if we can't determine role
-            setUserRole('member')
-          }
+          // Default to member if we can't determine role
+          setUserRole('member')
         }
       } catch (error) {
         console.error('Error fetching user role:', error)
