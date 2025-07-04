@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
     const invitationId = await teamService.createInvitation(invitationData)
     console.log('Invitation created with ID:', invitationId)
 
-    // Generate invitation URL
-    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/join/${invitationId}`
+    // Generate invitation URL using request origin
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const invitationUrl = `${baseUrl}/join/${invitationId}`
     console.log('Invitation URL:', invitationUrl)
 
     // Send SMS invitation

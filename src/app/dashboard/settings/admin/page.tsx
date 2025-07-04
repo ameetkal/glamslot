@@ -15,6 +15,7 @@ import {
   TrashIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -453,12 +454,15 @@ export default function AdminPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Role Permissions Preview */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Role Permissions Preview</h4>
-                {renderPermissions(getPermissionsForRole(inviteForm.role))}
+                <div className="mt-2">
+                  <Link 
+                    href="/dashboard/settings/admin/roles"
+                    className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                  >
+                    <ShieldCheckIcon className="h-4 w-4 mr-1" />
+                    View detailed role permissions
+                  </Link>
+                </div>
               </div>
 
               <button

@@ -173,6 +173,9 @@ export default function ProvidersPage() {
           });
         }
         
+        // Update the local editing state to reflect the SMS toggle is now on
+        setEditing(prev => prev ? { ...prev, receiveNotifications: true } : null);
+        
         closeInviteModal();
         fetchData(); // Refresh the list
         
