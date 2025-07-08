@@ -226,16 +226,24 @@ export default function StaffSchedulePage() {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Requested Shift</h4>
                 <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Date:</span>
-                    <span className="ml-2 text-gray-600">{formatDate(request.requestedShift.date)}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Time:</span>
-                    <span className="ml-2 text-gray-600">
-                      {formatTime(request.requestedShift.startTime)} - {formatTime(request.requestedShift.endTime)}
-                    </span>
-                  </div>
+                  {request.requestedShift.date ? (
+                    <>
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-700">Date:</span>
+                        <span className="ml-2 text-gray-600">{formatDate(request.requestedShift.date)}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-700">Time:</span>
+                        <span className="ml-2 text-gray-600">
+                          {formatTime(request.requestedShift.startTime)} - {formatTime(request.requestedShift.endTime)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      No specific shift requested - provider is asking for time off
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

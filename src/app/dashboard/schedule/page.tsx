@@ -387,96 +387,110 @@ export default function MySchedulePage() {
             {showRequestForm ? (
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Request Shift Change</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Shift Date</label>
-                      <input
-                        type="date"
-                        value={requestForm.currentShift.date}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          currentShift: { ...prev.currentShift, date: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Requested Shift Date</label>
-                      <input
-                        type="date"
-                        value={requestForm.requestedShift.date}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          requestedShift: { ...prev.requestedShift, date: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Start Time</label>
-                      <input
-                        type="time"
-                        value={requestForm.currentShift.startTime}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          currentShift: { ...prev.currentShift, startTime: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current End Time</label>
-                      <input
-                        type="time"
-                        value={requestForm.currentShift.endTime}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          currentShift: { ...prev.currentShift, endTime: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Requested Start Time</label>
-                      <input
-                        type="time"
-                        value={requestForm.requestedShift.startTime}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          requestedShift: { ...prev.requestedShift, startTime: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Requested End Time</label>
-                      <input
-                        type="time"
-                        value={requestForm.requestedShift.endTime}
-                        onChange={(e) => setRequestForm(prev => ({
-                          ...prev,
-                          requestedShift: { ...prev.requestedShift, endTime: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  
+                <div className="space-y-6">
+                  {/* Current Shift Section */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Change</label>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Current Shift Details</h4>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                          <input
+                            type="date"
+                            value={requestForm.currentShift.date}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              currentShift: { ...prev.currentShift, date: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
+                          <input
+                            type="time"
+                            value={requestForm.currentShift.startTime}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              currentShift: { ...prev.currentShift, startTime: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
+                          <input
+                            type="time"
+                            value={requestForm.currentShift.endTime}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              currentShift: { ...prev.currentShift, endTime: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Requested Shift Section */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Requested Shift Details (Optional)</h4>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                          <input
+                            type="date"
+                            value={requestForm.requestedShift.date}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              requestedShift: { ...prev.requestedShift, date: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                          <input
+                            type="time"
+                            value={requestForm.requestedShift.startTime}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              requestedShift: { ...prev.requestedShift, startTime: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                          <input
+                            type="time"
+                            value={requestForm.requestedShift.endTime}
+                            onChange={(e) => setRequestForm(prev => ({
+                              ...prev,
+                              requestedShift: { ...prev.requestedShift, endTime: e.target.value }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reason Section */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Change *</label>
                     <textarea
                       value={requestForm.reason}
                       onChange={(e) => setRequestForm(prev => ({ ...prev, reason: e.target.value }))}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Please explain why you need this shift change..."
+                      required
                     />
                   </div>
                   
@@ -489,7 +503,7 @@ export default function MySchedulePage() {
                     </button>
                     <button
                       onClick={handleSubmitRequest}
-                      disabled={submitting || !requestForm.currentShift.date || !requestForm.requestedShift.date || !requestForm.reason}
+                      disabled={submitting || !requestForm.currentShift.date || !requestForm.currentShift.startTime || !requestForm.currentShift.endTime || !requestForm.reason}
                       className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitting ? 'Submitting...' : 'Submit Request'}
@@ -523,15 +537,18 @@ export default function MySchedulePage() {
               <div className="space-y-4">
                 {shiftRequests.map((request) => (
                   <div key={request.id} className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h4 className="text-lg font-medium text-gray-900">
-                          {formatDate(request.currentShift.date)} → {formatDate(request.requestedShift.date)}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {formatTime(request.currentShift.startTime)}-{formatTime(request.currentShift.endTime)} → {formatTime(request.requestedShift.startTime)}-{formatTime(request.requestedShift.endTime)}
-                        </p>
-                      </div>
+                                         <div className="flex items-start justify-between mb-4">
+                       <div>
+                         <h4 className="text-lg font-medium text-gray-900">
+                           {formatDate(request.currentShift.date)}
+                           {request.requestedShift.date && ` → ${formatDate(request.requestedShift.date)}`}
+                         </h4>
+                         <p className="text-sm text-gray-600 mt-1">
+                           {formatTime(request.currentShift.startTime)}-{formatTime(request.currentShift.endTime)}
+                           {request.requestedShift.startTime && request.requestedShift.endTime && 
+                             ` → ${formatTime(request.requestedShift.startTime)}-${formatTime(request.requestedShift.endTime)}`}
+                         </p>
+                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                         {request.status === 'pending' ? 'Pending' : 
                          request.status === 'approved' ? 'Approved' : 'Denied'}
