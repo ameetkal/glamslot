@@ -30,7 +30,7 @@ interface BookingRequest {
   dateTimePreference: string
   notes?: string
   waitlistOptIn: boolean
-  status: 'pending' | 'booked' | 'not-booked'
+  status: 'pending' | 'contacted' | 'booked' | 'not-booked'
   salonId: string
   createdAt: Date | { toDate: () => Date }
   updatedAt: Date | { toDate: () => Date }
@@ -43,7 +43,7 @@ export default function BookingHistoryPage() {
   const [loading, setLoading] = useState(true)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'booked' | 'not-booked'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'contacted' | 'booked' | 'not-booked'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20)
 
@@ -96,7 +96,7 @@ export default function BookingHistoryPage() {
     setCurrentPage(1) // Reset to first page when filters change
   }, [searchTerm, statusFilter, allRequests])
 
-  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending', e?: React.MouseEvent) => {
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending' | 'contacted', e?: React.MouseEvent) => {
     e?.stopPropagation()
     
     try {
@@ -141,6 +141,8 @@ export default function BookingHistoryPage() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
+      case 'contacted':
+        return 'bg-blue-100 text-blue-800'
       case 'booked':
         return 'bg-green-100 text-green-800'
       case 'not-booked':
@@ -189,6 +191,7 @@ export default function BookingHistoryPage() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
               {request.status === 'pending' ? 'Pending' : 
+               request.status === 'contacted' ? 'Contacted' :
                request.status === 'booked' ? 'Booked' : 'Not Booked'}
             </span>
             
@@ -210,6 +213,15 @@ export default function BookingHistoryPage() {
                   title="Mark as not booked"
                 >
                   <XMarkIcon className="h-3 w-3" />
+                </button>
+              )}
+              {request.status !== 'contacted' && (
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
+                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                  title="Mark as contacted"
+                >
+                  <PhoneIcon className="h-3 w-3" />
                 </button>
               )}
               {request.status !== 'pending' && (
@@ -355,11 +367,12 @@ export default function BookingHistoryPage() {
               </div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'booked' | 'not-booked')}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'contacted' | 'booked' | 'not-booked')}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
+                <option value="contacted">Contacted</option>
                 <option value="booked">Booked</option>
                 <option value="not-booked">Not Booked</option>
               </select>

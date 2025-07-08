@@ -28,7 +28,7 @@ interface BookingRequest {
   dateTimePreference: string
   notes?: string
   waitlistOptIn: boolean
-  status: 'pending' | 'booked' | 'not-booked'
+  status: 'pending' | 'contacted' | 'booked' | 'not-booked'
   salonId: string
   createdAt: Date | { toDate: () => Date }
   updatedAt: Date | { toDate: () => Date }
@@ -59,12 +59,20 @@ export default function RequestsPage() {
         
         // Sort in memory instead
         const sortedRequests = requestsData.sort((a, b) => {
-          // First, prioritize pending requests
-          if (a.status === 'pending' && b.status !== 'pending') {
-            return -1; // a comes first
-          }
-          if (a.status !== 'pending' && b.status === 'pending') {
-            return 1; // b comes first
+          // Define status priority: pending > contacted > others
+          const getStatusPriority = (status: string) => {
+            switch (status) {
+              case 'pending': return 3;
+              case 'contacted': return 2;
+              default: return 1;
+            }
+          };
+          
+          const priorityA = getStatusPriority(a.status);
+          const priorityB = getStatusPriority(b.status);
+          
+          if (priorityA !== priorityB) {
+            return priorityB - priorityA; // Higher priority first
           }
           
           // If both have the same status priority, sort by date (most recent first)
@@ -88,7 +96,7 @@ export default function RequestsPage() {
     fetchRequests()
   }, [user])
 
-  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending', e?: React.MouseEvent) => {
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending' | 'contacted', e?: React.MouseEvent) => {
     e?.stopPropagation() // Prevent card expansion when clicking buttons
     
     try {
@@ -137,6 +145,8 @@ export default function RequestsPage() {
         return 'bg-green-100 text-green-800'
       case 'not-booked':
         return 'bg-red-100 text-red-800'
+      case 'contacted':
+        return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -156,6 +166,7 @@ export default function RequestsPage() {
 
   // Separate requests into categories
   const pendingRequests = requests.filter(req => req.status === 'pending')
+  const contactedRequests = requests.filter(req => req.status === 'contacted')
   const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
   
   const renderRequestCard = (request: BookingRequest) => (
@@ -194,12 +205,21 @@ export default function RequestsPage() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
               {request.status === 'pending' ? 'Pending' : 
-               request.status === 'booked' ? 'Booked' : 'Not Booked'}
+               request.status === 'booked' ? 'Booked' : 
+               request.status === 'contacted' ? 'Contacted' : 'Not Booked'}
             </span>
             
             {/* Action buttons - always visible on mobile */}
             {request.status === 'pending' && (
               <div className="flex items-center space-x-1 sm:space-x-2">
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <PhoneIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Mark Contacted</span>
+                  <span className="sm:hidden">Contacted</span>
+                </button>
                 <button
                   onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
                   className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -220,7 +240,7 @@ export default function RequestsPage() {
             )}
 
             {/* Status change buttons for completed requests */}
-            {request.status !== 'pending' && (
+            {request.status !== 'pending' && request.status !== 'contacted' && (
               <div className="flex items-center space-x-1">
                 <button
                   onClick={(e) => updateRequestStatus(request.id, request.status === 'booked' ? 'not-booked' : 'booked', e)}
@@ -245,12 +265,42 @@ export default function RequestsPage() {
                   )}
                 </button>
                 <button
+                  onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
+                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                >
+                  <PhoneIcon className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Mark Contacted</span>
+                  <span className="sm:hidden">Contacted</span>
+                </button>
+                <button
                   onClick={(e) => updateRequestStatus(request.id, 'pending', e)}
                   className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200"
                 >
                   <ClockIcon className="h-3 w-3 mr-1" />
                   <span className="hidden sm:inline">Mark Pending</span>
                   <span className="sm:hidden">Pending</span>
+                </button>
+              </div>
+            )}
+
+            {/* Action buttons for contacted requests */}
+            {request.status === 'contacted' && (
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Appointment Made</span>
+                  <span className="sm:hidden">Booked</span>
+                </button>
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Not Booked</span>
+                  <span className="sm:hidden">Not Booked</span>
                 </button>
               </div>
             )}
@@ -381,6 +431,24 @@ export default function RequestsPage() {
               </div>
             )}
           </div>
+
+          {/* Contacted Requests Section */}
+          {contactedRequests.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Contacted Clients</h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {contactedRequests.length} contacted
+                </span>
+              </div>
+              
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                <ul className="divide-y divide-gray-200">
+                  {contactedRequests.map(renderRequestCard)}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* Recently Completed Section */}
           {recentlyCompletedRequests.length > 0 && (
