@@ -245,4 +245,28 @@ export interface Client {
   };
   createdAt: Date | string;
   updatedAt: Date | string;
+}
+
+// Shift Change Request Interfaces
+export interface ShiftChangeRequest {
+  id: string;
+  providerId: string;
+  providerName: string;
+  salonId: string;
+  currentShift: {
+    date: string;
+    startTime: string;
+    endTime: string;
+  };
+  requestedShift: {
+    date: string;
+    startTime: string;
+    endTime: string;
+  };
+  reason: string;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy?: string;
+  reviewNotes?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 } 

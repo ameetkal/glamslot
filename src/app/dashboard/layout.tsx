@@ -14,7 +14,6 @@ import {
   Bars3Icon,
   XMarkIcon,
   ArrowRightOnRectangleIcon,
-  GiftIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
@@ -49,10 +48,15 @@ const getNavigation = (userRole: string): NavigationItem[] => {
     navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon })
   }
   
-  // Add Loyalty if user can view it
-  if (permissions.canViewLoyalty) {
-    navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
+  // Add Staff Schedule for management (owners, admins, front desk)
+  if (userRole === 'owner' || userRole === 'admin' || userRole === 'front_desk') {
+    navigation.push({ name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon })
   }
+  
+  // Add Loyalty if user can view it (temporarily hidden)
+  // if (permissions.canViewLoyalty) {
+  //   navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
+  // }
   
   // Add Dashboard (only for owners and admins)
   if (userRole === 'owner' || userRole === 'admin') {

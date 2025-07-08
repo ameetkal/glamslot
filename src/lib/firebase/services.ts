@@ -12,7 +12,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client } from '@/types/firebase';
+import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client, ShiftChangeRequest } from '@/types/firebase';
 
 // Provider Services
 export const providerService = {
@@ -778,5 +778,111 @@ export const clientService = {
       loyalty: loyaltyData,
       updatedAt: serverTimestamp()
     });
+  }
+};
+
+// Shift Change Request Services
+export const shiftChangeRequestService = {
+  // Get all shift change requests for a salon
+  async getShiftChangeRequests(salonId: string): Promise<ShiftChangeRequest[]> {
+    const q = query(
+      collection(db, 'shiftChangeRequests'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    const requests = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ShiftChangeRequest[];
+    
+    // Sort by status priority (pending first), then by date
+    return requests.sort((a, b) => {
+      // Define status priority: pending > approved > denied
+      const getStatusPriority = (status: string) => {
+        switch (status) {
+          case 'pending': return 3;
+          case 'approved': return 2;
+          case 'denied': return 1;
+          default: return 0;
+        }
+      };
+      
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+      
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA; // Higher priority first
+      }
+      
+      // If same status, sort by creation date (newest first)
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(b.createdAt);
+      
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
+
+  // Get shift change requests for a specific provider
+  async getProviderShiftChangeRequests(providerId: string): Promise<ShiftChangeRequest[]> {
+    const q = query(
+      collection(db, 'shiftChangeRequests'),
+      where('providerId', '==', providerId)
+    );
+    const querySnapshot = await getDocs(q);
+    const requests = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ShiftChangeRequest[];
+    
+    // Sort by creation date (newest first)
+    return requests.sort((a, b) => {
+      const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+        ? (a.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(a.createdAt);
+      const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+        ? (b.createdAt as { toDate: () => Date }).toDate() 
+        : new Date(b.createdAt);
+      
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
+
+  // Get a single shift change request
+  async getShiftChangeRequest(id: string): Promise<ShiftChangeRequest | null> {
+    const docRef = doc(db, 'shiftChangeRequests', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as ShiftChangeRequest;
+    }
+    return null;
+  },
+
+  // Create a new shift change request
+  async createShiftChangeRequest(request: Omit<ShiftChangeRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'shiftChangeRequests'), {
+      ...request,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  },
+
+  // Update a shift change request
+  async updateShiftChangeRequest(id: string, updates: Partial<ShiftChangeRequest>): Promise<void> {
+    const docRef = doc(db, 'shiftChangeRequests', id);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Delete a shift change request
+  async deleteShiftChangeRequest(id: string): Promise<void> {
+    const docRef = doc(db, 'shiftChangeRequests', id);
+    await deleteDoc(docRef);
   }
 }; 
