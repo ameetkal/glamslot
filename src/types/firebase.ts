@@ -52,7 +52,7 @@ export interface BookingRequest {
   dateTimePreference: string;
   notes?: string;
   waitlistOptIn: boolean;
-  status: 'pending' | 'booked' | 'not-booked';
+  status: 'pending' | 'contacted' | 'booked' | 'not-booked';
   salonId: string;
   createdAt: Date;
   updatedAt: Date;

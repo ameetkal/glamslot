@@ -17,26 +17,17 @@ import {
   ChevronUpIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline'
+import { BookingRequest } from '@/types/firebase'
 
-interface BookingRequest {
-  id: string
-  clientName: string
-  clientEmail: string
-  clientPhone: string
-  service: string
-  stylistPreference: string
-  dateTimePreference: string
-  notes?: string
-  waitlistOptIn: boolean
-  status: 'pending' | 'contacted' | 'booked' | 'not-booked'
-  salonId: string
+// Type alias to handle Firebase timestamp format
+type BookingRequestWithFirebaseTimestamps = Omit<BookingRequest, 'createdAt' | 'updatedAt'> & {
   createdAt: Date | { toDate: () => Date }
   updatedAt: Date | { toDate: () => Date }
 }
 
 export default function RequestsPage() {
   const { user } = useAuth()
-  const [requests, setRequests] = useState<BookingRequest[]>([])
+  const [requests, setRequests] = useState<BookingRequestWithFirebaseTimestamps[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
   const [showRecentlyCompleted, setShowRecentlyCompleted] = useState(false)
@@ -152,7 +143,7 @@ export default function RequestsPage() {
     }
   }
 
-  const isRecentlyCompleted = (request: BookingRequest) => {
+  const isRecentlyCompleted = (request: BookingRequestWithFirebaseTimestamps) => {
     if (request.status === 'pending') return false
     
     // Check if completed within last 48 hours
@@ -169,7 +160,7 @@ export default function RequestsPage() {
   const contactedRequests = requests.filter(req => req.status === 'contacted')
   const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
   
-  const renderRequestCard = (request: BookingRequest) => (
+  const renderRequestCard = (request: BookingRequestWithFirebaseTimestamps) => (
     <li key={request.id}>
       <div 
         className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
