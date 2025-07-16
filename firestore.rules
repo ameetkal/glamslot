@@ -2,18 +2,121 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the salon
+    function isSalonOwner(salonId) {
+      return isAuthenticated() && request.auth.uid == salonId;
+    }
+    
+    // Helper function to check if user is a team member of the salon
+    function isTeamMember(salonId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
+    }
+    
+    // Helper function to check if user has access to salon data
+    function hasSalonAccess(salonId) {
+      return isSalonOwner(salonId) || isTeamMember(salonId);
+    }
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 7, 20);
+    // Salon documents - only salon owners can read/write their own salon
+    match /salons/{salonId} {
+      allow read, write: if isSalonOwner(salonId);
+      
+      // Allow public read access for booking pages (by slug)
+      allow read: if resource.data.slug != null;
+    }
+
+    // Providers - salon owners and team members can manage
+    match /providers/{providerId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Services - salon owners and team members can manage
+    match /services/{serviceId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Booking requests - salon owners and team members can manage their salon's requests
+    match /bookingRequests/{requestId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if request.resource.data.salonId != null;
+    }
+
+    // Team members - salon owners can manage their team
+    match /teamMembers/{memberId} {
+      allow read, write: if isSalonOwner(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        isSalonOwner(request.resource.data.salonId);
+    }
+
+    // Invitations - salon owners can manage invitations
+    match /invitations/{invitationId} {
+      allow read, write: if isSalonOwner(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        isSalonOwner(request.resource.data.salonId);
+    }
+
+    // Loyalty programs - salon owners and team members can manage
+    match /loyaltyPrograms/{programId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Customer passes - salon owners and team members can manage
+    match /customerPasses/{passId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Visit records - salon owners and team members can manage
+    match /visitRecords/{recordId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Clients - salon owners and team members can manage
+    match /clients/{clientId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Shift change requests - salon owners and team members can manage
+    match /shiftChangeRequests/{requestId} {
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.salonId != null && 
+        hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Session tracking - allow creation for analytics
+    match /sessionTracking/{sessionId} {
+      allow create: if true; // Allow public creation for analytics
+      allow read, write: if isAuthenticated() && 
+        resource.data.salonId != null && 
+        hasSalonAccess(resource.data.salonId);
     }
   }
 }
