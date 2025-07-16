@@ -25,14 +25,11 @@ service cloud.firestore {
       return isSalonOwner(salonId) || isTeamMember(salonId);
     }
 
-    // Helper function to check if user is an admin (for aggregate data access)
-    function isAdmin() {
+    // Helper function to check if user is a platform admin (for aggregate data access)
+    function isPlatformAdmin() {
       return isAuthenticated() && 
-        (request.auth.uid == "admin" || 
-         request.auth.email == "ameet@gofisherman.com" ||
-         request.auth.email == "ameetk96@gmail.com" ||
-         // Add any other admin emails you use for testing
-         request.auth.email == "ameet@example.com");
+        (request.auth.email == "ameet@gofisherman.com" ||
+         request.auth.email == "ameetk96@gmail.com");
     }
 
     // Salon documents - only salon owners can read/write their own salon
@@ -42,8 +39,8 @@ service cloud.firestore {
       // Allow public read access for booking pages (by slug)
       allow read: if resource.data.slug != null;
       
-      // Allow admins to read all salons for aggregate data
-      allow read: if isAdmin();
+      // Allow platform admins to read all salons for aggregate data
+      allow read: if isPlatformAdmin();
     }
 
     // Providers - salon owners and team members can manage
@@ -67,8 +64,8 @@ service cloud.firestore {
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if request.resource.data.salonId != null;
       
-      // Allow admins to read all booking requests for aggregate data
-      allow read: if isAdmin();
+      // Allow platform admins to read all booking requests for aggregate data
+      allow read: if isPlatformAdmin();
     }
 
     // Team members - salon owners can manage their team
@@ -129,6 +126,14 @@ service cloud.firestore {
 
     // Session tracking - allow creation for analytics
     match /sessionTracking/{sessionId} {
+      allow create: if true; // Allow public creation for analytics
+      allow read, write: if isAuthenticated() && 
+        resource.data.salonId != null && 
+        hasSalonAccess(resource.data.salonId);
+    }
+
+    // Sessions - allow creation for analytics and reading by salon owners/team members
+    match /sessions/{sessionId} {
       allow create: if true; // Allow public creation for analytics
       allow read, write: if isAuthenticated() && 
         resource.data.salonId != null && 

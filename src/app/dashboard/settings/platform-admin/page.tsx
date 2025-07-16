@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/lib/auth'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { BookingRequest, Salon } from '@/types/firebase'
-import { useAuth } from '@/lib/auth'
 import { 
   UserIcon,
   BuildingOfficeIcon,
@@ -14,7 +14,9 @@ import {
   ArrowPathIcon,
   ChartBarIcon,
   MagnifyingGlassIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import Button from '@/components/ui/Button'
 
@@ -45,7 +47,20 @@ interface PlatformStats {
   avgRequestsPerSalon: number
 }
 
-export default function SuperAdminPage() {
+// Helper function to check if user is a platform admin
+function isPlatformAdmin(userEmail: string | null | undefined): boolean {
+  if (!userEmail) return false
+  
+  const adminEmails = [
+    'ameet@gofisherman.com',
+    'ameetk96@gmail.com',
+    // Add any other platform admin emails here
+  ]
+  
+  return adminEmails.includes(userEmail)
+}
+
+export default function PlatformAdminPage() {
   const { user } = useAuth()
   const [salonStats, setSalonStats] = useState<SalonStats[]>([])
   const [platformStats, setPlatformStats] = useState<PlatformStats>({
@@ -65,10 +80,26 @@ export default function SuperAdminPage() {
   const [sortBy, setSortBy] = useState<'name' | 'totalRequests' | 'completionRate' | 'lastActivity' | 'createdAt'>('totalRequests')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  const fetchSuperAdminData = useCallback(async () => {
+  // Check if user has platform admin access
+  if (!isPlatformAdmin(user?.email)) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">You don't have permission to access platform admin data.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const fetchPlatformAdminData = useCallback(async () => {
     try {
       setRefreshing(true)
-      console.log('Fetching super admin data...')
+      console.log('Fetching platform admin data...')
+      console.log('Current user email:', user?.email)
 
       // Get all salons
       const salonsQuery = query(collection(db, 'salons'), orderBy('createdAt', 'desc'))
@@ -78,7 +109,7 @@ export default function SuperAdminPage() {
         ...doc.data()
       })) as Salon[]
 
-      console.log(`Found ${salons.length} salons`)
+      console.log(`Found ${salons.length} salons:`, salons.map(s => ({ id: s.id, name: s.name })))
 
       // Get all booking requests
       const requestsQuery = query(collection(db, 'bookingRequests'), orderBy('createdAt', 'desc'))
@@ -88,7 +119,7 @@ export default function SuperAdminPage() {
         ...doc.data()
       })) as BookingRequest[]
 
-      console.log(`Found ${allRequests.length} total booking requests`)
+      console.log(`Found ${allRequests.length} total booking requests:`, allRequests.map(r => ({ id: r.id, salonId: r.salonId, status: r.status })))
 
       // Group requests by salon
       const requestsBySalon = new Map<string, BookingRequest[]>()
@@ -99,9 +130,9 @@ export default function SuperAdminPage() {
         requestsBySalon.get(request.salonId)!.push(request)
       })
 
-             // Calculate stats for each salon
-       const currentDate = new Date()
-       const thisMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+      // Calculate stats for each salon
+      const currentDate = new Date()
+      const thisMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
 
       const salonStatsArray: SalonStats[] = salons.map(salon => {
         const requests = requestsBySalon.get(salon.id) || []
@@ -177,9 +208,9 @@ export default function SuperAdminPage() {
         avgRequestsPerSalon
       })
 
-      console.log('Super admin data processed successfully')
+      console.log('Platform admin data processed successfully')
     } catch (error) {
-      console.error('Error fetching super admin data:', error)
+      console.error('Error fetching platform admin data:', error)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -187,11 +218,11 @@ export default function SuperAdminPage() {
   }, [])
 
   useEffect(() => {
-    fetchSuperAdminData()
-  }, [fetchSuperAdminData])
+    fetchPlatformAdminData()
+  }, [fetchPlatformAdminData])
 
   const handleRefresh = () => {
-    fetchSuperAdminData()
+    fetchPlatformAdminData()
   }
 
   const formatDate = (date: Date) => {
@@ -262,9 +293,9 @@ export default function SuperAdminPage() {
         {/* Header */}
         <div className="sm:flex sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Glammatic Super Admin</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">Platform Admin</h1>
             <p className="mt-2 text-sm text-gray-700">
-              Platform-wide analytics and salon management
+              Overview of all salons and platform performance
             </p>
           </div>
           <div className="mt-4 sm:mt-0">
@@ -274,22 +305,22 @@ export default function SuperAdminPage() {
               className="inline-flex items-center gap-2"
             >
               <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh Data'}
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </div>
 
-        {/* Platform Overview Stats */}
+        {/* Platform Stats */}
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <BuildingOfficeIcon className="h-6 w-6 text-blue-600" />
+                  <BuildingOfficeIcon className="h-6 w-6 text-gray-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Total Salons</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Total Salons</dt>
                     <dd className="text-lg font-medium text-gray-900">{platformStats.totalSalons}</dd>
                   </dl>
                 </div>
@@ -301,11 +332,27 @@ export default function SuperAdminPage() {
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <CalendarIcon className="h-6 w-6 text-purple-600" />
+                  <CheckCircleIcon className="h-6 w-6 text-green-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Total Requests</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Active Salons</dt>
+                    <dd className="text-lg font-medium text-gray-900">{platformStats.activeSalons}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
                     <dd className="text-lg font-medium text-gray-900">{platformStats.totalRequests}</dd>
                   </dl>
                 </div>
@@ -317,49 +364,31 @@ export default function SuperAdminPage() {
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                  <ChartBarIcon className="h-6 w-6 text-purple-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Overall Completion</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
                     <dd className="text-lg font-medium text-gray-900">{platformStats.overallCompletionRate}%</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <UserIcon className="h-6 w-6 text-indigo-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Active Salons</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {platformStats.activeSalons} / {platformStats.totalSalons}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Additional Stats Row */}
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        {/* Detailed Stats */}
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <ChartBarIcon className="h-6 w-6 text-orange-600" />
+                  <CheckCircleIcon className="h-6 w-6 text-green-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Avg Requests/Salon</dt>
-                    <dd className="text-lg font-medium text-gray-900">{platformStats.avgRequestsPerSalon}</dd>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Completed</dt>
+                    <dd className="text-lg font-medium text-gray-900">{platformStats.totalCompleted}</dd>
                   </dl>
                 </div>
               </div>
@@ -370,193 +399,123 @@ export default function SuperAdminPage() {
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <ClockIcon className="h-6 w-6 text-yellow-600" />
+                  <ClockIcon className="h-6 w-6 text-yellow-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">New This Month</dt>
-                    <dd className="text-lg font-medium text-gray-900">{platformStats.newSalonsThisMonth}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-700 truncate">Pending Platform</dt>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Pending</dt>
                     <dd className="text-lg font-medium text-gray-900">{platformStats.totalPending}</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
+
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <XMarkIcon className="h-6 w-6 text-red-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Not Booked</dt>
+                    <dd className="text-lg font-medium text-gray-900">{platformStats.totalNotBooked}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Salon Details Table */}
-        <div className="mt-8 bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Salon Details</h3>
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search salons..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
+        {/* Search and Sort */}
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search salons..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
+        </div>
 
-          {/* Table Headers */}
-          <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-7 gap-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-              <button
-                onClick={() => handleSort('name')}
-                className="flex items-center space-x-1 hover:text-gray-900"
-              >
-                <span>Salon</span>
-                {sortBy === 'name' && (
-                  <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </button>
-              <button
-                onClick={() => handleSort('totalRequests')}
-                className="flex items-center space-x-1 hover:text-gray-900"
-              >
-                <span>Requests</span>
-                {sortBy === 'totalRequests' && (
-                  <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </button>
-              <span>Completed</span>
-              <span>Pending</span>
-              <button
-                onClick={() => handleSort('completionRate')}
-                className="flex items-center space-x-1 hover:text-gray-900"
-              >
-                <span>Rate</span>
-                {sortBy === 'completionRate' && (
-                  <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </button>
-              <button
-                onClick={() => handleSort('lastActivity')}
-                className="flex items-center space-x-1 hover:text-gray-900"
-              >
-                <span>Last Activity</span>
-                {sortBy === 'lastActivity' && (
-                  <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </button>
-              <button
-                onClick={() => handleSort('createdAt')}
-                className="flex items-center space-x-1 hover:text-gray-900"
-              >
-                <span>Created</span>
-                {sortBy === 'createdAt' && (
-                  <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </button>
-            </div>
+        {/* Salons Table */}
+        <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Salon Performance</h3>
           </div>
-
-          {/* Salon Data */}
-          <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-            {filteredAndSortedSalons.length === 0 ? (
-              <div className="px-6 py-12 text-center">
-                <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No salons found</h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  {searchTerm ? 'Try adjusting your search criteria.' : 'No salons have signed up yet.'}
-                </p>
-              </div>
-            ) : (
-              filteredAndSortedSalons.map((salon) => (
-                <div key={salon.id} className="px-6 py-4 hover:bg-gray-50">
-                  <div className="grid grid-cols-7 gap-4 items-center">
-                    {/* Salon Info */}
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                            salon.isActive ? 'bg-green-100' : 'bg-gray-100'
-                          }`}>
-                            <span className={`text-sm font-medium ${
-                              salon.isActive ? 'text-green-700' : 'text-gray-700'
-                            }`}>
-                              {salon.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {salon.name}
-                          </p>
-                          <p className="text-xs text-gray-600 truncate">
-                            {salon.ownerEmail}
-                          </p>
-                        </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
+                    Salon Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('totalRequests')}>
+                    Total Requests
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('completionRate')}>
+                    Completion Rate
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('lastActivity')}>
+                    Last Activity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('createdAt')}>
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAndSortedSalons.map((salon) => (
+                  <tr key={salon.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{salon.name}</div>
+                        <div className="text-sm text-gray-500">{salon.ownerEmail}</div>
                       </div>
-                    </div>
-
-                    {/* Total Requests */}
-                    <div className="text-sm text-gray-900 font-medium">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {salon.totalRequests}
-                    </div>
-
-                    {/* Completed */}
-                    <div className="flex items-center space-x-1">
-                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-gray-900">{salon.completedRequests}</span>
-                    </div>
-
-                    {/* Pending */}
-                    <div className="flex items-center space-x-1">
-                      <ClockIcon className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm text-gray-900">{salon.pendingRequests}</span>
-                    </div>
-
-                    {/* Completion Rate */}
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${salon.completionRate}%` }}
-                        ></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className="text-sm text-gray-900">{salon.completionRate}%</span>
+                        <div className="ml-2 flex-1 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${salon.completionRate}%` }}
+                          ></div>
+                        </div>
                       </div>
-                      <span className="text-sm text-gray-900 min-w-0">
-                        {salon.completionRate}%
-                      </span>
-                    </div>
-
-                    {/* Last Activity */}
-                    <div className="text-sm text-gray-600">
-                      {salon.lastActivity ? formatDate(salon.lastActivity) : 'Never'}
-                    </div>
-
-                    {/* Created Date */}
-                    <div className="text-sm text-gray-600">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {salon.lastActivity ? formatDate(salon.lastActivity) : 'No activity'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(salon.createdAt)}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        salon.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {salon.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
   )
-}
+} 

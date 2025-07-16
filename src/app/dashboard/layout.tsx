@@ -14,7 +14,8 @@ import {
   Bars3Icon,
   XMarkIcon,
   ArrowRightOnRectangleIcon,
-  CalendarIcon
+  CalendarIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -35,11 +36,17 @@ const settingsSubItems = [
   { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
   { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
   { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
-  { name: 'Admin', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
+  { name: 'Team Management', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
 ]
 
-const getNavigation = (userRole: string): NavigationItem[] => {
+const getNavigation = (userRole: string, userEmail?: string | null): NavigationItem[] => {
   const permissions = getPermissionsForRole(userRole)
+  
+  // Helper function to check if user is a platform admin
+  const isPlatformAdmin = (email: string | null | undefined): boolean => {
+    if (!email) return false
+    return email === 'ameet@gofisherman.com' || email === 'ameetk96@gmail.com'
+  }
   
   const navigation: NavigationItem[] = []
   
@@ -74,7 +81,15 @@ const getNavigation = (userRole: string): NavigationItem[] => {
   
   // Add Settings if user can view settings
   if (permissions.canViewSettings) {
-    navigation.push({ name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsSubItems })
+    // Create settings sub-items, conditionally adding Platform Admin
+    const settingsItems = [...settingsSubItems]
+    
+    // Add Platform Admin tab only for platform admins
+    if (isPlatformAdmin(userEmail)) {
+      settingsItems.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
+    }
+    
+    navigation.push({ name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsItems })
   } else if (permissions.canManageOwnServices) {
     // For providers, show a simplified settings link to their provider settings
     navigation.push({ name: 'Settings', href: '/dashboard/settings/provider', icon: Cog6ToothIcon })
@@ -213,7 +228,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
-            {getNavigation(userRole).map((item: NavigationItem) => {
+            {getNavigation(userRole, user?.email).map((item: NavigationItem) => {
               if (!item.subItems) {
                 const isActive = pathname === item.href
                 return (
