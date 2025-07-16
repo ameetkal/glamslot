@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { BookingRequest, Salon } from '@/types/firebase'
+import { useAuth } from '@/lib/auth'
 import { 
   UserIcon,
   BuildingOfficeIcon,
@@ -45,6 +46,7 @@ interface PlatformStats {
 }
 
 export default function SuperAdminPage() {
+  const { user } = useAuth()
   const [salonStats, setSalonStats] = useState<SalonStats[]>([])
   const [platformStats, setPlatformStats] = useState<PlatformStats>({
     totalSalons: 0,
@@ -185,8 +187,21 @@ export default function SuperAdminPage() {
   }, [])
 
   useEffect(() => {
+    // Debug: Log current user info
+    console.log('Admin page - Current user:', {
+      email: user?.email,
+      uid: user?.uid,
+      displayName: user?.displayName,
+      isAuthenticated: !!user
+    })
+    
+    if (!user) {
+      console.log('No user found - user is null or undefined')
+      return
+    }
+    
     fetchSuperAdminData()
-  }, [fetchSuperAdminData])
+  }, [fetchSuperAdminData, user])
 
   const handleRefresh = () => {
     fetchSuperAdminData()
