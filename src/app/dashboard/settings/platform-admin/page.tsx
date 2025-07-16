@@ -6,9 +6,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { BookingRequest, Salon } from '@/types/firebase'
 import { 
-  UserIcon,
   BuildingOfficeIcon,
-  CalendarIcon,
   CheckCircleIcon,
   ClockIcon,
   ArrowPathIcon,
@@ -79,21 +77,6 @@ export default function PlatformAdminPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'totalRequests' | 'completionRate' | 'lastActivity' | 'createdAt'>('totalRequests')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-
-  // Check if user has platform admin access
-  if (!isPlatformAdmin(user?.email)) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Access Denied</h1>
-            <p className="text-gray-600">You don't have permission to access platform admin data.</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const fetchPlatformAdminData = useCallback(async () => {
     try {
@@ -215,11 +198,26 @@ export default function PlatformAdminPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [user?.email])
 
   useEffect(() => {
     fetchPlatformAdminData()
   }, [fetchPlatformAdminData])
+
+  // Move the admin check here, after all hooks
+  if (!isPlatformAdmin(user?.email)) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600">You don&apos;t have permission to access platform admin data.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleRefresh = () => {
     fetchPlatformAdminData()
@@ -518,4 +516,4 @@ export default function PlatformAdminPage() {
       </div>
     </div>
   )
-} 
+}
