@@ -145,11 +145,11 @@ export default function AdminPage() {
     }
   }
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = async (userId: string) => {
     if (!confirm('Are you sure you want to remove this team member?')) return
 
     try {
-      await teamService.removeTeamMember(memberId)
+      await teamService.removeTeamMember(userId)
       
       // Refresh team members list
       const teamMembersData = await teamService.getTeamMembers(user!.uid)
@@ -538,7 +538,7 @@ export default function AdminPage() {
                           </button>
                           {member.role !== 'owner' && (
                             <button
-                              onClick={() => handleRemoveMember(member.id)}
+                              onClick={() => handleRemoveMember(member.userId)}
                               className="text-red-600 hover:text-red-800"
                               title="Remove member"
                             >

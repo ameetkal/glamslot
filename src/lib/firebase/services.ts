@@ -9,7 +9,8 @@ import {
   query, 
   where, 
   writeBatch,
-  serverTimestamp
+  serverTimestamp,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client, ShiftChangeRequest } from '@/types/firebase';
@@ -351,14 +352,11 @@ export const teamService = {
 
   // Get team member by userId
   async getTeamMemberByUserId(userId: string): Promise<TeamMember | null> {
-    const q = query(
-      collection(db, 'teamMembers'),
-      where('userId', '==', userId)
-    );
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0];
-      return { id: doc.id, ...doc.data() } as TeamMember;
+    // Now that we use userId as document ID, we can directly get the document
+    const docRef = doc(db, 'teamMembers', userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as TeamMember;
     }
     return null;
   },
@@ -431,7 +429,9 @@ export const teamService = {
     salonId: string;
     userId: string;
   }): Promise<string> {
-    const docRef = await addDoc(collection(db, 'teamMembers'), {
+    // Use userId as the document ID to make security rules work properly
+    const docRef = doc(db, 'teamMembers', member.userId);
+    await setDoc(docRef, {
       ...member,
       status: 'active',
       invitedAt: serverTimestamp(),
@@ -441,8 +441,9 @@ export const teamService = {
   },
 
   // Remove team member
-  async removeTeamMember(id: string): Promise<void> {
-    const docRef = doc(db, 'teamMembers', id);
+  async removeTeamMember(userId: string): Promise<void> {
+    // Now that we use userId as document ID, we can directly delete the document
+    const docRef = doc(db, 'teamMembers', userId);
     await deleteDoc(docRef);
   },
 

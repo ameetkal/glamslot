@@ -14,6 +14,7 @@ service cloud.firestore {
     }
     
     // Helper function to check if user is a team member of the salon
+    // Flexible approach: Allow access if user has any team member document with matching salonId
     function isTeamMember(salonId) {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
@@ -43,6 +44,11 @@ service cloud.firestore {
       allow read: if isPlatformAdmin();
     }
 
+    // Allow public queries to salons collection for booking pages
+    match /salons {
+      allow list: if true; // Allow public queries to find salons by slug
+    }
+
     // Providers - salon owners and team members can manage
     match /providers/{providerId} {
       allow read, write: if hasSalonAccess(resource.data.salonId);
@@ -51,12 +57,22 @@ service cloud.firestore {
         hasSalonAccess(request.resource.data.salonId);
     }
 
+    // Allow public queries to providers collection for booking pages
+    match /providers {
+      allow list: if true; // Allow public queries to find providers by salonId
+    }
+
     // Services - salon owners and team members can manage
     match /services/{serviceId} {
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Allow public queries to services collection for booking pages
+    match /services {
+      allow list: if true; // Allow public queries to find services by salonId
     }
 
     // Booking requests - salon owners and team members can manage their salon's requests
@@ -138,6 +154,11 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && 
         resource.data.salonId != null && 
         hasSalonAccess(resource.data.salonId);
+    }
+
+    // Allow public queries to sessions collection for analytics
+    match /sessions {
+      allow list: if true; // Allow public queries for analytics
     }
   }
 }
