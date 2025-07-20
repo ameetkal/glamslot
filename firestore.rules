@@ -42,6 +42,9 @@ service cloud.firestore {
       
       // Allow platform admins to read all salons for aggregate data
       allow read: if isPlatformAdmin();
+      
+      // Allow public read access for all salon documents (for booking pages)
+      allow read: if true;
     }
 
     // Allow public queries to salons collection for booking pages

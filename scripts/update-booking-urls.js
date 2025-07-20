@@ -1,16 +1,14 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+const { initializeApp } = require('firebase/app');
+const { getFirestore, collection, getDocs, doc, updateDoc } = require('firebase/firestore');
 
-// Load environment variables (you may need to install dotenv and configure it)
-// Or manually replace these with your actual values
+// Your Firebase config
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDGc0Bmf94Ws5DkSh0hTEeGhH-5pfBeREI",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "last-minute-app-93f61.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "last-minute-app-93f61",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "last-minute-app-93f61.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "916728653067",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:916728653067:web:08e03dfc04cec1b1786e0e",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-C6SHWDM5WQ"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
@@ -19,61 +17,47 @@ const db = getFirestore(app);
 
 async function updateBookingUrls() {
   try {
-    console.log('🔍 Fetching all salon records...');
+    console.log('Fetching all salons...');
     
-    // Get all salon documents
-    const querySnapshot = await getDocs(collection(db, 'salons'));
-    
-    if (querySnapshot.empty) {
-      console.log('✅ No salon records found to update');
-      return;
-    }
-    
-    console.log(`📊 Found ${querySnapshot.size} salon records`);
-    
-    let updatedCount = 0;
-    let skippedCount = 0;
-    
-    // Process each salon document
-    for (const docSnapshot of querySnapshot.docs) {
-      const salonData = docSnapshot.data();
-      const salonId = docSnapshot.id;
-      
-      console.log(`\n🏪 Processing salon: ${salonData.name || salonId}`);
-      console.log(`   Current bookingUrl: ${salonData.bookingUrl}`);
-      
-      // Check if the bookingUrl needs to be updated
-      if (salonData.bookingUrl && salonData.bookingUrl.includes('booking.glammatic.com')) {
-        // Update the bookingUrl to use the correct domain
-        const newBookingUrl = salonData.bookingUrl.replace(
-          'booking.glammatic.com',
-          'last-minute-app.vercel.app'
-        );
+    // Get all salons
+    const salonsSnapshot = await getDocs(collection(db, 'salons'));
+    const salons = salonsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    console.log(`Found ${salons.length} salons`);
+
+    // Update each salon's booking URL
+    for (const salon of salons) {
+      if (salon.slug) {
+        const newBookingUrl = `https://glamslot.vercel.app/booking/${salon.slug}`;
         
-        console.log(`   New bookingUrl: ${newBookingUrl}`);
-        
-        // Update the document
-        await updateDoc(doc(db, 'salons', salonId), {
-          bookingUrl: newBookingUrl,
-          updatedAt: new Date()
-        });
-        
-        console.log(`   ✅ Updated successfully`);
-        updatedCount++;
+        // Only update if the URL is different
+        if (salon.bookingUrl !== newBookingUrl) {
+          console.log(`Updating ${salon.name} (${salon.slug}):`);
+          console.log(`  Old: ${salon.bookingUrl || 'No booking URL'}`);
+          console.log(`  New: ${newBookingUrl}`);
+          
+          await updateDoc(doc(db, 'salons', salon.id), {
+            bookingUrl: newBookingUrl,
+            updatedAt: new Date()
+          });
+          
+          console.log(`  ✅ Updated successfully\n`);
+        } else {
+          console.log(`✅ ${salon.name} (${salon.slug}) - URL already correct\n`);
+        }
       } else {
-        console.log(`   ⏭️  No update needed (already correct or no bookingUrl)`);
-        skippedCount++;
+        console.log(`⚠️  ${salon.name} - No slug found, skipping\n`);
       }
     }
-    
-    console.log(`\n🎉 Update complete!`);
-    console.log(`   Updated: ${updatedCount} records`);
-    console.log(`   Skipped: ${skippedCount} records`);
-    
+
+    console.log('🎉 All booking URLs updated successfully!');
   } catch (error) {
-    console.error('❌ Error updating booking URLs:', error);
+    console.error('Error updating booking URLs:', error);
   }
 }
 
-// Run the update
+// Run the script
 updateBookingUrls(); 
