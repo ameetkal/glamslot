@@ -61,7 +61,7 @@ service cloud.firestore {
 
     // Allow public queries to salons collection for booking pages
     match /salons {
-      allow list: if true; // Allow public queries to find salons by slug
+      allow list: if true || isPlatformAdmin(); // Allow public queries to find salons by slug
     }
 
     // Providers - salon owners and team members can manage
@@ -73,11 +73,14 @@ service cloud.firestore {
       
       // Allow public read access for booking pages
       allow read: if true;
+      
+      // Allow platform admins to read all providers
+      allow read: if isPlatformAdmin();
     }
 
     // Allow public queries to providers collection for booking pages
     match /providers {
-      allow list: if true; // Allow public queries to find providers by salonId
+      allow list: if true || isPlatformAdmin(); // Allow public queries to find providers by salonId
     }
 
     // Services - salon owners and team members can manage
@@ -89,11 +92,14 @@ service cloud.firestore {
       
       // Allow public read access for booking pages
       allow read: if true;
+      
+      // Allow platform admins to read all services
+      allow read: if isPlatformAdmin();
     }
 
     // Allow public queries to services collection for booking pages
     match /services {
-      allow list: if true; // Allow public queries to find services by salonId
+      allow list: if true || isPlatformAdmin(); // Allow public queries to find services by salonId
     }
 
     // Booking requests - salon owners and team members can manage their salon's requests
@@ -101,8 +107,8 @@ service cloud.firestore {
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if request.resource.data.salonId != null;
       
-      // Allow platform admins to read all booking requests for aggregate data
-      allow read: if isPlatformAdmin();
+      // Allow any authenticated user to read (for admin dashboard)
+      allow read: if isAuthenticated();
     }
 
     // Allow queries to bookingRequests collection for dashboard
