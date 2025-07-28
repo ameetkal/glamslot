@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       clientEmail: email,
       clientPhone: phone,
       service,
-      stylistPreference: stylist || 'Any stylist',
+      stylistPreference: stylist || 'Any service provider',
       dateTimePreference,
       notes: notes || '',
       waitlistOptIn: waitlistOptIn || false,
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
               <h2>New Booking Request</h2>
               <p><strong>Client:</strong> ${name}</p>
               <p><strong>Service:</strong> ${service}</p>
-              <p><strong>Stylist Preference:</strong> ${stylist || 'Any stylist'}</p>
+              <p><strong>Service Provider Preference:</strong> ${stylist || 'Any service provider'}</p>
               <p><strong>Date/Time:</strong> ${dateTimePreference}</p>
               <p><strong>Phone:</strong> ${phone}</p>
               <p><strong>Email:</strong> ${email}</p>

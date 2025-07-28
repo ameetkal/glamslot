@@ -187,7 +187,7 @@ export default function ProfilePage() {
                     <option value="salon">Salon</option>
                     <option value="spa">Spa</option>
                     <option value="barbershop">Barbershop</option>
-                    <option value="independent">Independent Stylist</option>
+                    <option value="independent">Independent Professional</option>
                   </select>
                 </div>
               </div>

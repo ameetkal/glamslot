@@ -55,8 +55,8 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
     navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon })
   }
   
-  // Add Staff Schedule for management (owners, admins, front desk)
-  if (userRole === 'owner' || userRole === 'admin' || userRole === 'front_desk') {
+  // Add Staff Schedule for management (admins only)
+  if (userRole === 'admin') {
     navigation.push({ name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon })
   }
   
@@ -65,17 +65,17 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   //   navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
   // }
   
-  // Add Dashboard (only for owners and admins)
-  if (userRole === 'owner' || userRole === 'admin') {
+  // Add Dashboard (only for admins)
+  if (userRole === 'admin') {
     navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
   }
   
-  // Add provider-specific pages (only for non-owners)
-  if (permissions.canManageOwnSchedule && userRole !== 'owner') {
+  // Add provider-specific pages (only for service providers)
+  if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
     navigation.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
   }
   
-  if (permissions.canViewOwnBookings && userRole !== 'owner') {
+  if (permissions.canViewOwnBookings && userRole === 'service_provider') {
     navigation.push({ name: 'My Bookings', href: '/dashboard/bookings', icon: ChatBubbleLeftRightIcon })
   }
   
@@ -139,21 +139,26 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         // First check if they're a salon owner (this takes precedence)
         const salon = await salonService.getSalon(user.uid)
         if (salon) {
-          setUserRole('owner')
+          setUserRole('admin')
           return
         }
         
         // If not an owner, check if they're a team member
         const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
         if (userTeamMember) {
-          setUserRole(userTeamMember.role)
+          // Map old roles to new simplified roles
+          if (userTeamMember.role === 'owner' || userTeamMember.role === 'admin' || userTeamMember.role === 'front_desk') {
+            setUserRole('admin')
+          } else {
+            setUserRole('service_provider')
+          }
         } else {
-          // Default to member if we can't determine role
-          setUserRole('member')
+          // Default to service_provider if we can't determine role
+          setUserRole('service_provider')
         }
       } catch (error) {
         console.error('Error fetching user role:', error)
-        setUserRole('member')
+        setUserRole('service_provider')
       }
     }
     fetchUserRole()
@@ -217,11 +222,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   {user?.email}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {userRole === 'owner' ? 'Salon Owner' : 
-                   userRole === 'admin' ? 'Admin' : 
-                   userRole === 'service_provider' ? 'Service Provider' : 
-                   userRole === 'front_desk' ? 'Front Desk' : 
-                   'Team Member'}
+                  {userRole === 'admin' ? 'Admin' : 'Service Provider'}
                 </p>
               </div>
             </div>

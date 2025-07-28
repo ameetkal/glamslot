@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import QRCode from 'qrcode'
+import Image from 'next/image'
 import { QrCodeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
 interface TestQRGeneratorProps {
@@ -21,14 +22,7 @@ export default function TestQRGenerator({ isOpen, onClose }: TestQRGeneratorProp
     currentVisits: 2
   })
 
-  // Auto-generate QR code when modal opens
-  useEffect(() => {
-    if (isOpen && !qrCodeDataUrl) {
-      generateTestQR()
-    }
-  }, [isOpen])
-
-  const generateTestQR = async () => {
+  const generateTestQR = useCallback(async () => {
     setIsGenerating(true)
     console.log('Generating test QR code with data:', testData)
     
@@ -70,7 +64,14 @@ export default function TestQRGenerator({ isOpen, onClose }: TestQRGeneratorProp
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [testData])
+
+  // Auto-generate QR code when modal opens
+  useEffect(() => {
+    if (isOpen && !qrCodeDataUrl) {
+      generateTestQR()
+    }
+  }, [isOpen, qrCodeDataUrl, generateTestQR])
 
   const downloadQRCode = () => {
     if (qrCodeDataUrl) {
@@ -198,9 +199,11 @@ export default function TestQRGenerator({ isOpen, onClose }: TestQRGeneratorProp
               {qrCodeDataUrl && (
                 <div className="text-center space-y-4">
                   <div className="w-48 h-48 mx-auto bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <img 
+                    <Image 
                       src={qrCodeDataUrl} 
                       alt="Test QR Code" 
+                      width={192}
+                      height={192}
                       className="w-full h-full object-contain"
                     />
                   </div>

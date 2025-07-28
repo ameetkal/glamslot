@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { 
   ClipboardDocumentIcon,
@@ -81,7 +81,7 @@ export default function DashboardPage() {
       try {
         // First, check if user is a team member
         const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
-        let salonId = user.uid // Default to user.uid for salon owners
+        let salonId = user.uid // Default to user.uid for salon admins
         
         if (userTeamMember) {
           // User is a team member, use their salonId
@@ -90,21 +90,43 @@ export default function DashboardPage() {
           console.log('User is a team member, using salonId:', salonId)
         } else {
           setIsTeamMember(false)
-          console.log('User is a salon owner, using user.uid as salonId')
+          console.log('User is a salon admin, using user.uid as salonId')
         }
 
-        // Fetch salon data using the correct salon ID
+        // Fetch salon data - first try by user ID, then by ownerEmail
+        let salon = null
+        
+        // Try to get salon by user ID first
         const salonDocRef = doc(db, 'salons', salonId)
         console.log('Fetching salon document with ID:', salonId)
         const salonDoc = await getDoc(salonDocRef)
+        
         if (salonDoc.exists()) {
-          const salon = salonDoc.data() as Salon
-          console.log('Salon data loaded:', salon)
+          salon = salonDoc.data() as Salon
+          console.log('Salon data loaded by user ID:', salon.name)
+        } else {
+          console.log('No salon document found for user ID, trying to find by ownerEmail')
+          
+          // If not found by user ID, try to find by ownerEmail
+          const salonsRef = collection(db, 'salons')
+          const q = query(salonsRef, where('ownerEmail', '==', user.email))
+          const querySnapshot = await getDocs(q)
+          
+          if (!querySnapshot.empty) {
+            const salonDoc = querySnapshot.docs[0]
+            salon = { id: salonDoc.id, ...salonDoc.data() } as Salon
+            console.log('Salon data loaded by ownerEmail:', salon.name)
+            console.log('Found salon with document ID:', salonDoc.id)
+          } else {
+            console.log('No salon document found for ownerEmail:', user.email)
+          }
+        }
+        
+        if (salon) {
           console.log('Salon name:', salon.name)
           console.log('Salon bookingUrl:', salon.bookingUrl)
           setSalonData(salon)
         } else {
-          console.log('No salon document found for salonId:', salonId)
           setSalonData(null)
         }
 
@@ -238,7 +260,7 @@ export default function DashboardPage() {
         name: user.displayName || user.email?.split('@')[0] || 'My Salon',
         slug: (user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-'),
         bookingUrl: getBookingUrl((user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')),
-        ownerName: user.displayName || 'Salon Owner',
+        ownerName: user.displayName || 'Admin',
         ownerEmail: user.email || '',
         businessType: 'salon',
         settings: {
@@ -290,7 +312,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Booking URL Section - Only show for salon owners */}
+                  {/* Booking URL Section - Only show for salon admins */}
         {(() => {
           console.log('Rendering booking URL section check:')
           console.log('salonData:', salonData)
@@ -299,7 +321,7 @@ export default function DashboardPage() {
           console.log('Should show booking URL:', (salonData?.bookingUrl || salonData?.name))
           
           if (!salonData) {
-            // Only show setup required for salon owners, not team members
+            // Only show setup required for salon admins, not team members
             if (!isTeamMember) {
               return (
                 <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
@@ -319,7 +341,7 @@ export default function DashboardPage() {
             return null
           }
           
-          // Only show booking URL section for salon owners
+          // Only show booking URL section for salon admins
           if (!isTeamMember && (salonData?.bookingUrl || salonData?.name)) {
             return (
               <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">

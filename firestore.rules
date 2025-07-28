@@ -21,6 +21,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
     }
     
+    // Helper function to check if user has any team member record
+    function hasTeamMemberRecord() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
+    }
+    
     // Helper function to check if user has access to salon data
     function hasSalonAccess(salonId) {
       return isSalonOwner(salonId) || isTeamMember(salonId);
@@ -35,9 +41,15 @@ service cloud.firestore {
 
     // Salon documents - only salon owners can read/write their own salon
     match /salons/{salonId} {
-      allow read, write: if isSalonOwner(salonId);
+      // Salon owners can always access their own salon (user ID matches document ID)
+      allow read, write: if isAuthenticated() && request.auth.uid == salonId;
       
-      // Allow public read access for booking pages (by slug)
+      // Team members can read their salon (check if user is a team member of this salon)
+      allow read: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
+      
+      // Public access for booking pages (anyone can read if slug exists)
       allow read: if resource.data.slug != null;
       
       // Allow platform admins to read all salons for aggregate data
@@ -98,9 +110,13 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
 
-    // Team members - salon owners can manage their team
+    // Team members - salon owners can manage their team, team members can read their own record
     match /teamMembers/{memberId} {
-      allow read, write: if isSalonOwner(resource.data.salonId);
+      allow read: if isAuthenticated() && (
+        isSalonOwner(resource.data.salonId) || 
+        request.auth.uid == memberId
+      );
+      allow write: if isSalonOwner(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         isSalonOwner(request.resource.data.salonId);

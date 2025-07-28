@@ -238,7 +238,7 @@ export default function BookingPage() {
                         Book Now - ${selectedSlot.discountPrice}
                       </Button>
                       <p className="mt-2 text-center text-xs text-gray-500">
-                        You&apos;ll receive a confirmation email once the stylist approves your request
+                        You&apos;ll receive a confirmation email once the service provider approves your request
                       </p>
                     </div>
                   </form>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { XMarkIcon, QrCodeIcon } from '@heroicons/react/24/outline'
 import QRCode from 'qrcode'
+import Image from 'next/image'
 import { LoyaltyProgram } from '@/types/firebase'
 
 interface QRCodeDisplayProps {
@@ -21,7 +22,7 @@ export default function QRCodeDisplay({
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const generateQRCode = async () => {
+  const generateQRCode = useCallback(async () => {
     setIsGenerating(true)
     try {
       // Create the registration URL
@@ -43,13 +44,13 @@ export default function QRCodeDisplay({
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [programData.id])
 
   useEffect(() => {
     if (isOpen && programData) {
       generateQRCode()
     }
-  }, [isOpen, programData])
+  }, [isOpen, programData, generateQRCode])
 
   if (!isOpen) return null
 
@@ -106,9 +107,11 @@ export default function QRCodeDisplay({
               ) : qrCodeDataUrl ? (
                 <div className="space-y-4">
                   <div className="bg-white p-4 rounded-lg border border-gray-200 inline-block">
-                    <img 
+                    <Image 
                       src={qrCodeDataUrl} 
                       alt="Loyalty Program QR Code" 
+                      width={256}
+                      height={256}
                       className="w-64 h-64"
                     />
                   </div>

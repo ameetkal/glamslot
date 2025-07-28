@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { XMarkIcon, CameraIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
@@ -35,19 +35,24 @@ export default function QRCodeScanner({
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (isOpen && !scannerRef.current) {
-      startScanner()
-    }
-
-    return () => {
-      if (scannerRef.current) {
+  const handleScanSuccess = useCallback((decodedText: string) => {
+    try {
+      const parsedData = JSON.parse(decodedText) as ScannedLoyaltyData
+      
+      // Validate the scanned data
+      if (parsedData.type === 'loyalty' && parsedData.program) {
+        setScanResult(parsedData)
         stopScanner()
+      } else {
+        setError('Invalid loyalty program QR code')
       }
+    } catch (err) {
+      console.error('Error parsing QR code data:', err)
+      setError('Invalid QR code format')
     }
-  }, [isOpen])
+  }, [])
 
-  const startScanner = () => {
+  const startScanner = useCallback(() => {
     if (!containerRef.current) return
 
     try {
@@ -77,7 +82,19 @@ export default function QRCodeScanner({
       console.error('Error starting scanner:', err)
       setError('Failed to start camera. Please check camera permissions.')
     }
-  }
+  }, [handleScanSuccess])
+
+  useEffect(() => {
+    if (isOpen && !scannerRef.current) {
+      startScanner()
+    }
+
+    return () => {
+      if (scannerRef.current) {
+        stopScanner()
+      }
+    }
+  }, [isOpen, startScanner])
 
   const stopScanner = () => {
     if (scannerRef.current) {
@@ -85,23 +102,6 @@ export default function QRCodeScanner({
       scannerRef.current = null
     }
     setIsScanning(false)
-  }
-
-  const handleScanSuccess = (decodedText: string) => {
-    try {
-      const parsedData = JSON.parse(decodedText) as ScannedLoyaltyData
-      
-      // Validate the scanned data
-      if (parsedData.type === 'loyalty' && parsedData.program) {
-        setScanResult(parsedData)
-        stopScanner()
-      } else {
-        setError('Invalid loyalty program QR code')
-      }
-    } catch (err) {
-      console.error('Error parsing QR code data:', err)
-      setError('Invalid QR code format')
-    }
   }
 
   const handleConfirmScan = () => {
