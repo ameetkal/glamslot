@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { collection, query, where, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { teamService } from '@/lib/firebase/services'
 import Link from 'next/link'
 import { 
   CalendarIcon, 
@@ -20,6 +21,7 @@ import {
   FunnelIcon
 } from '@heroicons/react/24/outline'
 import { BookingRequest } from '@/types/firebase'
+import ClickablePhone from '@/components/ui/ClickablePhone'
 
 // Type alias to handle Firebase timestamp format
 type BookingRequestWithFirebaseTimestamps = Omit<BookingRequest, 'createdAt' | 'updatedAt'> & {
@@ -43,9 +45,13 @@ export default function BookingHistoryPage() {
       if (!user) return
 
       try {
+        // Get the user's salon ID - check if they're a team member first
+        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+        const salonId = userTeamMember?.salonId || user.uid
+        
         const requestsQuery = query(
           collection(db, 'bookingRequests'),
-          where('salonId', '==', user.uid),
+          where('salonId', '==', salonId),
           orderBy('createdAt', 'desc')
         )
         const snapshot = await getDocs(requestsQuery)
@@ -255,7 +261,7 @@ export default function BookingHistoryPage() {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <PhoneIcon className="h-4 w-4 mr-2" />
-                    {request.clientPhone}
+                    <ClickablePhone phone={request.clientPhone} />
                   </div>
                 </div>
               </div>
@@ -268,7 +274,7 @@ export default function BookingHistoryPage() {
                     <span className="ml-2 text-gray-600">{request.service}</span>
                   </div>
                   <div className="text-sm">
-                    <span className="font-medium text-gray-700">Stylist Preference:</span>
+                    <span className="font-medium text-gray-700">Service Provider Preference:</span>
                     <span className="ml-2 text-gray-600">{request.stylistPreference}</span>
                   </div>
                   <div className="text-sm">

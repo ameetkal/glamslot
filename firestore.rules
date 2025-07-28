@@ -20,17 +20,32 @@ service cloud.firestore {
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
     }
     
+    // Helper function to check if user has any team member record
+    function hasTeamMemberRecord() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
+    }
+    
     // Helper function to check if user has access to salon data
     function hasSalonAccess(salonId) {
       return isSalonOwner(salonId) || isTeamMember(salonId);
     }
 
-    // Salon documents - only salon owners can read/write their own salon
+    // Salon documents - simplified access rules
     match /salons/{salonId} {
-      allow read, write: if isSalonOwner(salonId);
+      // Salon owners can always access their own salon (user ID matches document ID)
+      allow read, write: if isAuthenticated() && request.auth.uid == salonId;
       
-      // Allow public read access for booking pages (by slug)
+      // Team members can read their salon (check if user is a team member of this salon)
+      allow read: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
+      
+      // Public access for booking pages (anyone can read if slug exists)
       allow read: if resource.data.slug != null;
+      
+      // Allow public queries for booking page searches
+      allow list: if true;
     }
 
     // Providers - salon owners and team members can manage
@@ -39,6 +54,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
+      
+      // Allow public read access for booking pages
+      allow read: if resource.data.salonId != null && 
+        exists(/databases/$(database)/documents/salons/$(resource.data.salonId)) &&
+        get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.slug != null;
     }
 
     // Services - salon owners and team members can manage
@@ -47,17 +67,36 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
+      
+      // Explicit rule for team members to read their salon's services
+      allow read: if isAuthenticated() && 
+        hasTeamMemberRecord() &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == resource.data.salonId;
+      
+      // Allow public read access for booking pages
+      allow read: if resource.data.salonId != null && 
+        exists(/databases/$(database)/documents/salons/$(resource.data.salonId)) &&
+        get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.slug != null;
     }
 
     // Booking requests - salon owners and team members can manage their salon's requests
     match /bookingRequests/{requestId} {
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if request.resource.data.salonId != null;
+      
+      // Explicit rule for team members to read their salon's requests
+      allow read: if isAuthenticated() && 
+        hasTeamMemberRecord() &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == resource.data.salonId;
     }
 
-    // Team members - salon owners can manage their team
+    // Team members - salon owners can manage their team, team members can read their own record
     match /teamMembers/{memberId} {
-      allow read, write: if isSalonOwner(resource.data.salonId);
+      allow read: if isAuthenticated() && (
+        isSalonOwner(resource.data.salonId) || 
+        request.auth.uid == memberId
+      );
+      allow write: if isSalonOwner(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         isSalonOwner(request.resource.data.salonId);

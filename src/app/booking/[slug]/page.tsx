@@ -286,7 +286,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       if (providerOptions.length === 0 && otherProvider.trim()) {
         return otherProvider.trim()
       }
-      return 'Any stylist'
+      return 'Any service provider'
     }
     if (selectedProvider === OTHER_PROVIDER_ID) return otherProvider.trim()
     return providers.find(p => p.id === selectedProvider)?.name || otherProvider.trim()
@@ -364,7 +364,6 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       {/* Salon Name Header */}
       <div className="text-center mb-4 sm:mb-6 pb-4 border-b border-gray-200">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{salon?.name || 'Salon'}</h1>
-        <p className="text-sm text-gray-700 mt-1">Professional Hair & Beauty Services</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -459,26 +458,21 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 2: Stylist Preference */}
+        {/* Step 2: Service Provider Preference */}
         {step === 2 && (
           <>
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Who would you prefer?</h2>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Stylist Preference</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Service Provider Preference</label>
               {providerOptions.length === 0 ? (
                 <input
                   type="text"
+                  autoFocus
                   className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter stylist preference (optional)"
+                  placeholder="Enter service provider preference (optional)"
                   value={otherProvider}
-                  onChange={e => {
-                    setOtherProvider(e.target.value)
-                    // If user enters text, set selectedProvider to OTHER_PROVIDER_ID
-                    if (e.target.value.trim()) {
-                      setSelectedProvider(OTHER_PROVIDER_ID)
-                    } else {
-                      setSelectedProvider('any')
-                    }
-                  }}
+                  onChange={e => setOtherProvider(e.target.value)}
+                  onKeyPress={handleKeyPress}
                 />
               ) : (
                 <>
@@ -502,7 +496,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                     <input
                       type="text"
                       className="mt-3 w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-3 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
-                      placeholder="Enter stylist preference (optional)"
+                      placeholder="Enter service provider preference (optional)"
                       value={otherProvider}
                       onChange={e => setOtherProvider(e.target.value)}
                       required
@@ -700,7 +694,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                   <span className="ml-2 text-sm text-gray-900">{getServiceName()}</span>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Stylist Preference:</span>
+                  <span className="text-sm font-medium text-gray-700">Service Provider Preference:</span>
                   <span className="ml-2 text-sm text-gray-900">{getProviderName()}</span>
                 </div>
                 <div>
