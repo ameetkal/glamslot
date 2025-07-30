@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { providerService, serviceService, salonService, teamService } from '@/lib/firebase/services';
-import { Provider, Service, Salon } from '@/types/firebase';
+import { Provider, Service } from '@/types/firebase';
 import { motion } from 'framer-motion';
 import { UserIcon, PhoneIcon, GlobeAltIcon, CogIcon } from '@heroicons/react/24/outline';
 
 export default function ProviderSettingsPage() {
   const { user } = useAuth();
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [salon, setSalon] = useState<Salon | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,7 +64,6 @@ export default function ProviderSettingsPage() {
         name: salonData.name,
         ownerEmail: salonData.ownerEmail
       });
-      setSalon(salonData);
 
       // Step 3: Get providers
       console.log('🔍 DEBUG: Step 3 - Fetching providers for salonId:', teamMember.salonId);
@@ -90,6 +88,20 @@ export default function ProviderSettingsPage() {
         teamMemberId: providerData.teamMemberId
       });
       setProvider(providerData);
+
+      // Generate booking URL if it doesn't exist
+      if (!providerData.bookingUrl) {
+        console.log('🔍 DEBUG: No booking URL found, generating one...');
+        try {
+          const providerUrl = `${salonData.bookingUrl}?provider=${providerData.id}`;
+          await providerService.updateProvider(providerData.id, { bookingUrl: providerUrl });
+          console.log('🔍 DEBUG: ✅ Generated booking URL:', providerUrl);
+          // Update the local state with the new URL
+          setProvider(prev => prev ? { ...prev, bookingUrl: providerUrl } : null);
+        } catch (urlError) {
+          console.error('🔍 DEBUG: ❌ Error generating booking URL:', urlError);
+        }
+      }
 
       // Step 4: Get services
       console.log('🔍 DEBUG: Step 4 - Fetching services for salonId:', teamMember.salonId);
@@ -204,9 +216,9 @@ export default function ProviderSettingsPage() {
   };
 
   const copyBookingUrl = () => {
-    if (salon?.bookingUrl) {
-      navigator.clipboard.writeText(salon.bookingUrl);
-      setSuccess('Booking URL copied to clipboard!');
+    if (provider?.bookingUrl) {
+      navigator.clipboard.writeText(provider.bookingUrl);
+      setSuccess('Your direct booking link copied to clipboard!');
       setTimeout(() => setSuccess(''), 3000);
     }
   };
@@ -289,16 +301,17 @@ export default function ProviderSettingsPage() {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center mb-3">
               <GlobeAltIcon className="h-5 w-5 text-gray-400 mr-2" />
-              <h2 className="text-base font-semibold text-gray-900">Booking URL</h2>
+              <h2 className="text-base font-semibold text-gray-900">Your Direct Booking Link</h2>
             </div>
             
             <div className="bg-gray-50 rounded p-3">
-              <p className="text-xs font-medium text-gray-700 mb-1">Your Booking Link</p>
-              <p className="text-xs text-gray-600 break-all mb-2">{salon?.bookingUrl}</p>
+              <p className="text-xs font-medium text-gray-700 mb-1">Share this link with clients for direct booking</p>
+              <p className="text-xs text-gray-600 break-all mb-2">{provider?.bookingUrl || 'Loading...'}</p>
               <button
                 type="button"
                 onClick={copyBookingUrl}
-                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                disabled={!provider?.bookingUrl}
+                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Copy URL
               </button>

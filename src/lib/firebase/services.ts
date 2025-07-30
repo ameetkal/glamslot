@@ -74,6 +74,14 @@ export const providerService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+
+    // Generate provider-specific booking URL
+    const salonData = await salonService.getSalon(provider.salonId);
+    if (salonData?.bookingUrl) {
+      const providerUrl = `${salonData.bookingUrl}?provider=${docRef.id}`;
+      await this.updateProvider(docRef.id, { bookingUrl: providerUrl });
+    }
+
     return docRef.id;
   },
 

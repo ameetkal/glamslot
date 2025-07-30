@@ -18,14 +18,26 @@ export async function POST(request: NextRequest) {
       email,
       notes,
       waitlistOptIn,
-      salonSlug
+      salonSlug,
+      submittedByProvider,
+      providerId,
+      providerName
     } = body
 
     // Validate required fields
-    if (!service || !dateTimePreference || !name || !phone || !email || !salonSlug) {
-      console.log('Missing required fields:', { service, dateTimePreference, name, phone, email, salonSlug })
+    if (!service || !dateTimePreference || !name || !salonSlug) {
+      console.log('Missing required fields:', { service, dateTimePreference, name, salonSlug })
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // For non-provider submissions, email and phone are required
+    if (!submittedByProvider && (!phone || !email)) {
+      console.log('Missing required fields for regular submission:', { phone, email })
+      return NextResponse.json(
+        { success: false, message: 'Email and phone are required for regular submissions' },
         { status: 400 }
       )
     }
@@ -45,15 +57,18 @@ export async function POST(request: NextRequest) {
     // Create booking request
     const bookingRequest = {
       clientName: name,
-      clientEmail: email,
-      clientPhone: phone,
+      clientEmail: email || '',
+      clientPhone: phone || '',
       service,
       stylistPreference: stylist || 'Any service provider',
       dateTimePreference,
       notes: notes || '',
       waitlistOptIn: waitlistOptIn || false,
-      status: 'pending' as const,
-      salonId: salon.id
+      status: submittedByProvider ? 'provider-requested' as const : 'pending' as const,
+      salonId: salon.id,
+      submittedByProvider: submittedByProvider || false,
+      providerId: providerId || undefined,
+      providerName: providerName || undefined
     }
 
     console.log('Creating booking request:', bookingRequest)

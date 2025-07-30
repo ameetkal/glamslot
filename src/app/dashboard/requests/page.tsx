@@ -67,10 +67,11 @@ export default function RequestsPage() {
         
         // Sort in memory instead
         const sortedRequests = requestsData.sort((a, b) => {
-          // Define status priority: pending > contacted > others
+          // Define status priority: pending > provider-requested > contacted > others
           const getStatusPriority = (status: string) => {
             switch (status) {
-              case 'pending': return 3;
+              case 'pending': return 4;
+              case 'provider-requested': return 3;
               case 'contacted': return 2;
               default: return 1;
             }
@@ -104,7 +105,7 @@ export default function RequestsPage() {
     fetchRequests()
   }, [user])
 
-  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending' | 'contacted', e?: React.MouseEvent) => {
+  const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending' | 'contacted' | 'provider-requested', e?: React.MouseEvent) => {
     e?.stopPropagation() // Prevent card expansion when clicking buttons
     
     try {
@@ -149,6 +150,8 @@ export default function RequestsPage() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
+      case 'provider-requested':
+        return 'bg-purple-100 text-purple-800'
       case 'booked':
         return 'bg-green-100 text-green-800'
       case 'not-booked':
@@ -174,13 +177,16 @@ export default function RequestsPage() {
 
   // Separate requests into categories
   const pendingRequests = requests.filter(req => req.status === 'pending')
+  const providerRequests = requests.filter(req => req.status === 'provider-requested')
   const contactedRequests = requests.filter(req => req.status === 'contacted')
   const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
   
   const renderRequestCard = (request: BookingRequestWithFirebaseTimestamps) => (
     <li key={request.id}>
       <div 
-        className="px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors"
+        className={`px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors ${
+          request.submittedByProvider ? 'border-l-4 border-l-purple-400' : ''
+        }`}
         onClick={() => toggleExpanded(request.id)}
       >
         {/* Mobile-optimized main card content */}
@@ -213,12 +219,13 @@ export default function RequestsPage() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
               {request.status === 'pending' ? 'Pending' : 
+               request.status === 'provider-requested' ? 'Provider Requested' : 
                request.status === 'booked' ? 'Booked' : 
                request.status === 'contacted' ? 'Contacted' : 'Not Booked'}
             </span>
             
             {/* Action buttons - always visible on mobile */}
-            {request.status === 'pending' && (
+            {(request.status === 'pending' || request.status === 'provider-requested') && (
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <button
                   onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
@@ -439,6 +446,24 @@ export default function RequestsPage() {
               </div>
             )}
           </div>
+
+          {/* Provider Requests Section */}
+          {providerRequests.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Provider Requests</h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  {providerRequests.length} provider requests
+                </span>
+              </div>
+              
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                <ul className="divide-y divide-gray-200">
+                  {providerRequests.map(renderRequestCard)}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* Contacted Requests Section */}
           {contactedRequests.length > 0 && (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { 
   ClockIcon,
@@ -14,6 +14,9 @@ import Input from '@/components/ui/Input'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
+import { useSearchParams } from 'next/navigation'
+import { providerService, salonService } from '@/lib/firebase/services'
+import { Provider, Salon } from '@/types/firebase'
 
 // Mock data for the prototype
 const lastMinuteSlots = [
@@ -59,9 +62,13 @@ const bookingSchema = yup.object().shape({
 
 type BookingFormData = yup.InferType<typeof bookingSchema>
 
-export default function BookingPage() {
+function BookingForm() {
   const [selectedSlot, setSelectedSlot] = useState<typeof lastMinuteSlots[0] | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [provider, setProvider] = useState<Provider | null>(null)
+  const [salon, setSalon] = useState<Salon | null>(null)
+  const [isProviderSubmission, setIsProviderSubmission] = useState(false)
+  const searchParams = useSearchParams()
 
   const {
     register,
@@ -72,8 +79,39 @@ export default function BookingPage() {
     resolver: yupResolver(bookingSchema),
   })
 
+  // Check for provider parameter and fetch provider data
+  useEffect(() => {
+    const providerId = searchParams.get('provider')
+    if (providerId) {
+      setIsProviderSubmission(true)
+      fetchProviderData(providerId)
+    }
+  }, [searchParams])
+
+  const fetchProviderData = async (providerId: string) => {
+    try {
+      const providerData = await providerService.getProvider(providerId)
+      if (providerData) {
+        setProvider(providerData)
+        // Fetch salon data to get salon name
+        const salonData = await salonService.getSalon(providerData.salonId)
+        setSalon(salonData)
+      }
+    } catch (error) {
+      console.error('Error fetching provider data:', error)
+      // Fall back to regular booking form if provider doesn't exist
+      setIsProviderSubmission(false)
+    }
+  }
+
   const handleBookingSubmit = async (data: BookingFormData) => {
     if (!selectedSlot) return
+
+    // Manual validation for provider submissions
+    if (!isProviderSubmission && (!data.email || !data.phone)) {
+      alert('Please fill in all required fields')
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -81,6 +119,9 @@ export default function BookingPage() {
       console.log('Booking request:', {
         ...data,
         slot: selectedSlot,
+        submittedByProvider: isProviderSubmission,
+        providerId: provider?.id,
+        providerName: provider?.name,
       })
       
       // Reset form and selection
@@ -159,6 +200,12 @@ export default function BookingPage() {
             {/* Booking Form */}
             <div className="rounded-lg bg-white p-6 shadow">
               <h2 className="text-lg font-medium text-gray-900">Book Your Slot</h2>
+              {isProviderSubmission && provider && salon && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <div className="font-medium">{salon.name}</div>
+                  <div>Provider: {provider.name}</div>
+                </div>
+              )}
               {selectedSlot ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -189,32 +236,57 @@ export default function BookingPage() {
                   <form onSubmit={handleSubmit(handleBookingSubmit)} className="mt-6 space-y-4">
                     <div>
                       <Input
-                        label="Full Name"
+                        label={isProviderSubmission ? "Client Name" : "Full Name"}
                         icon={UserIcon}
                         error={errors.name?.message}
                         {...register('name')}
                       />
                     </div>
 
-                    <div>
-                      <Input
-                        type="email"
-                        label="Email"
-                        icon={EnvelopeIcon}
-                        error={errors.email?.message}
-                        {...register('email')}
-                      />
-                    </div>
+                    {!isProviderSubmission && (
+                      <>
+                        <div>
+                          <Input
+                            type="email"
+                            label="Email"
+                            icon={EnvelopeIcon}
+                            error={errors.email?.message}
+                            {...register('email')}
+                          />
+                        </div>
 
-                    <div>
-                      <Input
-                        type="tel"
-                        label="Phone Number"
-                        icon={PhoneIcon}
-                        error={errors.phone?.message}
-                        {...register('phone')}
-                      />
-                    </div>
+                        <div>
+                          <Input
+                            type="tel"
+                            label="Phone Number"
+                            icon={PhoneIcon}
+                            error={errors.phone?.message}
+                            {...register('phone')}
+                          />
+                        </div>
+                      </>
+                    )}
+                    {isProviderSubmission && (
+                      <>
+                        <div>
+                          <Input
+                            type="email"
+                            label="Client Email (Optional)"
+                            icon={EnvelopeIcon}
+                            {...register('email')}
+                          />
+                        </div>
+
+                        <div>
+                          <Input
+                            type="tel"
+                            label="Client Phone (Optional)"
+                            icon={PhoneIcon}
+                            {...register('phone')}
+                          />
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -253,5 +325,20 @@ export default function BookingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading booking form...</p>
+        </div>
+      </div>
+    }>
+      <BookingForm />
+    </Suspense>
   )
 } 

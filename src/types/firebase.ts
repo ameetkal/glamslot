@@ -13,6 +13,7 @@ export interface Provider {
   teamMemberId?: string;
   receiveNotifications: boolean;
   userId?: string;
+  bookingUrl?: string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -52,8 +53,11 @@ export interface BookingRequest {
   dateTimePreference: string;
   notes?: string;
   waitlistOptIn: boolean;
-  status: 'pending' | 'contacted' | 'booked' | 'not-booked';
+  status: 'pending' | 'contacted' | 'booked' | 'not-booked' | 'provider-requested';
   salonId: string;
+  submittedByProvider?: boolean;
+  providerId?: string;
+  providerName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

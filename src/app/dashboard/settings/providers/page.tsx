@@ -212,7 +212,7 @@ export default function ProvidersPage() {
             requiresConsultation: service.requiresConsultation || false
           })),
           isTeamMember: editing.isTeamMember,
-          teamMemberId: editing.teamMemberId,
+          ...(editing.teamMemberId && { teamMemberId: editing.teamMemberId }),
           receiveNotifications: editing.receiveNotifications
         };
 
@@ -237,7 +237,7 @@ export default function ProvidersPage() {
             requiresConsultation: service.requiresConsultation || false
           })),
           isTeamMember: editing.isTeamMember || false,
-          teamMemberId: editing.teamMemberId,
+          ...(editing.teamMemberId && { teamMemberId: editing.teamMemberId }),
           receiveNotifications: editing.receiveNotifications || false,
           salonId: user.uid
         };
@@ -359,6 +359,23 @@ export default function ProvidersPage() {
             <p className="text-xs text-gray-400 mt-1">
               {provider.services.length} service{provider.services.length !== 1 ? 's' : ''}
             </p>
+          )}
+          {provider.bookingUrl && (
+            <div className="mt-2 p-2 bg-gray-50 rounded border">
+              <p className="text-xs font-medium text-gray-700 mb-1">Direct Booking Link</p>
+              <p className="text-xs text-gray-600 break-all mb-2">{provider.bookingUrl}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(provider.bookingUrl!);
+                  setSuccess(`${provider.name}'s booking link copied to clipboard!`);
+                  setTimeout(() => setSuccess(''), 3000);
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Copy Link
+              </button>
+            </div>
           )}
         </div>
         <div className="flex items-center space-x-2 ml-4">
