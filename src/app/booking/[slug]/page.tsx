@@ -795,18 +795,20 @@ function BookingForm({ params }: { params: Promise<{ slug: string }> }) {
               </div>
             </div>
             
-            <div className="flex items-start gap-2 mt-4">
-              <input
-                type="checkbox"
-                id="waitlistOptIn"
-                checked={form.waitlistOptIn}
-                onChange={e => setForm({ ...form, waitlistOptIn: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1"
-              />
-              <label htmlFor="waitlistOptIn" className="text-sm text-gray-700">
-                Include me in the waitlist for future appointment gaps that open up in my preferred window
-              </label>
-            </div>
+            {!isProviderSubmission && (
+              <div className="flex items-start gap-2 mt-4">
+                <input
+                  type="checkbox"
+                  id="waitlistOptIn"
+                  checked={form.waitlistOptIn}
+                  onChange={e => setForm({ ...form, waitlistOptIn: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1"
+                />
+                <label htmlFor="waitlistOptIn" className="text-sm text-gray-700">
+                  Include me in the waitlist for future appointment gaps that open up in my preferred window
+                </label>
+              </div>
+            )}
             
             <div className="flex justify-between gap-2 mt-4">
               <button type="button" className="px-4 py-3 bg-gray-700 text-white font-semibold rounded-lg shadow hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 min-h-[44px] flex-1 sm:flex-none" onClick={handleBack}>Back</button>

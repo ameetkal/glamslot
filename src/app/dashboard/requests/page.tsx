@@ -224,7 +224,7 @@ export default function RequestsPage() {
                request.status === 'contacted' ? 'Contacted' : 'Not Booked'}
             </span>
             
-            {/* Action buttons - always visible on mobile */}
+            {/* Action buttons - consolidated logic */}
             {(request.status === 'pending' || request.status === 'provider-requested') && (
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <button
@@ -254,8 +254,30 @@ export default function RequestsPage() {
               </div>
             )}
 
-            {/* Status change buttons for completed requests */}
-            {request.status !== 'pending' && request.status !== 'contacted' && (
+            {/* Action buttons for contacted requests */}
+            {request.status === 'contacted' && (
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Appointment Made</span>
+                  <span className="sm:hidden">Booked</span>
+                </button>
+                <button
+                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Not Booked</span>
+                  <span className="sm:hidden">Not Booked</span>
+                </button>
+              </div>
+            )}
+
+            {/* Status change buttons for completed requests (booked/not-booked) */}
+            {(request.status === 'booked' || request.status === 'not-booked') && (
               <div className="flex items-center space-x-1">
                 <button
                   onClick={(e) => updateRequestStatus(request.id, request.status === 'booked' ? 'not-booked' : 'booked', e)}
@@ -278,44 +300,6 @@ export default function RequestsPage() {
                       <span className="sm:hidden">Booked</span>
                     </>
                   )}
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
-                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                >
-                  <PhoneIcon className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Mark Contacted</span>
-                  <span className="sm:hidden">Contacted</span>
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'pending', e)}
-                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200"
-                >
-                  <ClockIcon className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">Mark Pending</span>
-                  <span className="sm:hidden">Pending</span>
-                </button>
-              </div>
-            )}
-
-            {/* Action buttons for contacted requests */}
-            {request.status === 'contacted' && (
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Appointment Made</span>
-                  <span className="sm:hidden">Booked</span>
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Not Booked</span>
-                  <span className="sm:hidden">Not Booked</span>
                 </button>
               </div>
             )}
