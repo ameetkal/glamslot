@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, use, useEffect } from 'react'
+import React, { useState, use, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { salonService, serviceService, providerService } from '@/lib/firebase/services'
 import { Salon, Service, Provider, ProviderService } from '@/types/firebase'
 
@@ -43,8 +44,14 @@ function validateService(selectedServices: string[], otherService: string, isOth
   return undefined
 }
 
-export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
+function BookingForm({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const searchParams = useSearchParams();
+  
+  // Provider detection state
+  const [isProviderSubmission, setIsProviderSubmission] = useState(false)
+  const [providerData, setProviderData] = useState<Provider | null>(null)
+  
   const [step, setStep] = useState<Step>(1)
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [otherService, setOtherService] = useState('')
@@ -84,6 +91,30 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       try {
         setLoading(true)
         
+        // Check for provider parameter
+        const providerId = searchParams.get('provider')
+        if (providerId) {
+          console.log('🔍 Provider parameter detected:', providerId)
+          setIsProviderSubmission(true)
+          
+          // Fetch provider data
+          try {
+            const provider = await providerService.getProvider(providerId)
+            if (provider) {
+              console.log('✅ Provider found:', provider.name)
+              setProviderData(provider)
+              // Pre-select this provider
+              setSelectedProvider(provider.id)
+            } else {
+              console.log('❌ Provider not found, falling back to regular form')
+              setIsProviderSubmission(false)
+            }
+          } catch (providerError) {
+            console.error('❌ Error fetching provider:', providerError)
+            setIsProviderSubmission(false)
+          }
+        }
+        
         // Fetch salon by slug
         const salonData = await salonService.getSalonBySlug(slug)
         if (!salonData) {
@@ -118,7 +149,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     }
 
     fetchData()
-  }, [slug])
+  }, [slug, searchParams])
 
   // Providers for the selected services
   const providerOptions = selectedServices.length > 0 
@@ -148,12 +179,17 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         return // Don't proceed if validation fails
       }
       
-      // Track form start when user selects a service
-      // if (salon) {
-      //   const sessionTracking = SessionTrackingService.getInstance()
-      //   sessionTracking.trackFormStart(salon.id)
-      // }
-      setStep(2)
+      // Skip provider selection if it's a provider submission
+      if (isProviderSubmission && providerData) {
+        setStep(3)
+      } else {
+        // Track form start when user selects a service
+        // if (salon) {
+        //   const sessionTracking = SessionTrackingService.getInstance()
+        //   sessionTracking.trackFormStart(salon.id)
+        // }
+        setStep(2)
+      }
     }
     else if (step === 2 && (selectedProvider || (providerOptions.length === 0 && otherProvider.trim()))) {
       // Track form progress
@@ -186,7 +222,12 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       if (!validateCurrentStep()) {
         return // Don't proceed if validation fails
       }
-      setStep(6)
+      // Skip email and phone steps for provider submissions
+      if (isProviderSubmission) {
+        setStep(8)
+      } else {
+        setStep(6)
+      }
     }
     else if (step === 6) {
       // Validate email
@@ -228,7 +269,10 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         email: form.email,
         notes: form.notes,
         waitlistOptIn: form.waitlistOptIn,
-        salonSlug: slug
+        salonSlug: slug,
+        submittedByProvider: isProviderSubmission,
+        providerId: providerData?.id,
+        providerName: providerData?.name
       }
 
       // Submit to API
@@ -311,11 +355,17 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       const nameError = validateName(form.name)
       if (nameError) errors.name = nameError
     } else if (step === 6) {
-      const emailError = validateEmail(form.email)
-      if (emailError) errors.email = emailError
+      // Skip email validation for provider submissions
+      if (!isProviderSubmission) {
+        const emailError = validateEmail(form.email)
+        if (emailError) errors.email = emailError
+      }
     } else if (step === 7) {
-      const phoneError = validatePhone(form.phone)
-      if (phoneError) errors.phone = phoneError
+      // Skip phone validation for provider submissions
+      if (!isProviderSubmission) {
+        const phoneError = validatePhone(form.phone)
+        if (phoneError) errors.phone = phoneError
+      }
     }
     
     setValidationErrors(errors)
@@ -363,6 +413,11 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       {/* Salon Name Header */}
       <div className="text-center mb-4 sm:mb-6 pb-4 border-b border-gray-200">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{salon?.name || 'Salon'}</h1>
+        {isProviderSubmission && providerData && (
+          <div className="mt-2 text-sm text-gray-600">
+            <div>Provider: {providerData.name}</div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -577,9 +632,13 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         {/* Step 5: Name */}
         {step === 5 && (
           <>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your name?</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+              {isProviderSubmission ? "What's the client's name?" : "What's your name?"}
+            </h2>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {isProviderSubmission ? "Client Name *" : "Full Name *"}
+              </label>
               <input
                 type="text"
                 autoFocus
@@ -589,7 +648,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 onKeyPress={handleKeyPress}
-                placeholder="Enter your full name"
+                placeholder={isProviderSubmission ? "Enter client's full name" : "Enter your full name"}
                 required
               />
               {showValidationErrors && validationErrors.name && (
@@ -604,8 +663,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 6: Email */}
-        {step === 6 && (
+        {/* Step 6: Email - Skip for provider submissions */}
+        {step === 6 && !isProviderSubmission && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your email?</h2>
             <div>
@@ -634,8 +693,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </>
         )}
-        {/* Step 7: Phone */}
-        {step === 7 && (
+        {/* Step 7: Phone - Skip for provider submissions */}
+        {step === 7 && !isProviderSubmission && (
           <>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">What&apos;s your phone number?</h2>
             <div>
@@ -795,5 +854,20 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         )}
       </form>
     </div>
+  )
+}
+
+export default function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-4 sm:p-6 mt-2 sm:mt-8 mx-2 sm:mx-auto">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading booking information...</p>
+        </div>
+      </div>
+    }>
+      <BookingForm params={params} />
+    </Suspense>
   )
 } 
