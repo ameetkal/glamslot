@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { 
-  ClipboardDocumentIcon,
   UserGroupIcon,
   CalendarIcon,
   XMarkIcon
@@ -13,7 +12,7 @@ import {
 import { bookingRequestService, teamService } from '@/lib/firebase/services'
 import { BookingRequest } from '@/types/firebase'
 import { SessionTrackingService } from '@/lib/sessionTracking'
-import { getBookingUrl } from '@/lib/utils'
+
 
 interface DashboardStats {
   appointmentsCreated: number
@@ -55,8 +54,6 @@ interface Salon {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [copied, setCopied] = useState(false)
-  const [salonData, setSalonData] = useState<Salon | null>(null)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     appointmentsCreated: 0,
     requestedNotFulfilled: 0,
@@ -66,7 +63,6 @@ export default function DashboardPage() {
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
-  const [isTeamMember, setIsTeamMember] = useState(false)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -86,10 +82,8 @@ export default function DashboardPage() {
         if (userTeamMember) {
           // User is a team member, use their salonId
           salonId = userTeamMember.salonId
-          setIsTeamMember(true)
           console.log('User is a team member, using salonId:', salonId)
         } else {
-          setIsTeamMember(false)
           console.log('User is a salon admin, using user.uid as salonId')
         }
 
@@ -125,9 +119,6 @@ export default function DashboardPage() {
         if (salon) {
           console.log('Salon name:', salon.name)
           console.log('Salon bookingUrl:', salon.bookingUrl)
-          setSalonData(salon)
-        } else {
-          setSalonData(null)
         }
 
         // Fetch booking requests for this salon
@@ -221,71 +212,7 @@ export default function DashboardPage() {
     }
   }
 
-  const updateBookingUrl = async () => {
-    if (!user || !salonData) return;
-    
-    try {
-      const newBookingUrl = getBookingUrl(salonData.slug);
-      console.log('Updating booking URL to:', newBookingUrl);
-      
-      await setDoc(doc(db, 'salons', user.uid), {
-        ...salonData,
-        bookingUrl: newBookingUrl,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      
-      console.log('Booking URL updated successfully!');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error updating booking URL:', error);
-    }
-  };
 
-  const copyBookingUrl = () => {
-    const bookingUrl = salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')
-    if (bookingUrl) {
-      navigator.clipboard.writeText(bookingUrl).then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-    }
-  }
-
-  const createSalonDocument = async () => {
-    if (!user) return
-    
-    try {
-      const salonData = {
-        id: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'My Salon',
-        slug: (user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-'),
-        bookingUrl: getBookingUrl((user.displayName || user.email?.split('@')[0] || 'my-salon').toLowerCase().replace(/\s+/g, '-')),
-        ownerName: user.displayName || 'Admin',
-        ownerEmail: user.email || '',
-        businessType: 'salon',
-        settings: {
-          notifications: {
-            email: true,
-            sms: false
-          },
-          booking: {
-            requireConsultation: false,
-            allowWaitlist: true
-          }
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      await setDoc(doc(db, 'salons', user.uid), salonData)
-      console.log('Salon document created successfully')
-      
-      // Refresh the page to load the new data
-      window.location.reload()
-    } catch (error) {
-      console.error('Error creating salon document:', error)
-    }
-  }
 
   if (loading) {
     return (
@@ -312,72 +239,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-                  {/* Booking URL Section - Only show for salon admins */}
-        {(() => {
-          console.log('Rendering booking URL section check:')
-          console.log('salonData:', salonData)
-          console.log('salonData?.bookingUrl:', salonData?.bookingUrl)
-          console.log('salonData?.name:', salonData?.name)
-          console.log('Should show booking URL:', (salonData?.bookingUrl || salonData?.name))
-          
-          if (!salonData) {
-            // Only show setup required for salon admins, not team members
-            if (!isTeamMember) {
-              return (
-                <div className="mt-8 rounded-lg bg-yellow-50 p-6 shadow-sm border border-yellow-200">
-                  <h2 className="text-lg font-semibold text-yellow-900 mb-2">Setup Required</h2>
-                  <p className="text-sm text-yellow-700 mb-4">
-                    Your salon profile hasn&apos;t been set up yet. Click the button below to create your salon profile and get your booking URL.
-                  </p>
-                  <button
-                    onClick={createSalonDocument}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-                  >
-                    Create Salon Profile
-                  </button>
-                </div>
-              )
-            }
-            return null
-          }
-          
-          // Only show booking URL section for salon admins
-          if (!isTeamMember && (salonData?.bookingUrl || salonData?.name)) {
-            return (
-              <div className="mt-8 rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Booking URL</h2>
-                <p className="text-sm text-gray-600 mb-4">
-                  Share this link with your clients so they can request appointments
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={salonData?.bookingUrl || (salonData?.slug ? getBookingUrl(salonData.slug) : '')}
-                    className="flex-1 rounded-l-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
-                  />
-                  <button
-                    onClick={copyBookingUrl}
-                    className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
-                    aria-label="Copy booking URL"
-                  >
-                    <ClipboardDocumentIcon className="h-5 w-5" />
-                  </button>
-                </div>
-                {copied && (
-                  <p className="mt-2 text-sm text-green-600">✓ Copied to clipboard!</p>
-                )}
-                <button
-                  onClick={updateBookingUrl}
-                  className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Update URL
-                </button>
-              </div>
-            )
-          }
-          
-          return null
-        })()}
+
 
         {/* Stats Cards */}
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

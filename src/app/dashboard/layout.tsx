@@ -15,7 +15,8 @@ import {
   XMarkIcon,
   ArrowRightOnRectangleIcon,
   CalendarIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  GlobeAltIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -36,6 +37,7 @@ const settingsSubItems = [
   { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
   { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
   { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
+  { name: 'Links', href: '/dashboard/settings/links', icon: GlobeAltIcon },
   { name: 'Team Management', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
 ]
 
