@@ -40,24 +40,59 @@ export default function MySchedulePage() {
   const fetchMySchedule = useCallback(async () => {
     if (!user?.uid) return;
 
+    console.log('🔍 SCHEDULE DEBUG: Starting fetchMySchedule for user:', user.uid);
+    console.log('🔍 SCHEDULE DEBUG: User email:', user.email);
+
     try {
       setLoading(true);
       
-      // Get the provider's services
+      // Step 1: Get team member info first
+      console.log('🔍 SCHEDULE DEBUG: Step 1 - Getting team member info');
+      const userTeamMember = await teamService.getTeamMemberByUserId(user.uid);
+      console.log('🔍 SCHEDULE DEBUG: Team member result:', userTeamMember);
+      
+      if (!userTeamMember) {
+        console.log('🔍 SCHEDULE DEBUG: ❌ No team member found');
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔍 SCHEDULE DEBUG: ✅ Team member found:', {
+        id: userTeamMember.id,
+        salonId: userTeamMember.salonId,
+        role: userTeamMember.role
+      });
+      
+      // Step 2: Get the provider's services using teamMemberId
+      console.log('🔍 SCHEDULE DEBUG: Step 2 - Getting provider info with teamMemberId:', userTeamMember.id);
       const providerDoc = await getDocs(
         query(
           collection(db, 'providers'),
-          where('teamMemberId', '==', user.uid)
+          where('teamMemberId', '==', userTeamMember.id)
         )
       );
 
+      console.log('🔍 SCHEDULE DEBUG: Provider query result:', {
+        empty: providerDoc.empty,
+        size: providerDoc.size
+      });
+
       if (providerDoc.empty) {
+        console.log('🔍 SCHEDULE DEBUG: ❌ No provider found for teamMemberId:', userTeamMember.id);
         setBookings([]);
         setLoading(false);
         return;
       }
 
       const provider = providerDoc.docs[0].data();
+      console.log('🔍 SCHEDULE DEBUG: ✅ Provider found:', {
+        id: providerDoc.docs[0].id,
+        name: provider.name,
+        teamMemberId: provider.teamMemberId,
+        services: provider.services?.length || 0
+      });
+      
       const serviceIds = provider.services || [];
 
       if (serviceIds.length === 0) {
@@ -105,7 +140,7 @@ export default function MySchedulePage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, selectedDate]);
+  }, [user?.uid, user?.email, selectedDate]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -118,11 +153,18 @@ export default function MySchedulePage() {
     const fetchShiftRequests = async () => {
       if (!user?.uid) return;
 
+      console.log('🔍 SCHEDULE DEBUG: Fetching shift requests for user:', user.uid);
+
       try {
         const requests = await shiftChangeRequestService.getProviderShiftChangeRequests(user.uid);
+        console.log('🔍 SCHEDULE DEBUG: Shift requests result:', requests);
         setShiftRequests(requests);
       } catch (error) {
-        console.error('Error fetching shift requests:', error);
+        console.error('🔍 SCHEDULE DEBUG: ❌ Error fetching shift requests:', error);
+        console.error('🔍 SCHEDULE DEBUG: Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          code: (error as { code?: string })?.code || 'unknown'
+        });
       }
     };
 

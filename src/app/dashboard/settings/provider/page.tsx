@@ -18,45 +18,105 @@ export default function ProviderSettingsPage() {
   const [success, setSuccess] = useState('');
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('🔍 DEBUG: No user found, returning early');
+      return;
+    }
+    
+    console.log('🔍 DEBUG: Starting fetchData for user:', user.uid);
+    console.log('🔍 DEBUG: User email:', user.email);
     
     try {
       setLoading(true);
       
-      // Get team member info to find the provider
+      // Step 1: Get team member info
+      console.log('🔍 DEBUG: Step 1 - Fetching team member for user:', user.uid);
       const teamMember = await teamService.getTeamMemberByUserId(user.uid);
+      console.log('🔍 DEBUG: Team member result:', teamMember);
       
       if (!teamMember) {
+        console.log('🔍 DEBUG: ❌ Team member not found');
         setError('You are not a team member of this salon');
         setLoading(false);
         return;
       }
+      
+      console.log('🔍 DEBUG: ✅ Team member found:', {
+        id: teamMember.id,
+        salonId: teamMember.salonId,
+        role: teamMember.role,
+        userId: teamMember.userId
+      });
 
-      // Get salon info
+      // Step 2: Get salon info
+      console.log('🔍 DEBUG: Step 2 - Fetching salon for salonId:', teamMember.salonId);
       const salonData = await salonService.getSalon(teamMember.salonId);
+      console.log('🔍 DEBUG: Salon result:', salonData);
+      
       if (!salonData) {
+        console.log('🔍 DEBUG: ❌ Salon not found for salonId:', teamMember.salonId);
         setError('Salon not found');
         setLoading(false);
         return;
       }
+      
+      console.log('🔍 DEBUG: ✅ Salon found:', {
+        id: salonData.id,
+        name: salonData.name,
+        ownerEmail: salonData.ownerEmail
+      });
       setSalon(salonData);
 
-      // Find provider record linked to this team member
+      // Step 3: Get providers
+      console.log('🔍 DEBUG: Step 3 - Fetching providers for salonId:', teamMember.salonId);
       const providers = await providerService.getProviders(teamMember.salonId);
+      console.log('🔍 DEBUG: Providers result:', providers);
+      console.log('🔍 DEBUG: Looking for provider with teamMemberId:', teamMember.id);
+      
       const providerData = providers.find(p => p.teamMemberId === teamMember.id);
+      console.log('🔍 DEBUG: Found provider data:', providerData);
       
       if (!providerData) {
+        console.log('🔍 DEBUG: ❌ Provider not found for teamMemberId:', teamMember.id);
+        console.log('🔍 DEBUG: Available providers:', providers.map(p => ({ id: p.id, teamMemberId: p.teamMemberId, name: p.name })));
         setError('Provider profile not found. Please contact your salon administrator.');
         setLoading(false);
         return;
       }
+      
+      console.log('🔍 DEBUG: ✅ Provider found:', {
+        id: providerData.id,
+        name: providerData.name,
+        teamMemberId: providerData.teamMemberId
+      });
       setProvider(providerData);
 
-      // Get services
+      // Step 4: Get services
+      console.log('🔍 DEBUG: Step 4 - Fetching services for salonId:', teamMember.salonId);
       const servicesData = await serviceService.getServices(teamMember.salonId);
+      console.log('🔍 DEBUG: Services result:', servicesData);
       setServices(servicesData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      
+      console.log('🔍 DEBUG: ✅ All data fetched successfully');
+      
+    } catch (error: unknown) {
+      console.error('🔍 DEBUG: ❌ Error in fetchData:', error);
+              console.error('🔍 DEBUG: Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          code: (error as { code?: string })?.code || 'unknown',
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        });
+      
+      // Log specific error types
+      const errorCode = (error as { code?: string })?.code;
+      if (errorCode === 'permission-denied') {
+        console.log('🔍 DEBUG: 🔒 PERMISSION DENIED - This is likely a Firestore rules issue');
+      } else if (errorCode === 'not-found') {
+        console.log('🔍 DEBUG: 📍 NOT FOUND - Document doesn\'t exist');
+      } else if (errorCode === 'unavailable') {
+        console.log('🔍 DEBUG: 🌐 UNAVAILABLE - Network/Firebase service issue');
+      }
+      
       setError('Failed to load provider data');
     } finally {
       setLoading(false);

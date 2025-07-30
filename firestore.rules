@@ -49,6 +49,12 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
       
+      // Alternative: Check if user is a team member by userId field
+      allow read: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.userId == request.auth.uid &&
+        get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
+      
       // Public access for booking pages (anyone can read if slug exists)
       allow read: if resource.data.slug != null;
       
@@ -120,15 +126,12 @@ service cloud.firestore {
     match /teamMembers/{memberId} {
       allow read: if isAuthenticated() && (
         isSalonOwner(resource.data.salonId) || 
-        request.auth.uid == memberId
+        request.auth.uid == resource.data.userId
       );
       allow write: if isSalonOwner(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         isSalonOwner(request.resource.data.salonId);
-      
-      // Allow authenticated users to read their own team member document
-      allow read: if isAuthenticated() && request.auth.uid == memberId;
     }
 
     // Allow queries to teamMembers collection for dashboard
@@ -179,9 +182,17 @@ service cloud.firestore {
     // Shift change requests - salon owners and team members can manage
     match /shiftChangeRequests/{requestId} {
       allow read, write: if hasSalonAccess(resource.data.salonId);
+      // Allow service providers to read their own shift change requests
+      allow read: if isAuthenticated() && 
+        resource.data.providerId == request.auth.uid;
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Allow queries to shiftChangeRequests collection for dashboard
+    match /shiftChangeRequests {
+      allow list: if isAuthenticated();
     }
 
     // Session tracking - allow creation for analytics
