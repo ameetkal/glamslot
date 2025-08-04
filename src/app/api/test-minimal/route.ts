@@ -6,7 +6,7 @@ export async function GET() {
   try {
     // Test Firebase import
     console.log('Testing Firebase import...')
-    const { bookingRequestService, salonService } = await import('@/lib/firebase/services')
+    await import('@/lib/firebase/services')
     console.log('Firebase services imported successfully')
     
     return NextResponse.json({
