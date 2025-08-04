@@ -7,7 +7,10 @@ console.log('=== BOOKING API ROUTE LOADED ===')
 
 export async function POST(request: NextRequest) {
   console.log('=== BOOKING API CALLED ===')
+  
+  // Wrap everything in a try-catch to catch any early errors
   try {
+    console.log('=== PARSING REQUEST BODY ===')
     const body = await request.json()
     console.log('Received booking request:', body)
     
@@ -202,9 +205,23 @@ export async function POST(request: NextRequest) {
       requestId
     })
   } catch (error) {
-    console.error('Error creating booking request:', error)
+    console.error('=== TOP LEVEL ERROR ===', error)
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+    }
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('Firebase error code:', (error as { code: string }).code)
+    }
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
