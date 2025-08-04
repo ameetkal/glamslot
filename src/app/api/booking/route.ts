@@ -67,13 +67,20 @@ export async function POST(request: NextRequest) {
       status: submittedByProvider ? 'provider-requested' as const : 'pending' as const,
       salonId: salon.id,
       submittedByProvider: submittedByProvider || false,
-      providerId: providerId || undefined,
-      providerName: providerName || undefined
+      ...(providerId && { providerId }),
+      ...(providerName && { providerName })
     }
 
     console.log('Creating booking request:', bookingRequest)
-    const requestId = await bookingRequestService.createBookingRequest(bookingRequest)
-    console.log('Booking request created with ID:', requestId)
+    let requestId: string
+    try {
+      requestId = await bookingRequestService.createBookingRequest(bookingRequest)
+      console.log('Booking request created with ID:', requestId)
+    } catch (error) {
+      console.error('Error creating booking request:', error)
+      console.error('Booking request data:', bookingRequest)
+      throw error
+    }
 
     // Send SMS notification to all enabled numbers in smsRecipients
     const smsRecipients = salon.settings?.notifications?.smsRecipients || [];
