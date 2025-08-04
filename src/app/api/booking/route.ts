@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For non-provider submissions, email and phone are required
-    if (!submittedByProvider && (!phone || !email)) {
+    if (submittedByProvider !== true && (!phone || !email)) {
       console.log('Missing required fields for regular submission:', { phone, email })
       return NextResponse.json(
         { success: false, message: 'Email and phone are required for regular submissions' },
