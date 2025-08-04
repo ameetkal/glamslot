@@ -3,7 +3,10 @@ import { bookingRequestService, salonService, providerService, teamService } fro
 import { smsService } from '@/lib/smsService'
 import { sendEmail } from '@/lib/mailjet'
 
+console.log('=== BOOKING API ROUTE LOADED ===')
+
 export async function POST(request: NextRequest) {
+  console.log('=== BOOKING API CALLED ===')
   try {
     const body = await request.json()
     console.log('Received booking request:', body)
