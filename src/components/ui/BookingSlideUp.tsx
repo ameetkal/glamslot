@@ -71,7 +71,7 @@ export default function BookingSlideUp({ isOpen, onClose, onSubmit, loading = fa
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
                 placeholder="Your full name"
               />
             </div>
@@ -87,7 +87,7 @@ export default function BookingSlideUp({ isOpen, onClose, onSubmit, loading = fa
                 value={formData.phone}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
                 placeholder="(555) 123-4567"
               />
             </div>

@@ -171,7 +171,7 @@ function GlampageContent({ slug }: { slug: string }) {
               {salon.externalLinks?.shop && (
                 <button
                   onClick={() => window.open(salon.externalLinks!.shop, '_blank')}
-                  className="w-full sm:w-auto bg-white text-accent-600 border-2 border-accent-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-accent-50 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
+                  className="w-full sm:w-auto bg-white text-gray-900 border-2 border-accent-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-accent-50 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors"
                 >
                   <ShoppingBagIcon className="w-6 h-6 inline mr-2" />
                   Shop
