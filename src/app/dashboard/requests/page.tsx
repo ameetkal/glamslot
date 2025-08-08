@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { teamService } from '@/lib/firebase/services'
 import Link from 'next/link'
@@ -27,6 +27,23 @@ type BookingRequestWithFirebaseTimestamps = Omit<BookingRequest, 'createdAt' | '
   updatedAt: Date | { toDate: () => Date }
 }
 
+// Type for booking data from Firestore
+interface BookingData {
+  id: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  serviceName?: string;
+  stylistPreference?: string;
+  dateTimePreference?: string;
+  notes?: string;
+  status?: string;
+  salonId?: string;
+  createdAt?: Date | { toDate: () => Date };
+  updatedAt?: Date | { toDate: () => Date };
+  date?: Date | { toDate: () => Date };
+}
+
 export default function RequestsPage() {
   const { user } = useAuth()
   const [requests, setRequests] = useState<BookingRequestWithFirebaseTimestamps[]>([])
@@ -42,59 +59,125 @@ export default function RequestsPage() {
         // Get the user's salon ID - check if they're a team member first
         let salonId = user.uid // Default to user.uid for salon owners
         let userTeamMember = null
+        let userRole = 'admin' // Default to admin
         
         try {
           userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
           
           if (userTeamMember) {
             salonId = userTeamMember.salonId
+            // Determine user role
+            if (userTeamMember.role === 'owner' || userTeamMember.role === 'admin' || userTeamMember.role === 'front_desk') {
+              userRole = 'admin'
+            } else {
+              userRole = 'service_provider'
+            }
           }
         } catch (teamMemberError) {
           console.error('Error fetching team member data:', teamMemberError)
           salonId = user.uid
         }
         
-        const requestsQuery = query(
-          collection(db, 'bookingRequests'),
-          where('salonId', '==', salonId)
-        )
-        const snapshot = await getDocs(requestsQuery)
-        
-        const requestsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as BookingRequest[]
-        
-        // Sort in memory instead
-        const sortedRequests = requestsData.sort((a, b) => {
-          // Define status priority: pending > provider-requested > contacted > others
-          const getStatusPriority = (status: string) => {
-            switch (status) {
-              case 'pending': return 4;
-              case 'provider-requested': return 3;
-              case 'contacted': return 2;
-              default: return 1;
-            }
-          };
-          
-          const priorityA = getStatusPriority(a.status);
-          const priorityB = getStatusPriority(b.status);
-          
-          if (priorityA !== priorityB) {
-            return priorityB - priorityA; // Higher priority first
+        if (userRole === 'service_provider') {
+          // For service providers, show their own bookings
+          const providerDoc = await getDocs(
+            query(
+              collection(db, 'providers'),
+              where('teamMemberId', '==', user.uid)
+            )
+          )
+
+          if (providerDoc.empty) {
+            setRequests([])
+            setLoading(false)
+            return
           }
+
+          const provider = providerDoc.docs[0].data()
+          const serviceIds = provider.services || []
+
+          if (serviceIds.length === 0) {
+            setRequests([])
+            setLoading(false)
+            return
+          }
+
+          // Get bookings for the provider's services
+          const bookingsQuery = query(
+            collection(db, 'bookings'),
+            where('serviceId', 'in', serviceIds),
+            orderBy('createdAt', 'desc')
+          )
+
+          const bookingsSnapshot = await getDocs(bookingsQuery)
+          const bookingsData = bookingsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as BookingData[]
+
+          // Transform bookings to match BookingRequest format for consistency
+          const transformedBookings: BookingRequestWithFirebaseTimestamps[] = bookingsData.map(booking => ({
+            id: booking.id,
+            clientName: booking.clientName || 'Unknown',
+            clientEmail: booking.clientEmail || '',
+            clientPhone: booking.clientPhone || '',
+            service: booking.serviceName || 'Unknown Service',
+            stylistPreference: booking.stylistPreference || 'Any service provider',
+            dateTimePreference: booking.dateTimePreference || '',
+            notes: booking.notes || '',
+            waitlistOptIn: false,
+            status: (booking.status as 'pending' | 'contacted' | 'booked' | 'not-booked' | 'provider-requested') || 'pending',
+            salonId: booking.salonId || salonId,
+            submittedByProvider: false,
+            createdAt: booking.createdAt || booking.date || new Date(),
+            updatedAt: booking.updatedAt || booking.date || new Date()
+          }))
+
+          setRequests(transformedBookings)
+        } else {
+          // For admins, show all booking requests
+          const requestsQuery = query(
+            collection(db, 'bookingRequests'),
+            where('salonId', '==', salonId)
+          )
+          const snapshot = await getDocs(requestsQuery)
           
-          // If both have the same status priority, sort by date (most recent first)
-          const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
-            ? (a.createdAt as { toDate: () => Date }).toDate() 
-            : new Date(a.createdAt);
-          const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
-            ? (b.createdAt as { toDate: () => Date }).toDate() 
-            : new Date(b.createdAt);
-          return dateB.getTime() - dateA.getTime();
-        });
-        
-        setRequests(sortedRequests)
+          const requestsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as BookingRequest[]
+          
+          // Sort in memory instead
+          const sortedRequests = requestsData.sort((a, b) => {
+            // Define status priority: pending > provider-requested > contacted > others
+            const getStatusPriority = (status: string) => {
+              switch (status) {
+                case 'pending': return 4;
+                case 'provider-requested': return 3;
+                case 'contacted': return 2;
+                default: return 1;
+              }
+            };
+            
+            const priorityA = getStatusPriority(a.status);
+            const priorityB = getStatusPriority(b.status);
+            
+            if (priorityA !== priorityB) {
+              return priorityB - priorityA; // Higher priority first
+            }
+            
+            // If both have the same status priority, sort by date (most recent first)
+            const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+              ? (a.createdAt as { toDate: () => Date }).toDate() 
+              : new Date(a.createdAt);
+            const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+              ? (b.createdAt as { toDate: () => Date }).toDate() 
+              : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
+          
+          setRequests(sortedRequests)
+        }
       } catch (error) {
         console.error('Error fetching requests:', error)
       } finally {

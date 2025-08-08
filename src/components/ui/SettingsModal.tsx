@@ -81,6 +81,14 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
       )
     }
 
+    // Add My Schedule for service providers
+    if (userRole === 'service_provider') {
+      items.push(
+        { name: 'Provider Settings', href: '/dashboard/settings/provider', icon: UserIcon },
+        { name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon }
+      )
+    }
+
     // Add Platform Admin tab only for platform admins
     if (isPlatformAdmin(userEmail)) {
       items.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })

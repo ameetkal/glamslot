@@ -32,7 +32,7 @@ export const ROLE_PERMISSIONS: Record<string, TeamMemberPermissions> = {
   
   service_provider: {
     // Dashboard Access - Limited to own bookings
-    canViewRequests: false,
+    canViewRequests: true, // Allow service providers to view their own bookings as "Requests"
     canManageRequests: false,
     canViewClients: false,
     canManageClients: false,

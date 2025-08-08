@@ -14,8 +14,7 @@ import {
   ArrowRightOnRectangleIcon,
   CalendarIcon,
   ChartBarIcon,
-  GlobeAltIcon,
-  ChatBubbleLeftRightIcon
+  GlobeAltIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -53,18 +52,9 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   
   const navigation: NavigationItem[] = []
   
-  // Add Requests if user can view them
-  if (permissions.canViewRequests) {
+  // Add Requests if user can view them (for both admin and service providers)
+  if (permissions.canViewRequests || permissions.canViewOwnBookings) {
     navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ClipboardDocumentListIcon })
-  }
-  
-  // Add provider-specific pages (only for service providers)
-  if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
-    navigation.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
-  }
-  
-  if (permissions.canViewOwnBookings && userRole === 'service_provider') {
-    navigation.push({ name: 'My Bookings', href: '/dashboard/bookings', icon: ChatBubbleLeftRightIcon })
   }
   
   // Add Settings if user can view settings
@@ -80,6 +70,11 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
       )
     }
     
+    // Add My Schedule for service providers
+    if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
+      settingsItems.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
+    }
+    
     // Add Platform Admin tab only for platform admins
     if (isPlatformAdmin(userEmail)) {
       settingsItems.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
@@ -91,7 +86,20 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
     navigation.push({ name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsItems })
   } else if (permissions.canManageOwnServices) {
     // For providers, show a simplified settings link to their provider settings
-    navigation.push({ name: 'Settings', href: '/dashboard/settings/provider', icon: Cog6ToothIcon })
+    const settingsItems: NavigationItem[] = []
+    
+    // Add Provider Settings for service providers (includes Profile, Services, etc.)
+    settingsItems.push({ name: 'Provider Settings', href: '/dashboard/settings/provider', icon: UserIcon })
+    
+    // Add My Schedule for service providers
+    if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
+      settingsItems.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
+    }
+    
+    // Add Sign Out at the very bottom
+    settingsItems.push({ name: 'Sign Out', href: '#signout', icon: ArrowRightOnRectangleIcon, isSignOut: true })
+    
+    navigation.push({ name: 'Settings', href: '/dashboard/settings/provider', icon: Cog6ToothIcon, subItems: settingsItems })
   }
   
   return navigation
