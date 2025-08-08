@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
@@ -29,11 +29,15 @@ const navItems = [
 
 export default function BottomNav({ userRole, userEmail }: BottomNavProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
 
   const handleItemClick = (item: typeof navItems[0]) => {
     if (item.isModal) {
       setIsSettingsModalOpen(true)
+    } else {
+      // Navigate to the Requests page
+      router.push(item.href)
     }
   }
 
