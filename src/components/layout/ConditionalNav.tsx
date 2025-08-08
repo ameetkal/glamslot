@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/ui/Footer';
-import BottomNav from '@/components/layout/BottomNav';
 
 export default function ConditionalNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,7 +32,6 @@ export default function ConditionalNav({ children }: { children: React.ReactNode
         </div>
       </main>
       {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <Footer />}
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <BottomNav />}
     </div>
   );
 } 

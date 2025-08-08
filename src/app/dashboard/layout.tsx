@@ -5,22 +5,22 @@ import { usePathname, useRouter } from 'next/navigation'
 import { 
   Cog6ToothIcon,
   HomeIcon,
-  ChatBubbleLeftRightIcon,
+  ClipboardDocumentListIcon,
   UserGroupIcon,
   WrenchScrewdriverIcon,
   BellIcon,
   UserIcon,
   ShieldCheckIcon,
-  Bars3Icon,
-  XMarkIcon,
   ArrowRightOnRectangleIcon,
   CalendarIcon,
   ChartBarIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import BottomNav from '@/components/layout/BottomNav'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { getPermissionsForRole } from '@/lib/permissions'
 
@@ -29,6 +29,7 @@ interface NavigationItem {
   href: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   subItems?: NavigationItem[]
+  isSignOut?: boolean
 }
 
 const settingsSubItems = [
@@ -54,7 +55,7 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   
   // Add Requests if user can view them
   if (permissions.canViewRequests) {
-    navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon })
+    navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ClipboardDocumentListIcon })
   }
   
   // Add provider-specific pages (only for service providers)
@@ -69,7 +70,7 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   // Add Settings if user can view settings
   if (permissions.canViewSettings) {
     // Create settings sub-items, conditionally adding admin-specific items
-    const settingsItems = [...settingsSubItems]
+    const settingsItems: NavigationItem[] = [...settingsSubItems]
     
     // Add Staff Schedule and Dashboard for admins
     if (userRole === 'admin') {
@@ -83,6 +84,9 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
     if (isPlatformAdmin(userEmail)) {
       settingsItems.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
     }
+    
+    // Add Sign Out at the very bottom
+    settingsItems.push({ name: 'Sign Out', href: '#signout', icon: ArrowRightOnRectangleIcon, isSignOut: true })
     
     navigation.push({ name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon, subItems: settingsItems })
   } else if (permissions.canManageOwnServices) {
@@ -170,19 +174,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          type="button"
-          className="bg-white p-2 rounded-md shadow-md border border-gray-200"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? (
-            <XMarkIcon className="h-6 w-6 text-gray-600" />
-          ) : (
-            <Bars3Icon className="h-6 w-6 text-gray-600" />
-          )}
-        </button>
+      {/* Top bar */}
+      <div className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 lg:hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">{salonName || 'Business Name'}</h1>
+            <p className="text-sm text-gray-500">by Glammatic</p>
+          </div>
+        </div>
       </div>
 
       {/* Mobile menu overlay */}
@@ -190,9 +189,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      {/* Sidebar - Hidden on mobile */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:block ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center flex-shrink-0 px-4 py-6">
@@ -282,6 +281,21 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="ml-6 mt-1 space-y-1">
                       {item.subItems.map((sub: NavigationItem) => {
                         const isSubActive = pathname === sub.href
+                        
+                        // Handle Sign Out button specially
+                        if (sub.isSignOut) {
+                          return (
+                            <button
+                              key={sub.href}
+                              onClick={handleLogout}
+                              className="group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors text-red-600 hover:text-red-900 hover:bg-red-50"
+                            >
+                              <sub.icon className="h-4 w-4 mr-2" />
+                              {sub.name}
+                            </button>
+                          )
+                        }
+                        
                         return (
                           <Link
                             key={sub.href}
@@ -304,26 +318,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
-
-          {/* Logout button */}
-          <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="group flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
-            >
-              <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-gray-600 group-hover:text-gray-700" />
-              Sign out
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Main content */}
       <div className="lg:pl-64">
-        <main className="min-h-screen pt-16 lg:pt-0">
+        <main className="min-h-screen pt-16 pb-20 lg:pt-0 lg:pb-0">
           {children}
         </main>
       </div>
+
+      {/* Bottom Navigation - Mobile only */}
+      <BottomNav userRole={userRole} userEmail={user?.email} />
     </div>
   )
 }
