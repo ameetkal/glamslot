@@ -31,7 +31,7 @@ export default function BookingUrlCard({ bookingUrl, className = '' }: BookingUr
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Your Public Booking Link
           </label>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="text"
               readOnly
@@ -41,7 +41,7 @@ export default function BookingUrlCard({ bookingUrl, className = '' }: BookingUr
             <button
               type="button"
               onClick={handleVisit}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors rounded-md"
+              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors rounded-md whitespace-nowrap"
             >
               <GlobeAltIcon className="h-4 w-4 mr-1" />
               Visit
