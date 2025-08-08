@@ -37,7 +37,7 @@ export default function LoginPage() {
     
     try {
       await login(data.email, data.password)
-      router.push('/dashboard')
+      router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {
@@ -51,7 +51,7 @@ export default function LoginPage() {
     
     try {
       await loginWithGoogle()
-      router.push('/dashboard')
+      router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {

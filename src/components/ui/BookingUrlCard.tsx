@@ -1,33 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { GlobeAltIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { GlobeAltIcon } from '@heroicons/react/24/outline'
 
 interface BookingUrlCardProps {
   bookingUrl?: string
-  onCopySuccess?: () => void
   className?: string
 }
 
-export default function BookingUrlCard({ 
-  bookingUrl, 
-  onCopySuccess,
-  className = '' 
-}: BookingUrlCardProps) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    if (!bookingUrl) return
-
-    try {
-      await navigator.clipboard.writeText(bookingUrl)
-      setCopied(true)
-      onCopySuccess?.()
-      
-      // Reset copied state after 2 seconds
-      setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      console.error('Failed to copy URL:', error)
+export default function BookingUrlCard({ bookingUrl, className = '' }: BookingUrlCardProps) {
+  const handleVisit = () => {
+    if (bookingUrl) {
+      window.open(bookingUrl, '_blank')
     }
   }
 
@@ -48,35 +31,22 @@ export default function BookingUrlCard({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Your Public Booking Link
           </label>
-          <div className="flex rounded-md shadow-sm">
+          <div className="flex items-center space-x-2">
             <input
               type="text"
               readOnly
               value={bookingUrl}
-              className="flex-1 rounded-l-md border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
             />
             <button
               type="button"
-              onClick={handleCopy}
-              disabled={copied}
-              className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={handleVisit}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors rounded-md"
             >
-              {copied ? (
-                <>
-                  <CheckIcon className="h-4 w-4 mr-1 text-green-600" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <GlobeAltIcon className="h-4 w-4 mr-1" />
-                  Copy
-                </>
-              )}
+              <GlobeAltIcon className="h-4 w-4 mr-1" />
+              Visit
             </button>
           </div>
-          <p className="mt-2 text-sm text-gray-600">
-            Share this link with your clients to allow them to request appointments.
-          </p>
         </div>
       </div>
     </div>

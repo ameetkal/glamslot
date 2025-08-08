@@ -39,7 +39,7 @@ service cloud.firestore {
          request.auth.email == "ameetk96@gmail.com");
     }
 
-    // Salon documents - only salon owners can read/write their own salon
+    // Salon documents - allow public access for Glampage
     match /salons/{salonId} {
       // Salon owners can always access their own salon (user ID matches document ID)
       allow read, write: if isAuthenticated() && request.auth.uid == salonId;
@@ -55,57 +55,56 @@ service cloud.firestore {
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.userId == request.auth.uid &&
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.salonId == salonId;
       
-      // Public access for booking pages (anyone can read if slug exists)
-      allow read: if resource.data.slug != null;
+      // Public access for Glampage and booking pages (anyone can read)
+      allow read: if true;
       
       // Allow platform admins to read all salons for aggregate data
       allow read: if isPlatformAdmin();
-      
-      // Allow public read access for all salon documents (for booking pages)
-      allow read: if true;
     }
 
-    // Allow public queries to salons collection for booking pages
+    // Allow public queries to salons collection for Glampage and booking pages
     match /salons {
-      allow list: if true || isPlatformAdmin(); // Allow public queries to find salons by slug
+      allow list: if true;
     }
 
-    // Providers - salon owners and team members can manage
+    // Providers - allow public access for Glampage
     match /providers/{providerId} {
+      // Salon owners and team members can manage
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
       
-      // Allow public read access for booking pages
+      // Public access for Glampage
       allow read: if true;
       
       // Allow platform admins to read all providers
       allow read: if isPlatformAdmin();
     }
 
-    // Allow public queries to providers collection for booking pages
+    // Allow public queries to providers collection for Glampage
     match /providers {
-      allow list: if true || isPlatformAdmin(); // Allow public queries to find providers by salonId
+      allow list: if true;
     }
 
-    // Services - salon owners and team members can manage
+    // Services - allow public access for Glampage
     match /services/{serviceId} {
+      // Salon owners and team members can manage
       allow read, write: if hasSalonAccess(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
       
-      // Allow public read access for booking pages
+      // Public access for Glampage
       allow read: if true;
       
       // Allow platform admins to read all services
       allow read: if isPlatformAdmin();
     }
 
-    // Allow public queries to services collection for booking pages
+    // Allow public queries to services collection for Glampage
     match /services {
-      allow list: if true || isPlatformAdmin(); // Allow public queries to find services by salonId
+      allow list: if true;
     }
 
     // Booking requests - salon owners and team members can manage their salon's requests
@@ -126,7 +125,7 @@ service cloud.firestore {
     match /teamMembers/{memberId} {
       allow read: if isAuthenticated() && (
         isSalonOwner(resource.data.salonId) || 
-        request.auth.uid == resource.data.userId
+        request.auth.uid == memberId
       );
       allow write: if isSalonOwner(resource.data.salonId);
       allow create: if isAuthenticated() && 

@@ -47,7 +47,7 @@ export default function SignupPage() {
         phone: data.phone,
         businessType: 'salon' // Default to salon since we removed the selector
       })
-      router.push('/dashboard')
+      router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {
@@ -61,7 +61,7 @@ export default function SignupPage() {
     
     try {
       await loginWithGoogle()
-      router.push('/dashboard')
+      router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {
