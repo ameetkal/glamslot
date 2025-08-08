@@ -1,59 +1,75 @@
 "use client"
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from "react"
+import { usePathname } from "next/navigation"
 import {
-  HomeIcon,
-  CalendarIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/outline"
+import SettingsModal from "@/components/ui/SettingsModal"
+
+interface BottomNavProps {
+  userRole: string
+  userEmail?: string | null
+}
 
 const navItems = [
   {
     name: "Requests",
     href: "/dashboard/requests",
-    icon: HomeIcon,
-  },
-  {
-    name: "Dashboard",
-    href: "/dashboard",
     icon: ClipboardDocumentListIcon,
   },
   {
-    name: "Availability",
-    href: "/dashboard/availability",
-    icon: CalendarIcon,
-  },
-  {
     name: "Settings",
-    href: "/dashboard/settings",
+    href: "#settings",
     icon: Cog6ToothIcon,
+    isModal: true,
   },
-];
+]
 
-export default function BottomNav() {
-  const pathname = usePathname();
+export default function BottomNav({ userRole, userEmail }: BottomNavProps) {
+  const pathname = usePathname()
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+
+  const handleItemClick = (item: typeof navItems[0]) => {
+    if (item.isModal) {
+      setIsSettingsModalOpen(true)
+    }
+  }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 block border-t border-gray-200 bg-white shadow-t sm:hidden">
-      <div className="flex justify-around">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 py-2 text-xs transition-colors duration-150 ${
-                isActive ? "text-gray-900" : "text-gray-500 hover:text-accent-500"
-              }`}
-            >
-              <item.icon className="h-6 w-6 mb-1" aria-hidden="true" />
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 block border-t border-gray-200 bg-white shadow-lg md:hidden">
+        <div className="flex justify-around">
+          {navItems.map((item) => {
+            const isActive = item.isModal 
+              ? false 
+              : pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+            
+            return (
+              <button
+                key={item.name}
+                onClick={() => handleItemClick(item)}
+                className={`flex flex-col items-center justify-center flex-1 py-3 text-xs font-medium transition-colors duration-150 ${
+                  isActive 
+                    ? "text-blue-600" 
+                    : "text-gray-700 hover:text-blue-600"
+                }`}
+              >
+                <item.icon className={`h-6 w-6 mb-1 ${isActive ? "text-blue-600" : "text-gray-700"}`} aria-hidden="true" />
+                <span>{item.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        userRole={userRole}
+        userEmail={userEmail}
+      />
+    </>
+  )
 } 
