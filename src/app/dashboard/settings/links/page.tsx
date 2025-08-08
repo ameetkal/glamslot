@@ -6,6 +6,7 @@ import { salonService, teamService } from '@/lib/firebase/services'
 import { Salon } from '@/types/firebase'
 import BookingUrlCard from '@/components/ui/BookingUrlCard'
 import GlampageCard from '@/components/ui/GlampageCard'
+import VirtualConsultationCard from '@/components/ui/VirtualConsultationCard'
 
 // Helper function to generate a slug from a business name
 const generateSlug = (businessName: string): string => {
@@ -160,6 +161,23 @@ export default function LinksPage() {
     return glampageUrl
   }
 
+  // Generate Virtual Consultation URL
+  const getConsultationUrl = () => {
+    if (!salonData?.slug) {
+      console.log('❌ No slug found for salon:', salonData?.name)
+      return undefined
+    }
+    
+    // Use the current origin for localhost, or the production URL
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'https://glamslot.vercel.app'
+    
+    const consultationUrl = `${baseUrl}/consultation/${salonData.slug}`
+    console.log('🔗 Generated Consultation URL:', consultationUrl)
+    return consultationUrl
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-6">
@@ -177,6 +195,7 @@ export default function LinksPage() {
     name: salonData?.name,
     slug: salonData?.slug,
     bookingUrl: salonData?.bookingUrl,
+    consultationUrl: getConsultationUrl(),
     glampageUrl: getGlampageUrl()
   })
 
@@ -191,6 +210,14 @@ export default function LinksPage() {
           {/* Booking URL Card */}
           <BookingUrlCard 
             bookingUrl={salonData?.bookingUrl}
+            className=""
+          />
+          
+          {/* Virtual Consultation Card */}
+          <VirtualConsultationCard 
+            consultationUrl={getConsultationUrl()}
+            salonData={salonData}
+            onSalonUpdate={(updatedSalon) => setSalonData(updatedSalon)}
             className=""
           />
           

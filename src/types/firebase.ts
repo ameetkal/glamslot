@@ -43,6 +43,33 @@ export interface ProviderService {
   requiresConsultation: boolean;
 }
 
+export interface ConsultationFormField {
+  id: string;
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'file';
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[]; // for select fields
+  accept?: string; // for file fields (image/*, video/*)
+  order: number;
+}
+
+export interface ConsultationSubmission {
+  id: string;
+  salonId: string;
+  formData: Record<string, string | string[]>;
+  files?: { fieldId: string; url: string; name: string; size: number }[];
+  submittedAt: Date | string;
+  status: 'pending' | 'reviewed' | 'scheduled';
+  clientInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 export interface BookingRequest {
   id: string;
   clientName: string;
@@ -76,6 +103,12 @@ export interface Salon {
     shop?: string;
     instagram?: string;
     facebook?: string;
+    virtualConsultation?: string;
+  };
+  consultationForm?: {
+    fields: ConsultationFormField[];
+    submitButtonText?: string;
+    successMessage?: string;
   };
   settings: SalonSettings;
   createdAt: Date;
