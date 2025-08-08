@@ -71,6 +71,12 @@ export interface Salon {
   ownerEmail?: string;
   ownerPhone?: string;
   businessType?: string;
+  externalLinks?: {
+    bookNow?: string;
+    shop?: string;
+    instagram?: string;
+    facebook?: string;
+  };
   settings: SalonSettings;
   createdAt: Date;
   updatedAt: Date;

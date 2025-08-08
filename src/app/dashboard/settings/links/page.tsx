@@ -5,16 +5,29 @@ import { useAuth } from '@/lib/auth'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { Salon } from '@/types/firebase'
 import BookingUrlCard from '@/components/ui/BookingUrlCard'
+import GlampageCard from '@/components/ui/GlampageCard'
+
+// Helper function to generate a slug from a business name
+const generateSlug = (businessName: string): string => {
+  return businessName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .trim()
+}
 
 export default function LinksPage() {
   const { user } = useAuth()
   const [salonData, setSalonData] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
-  const [success, setSuccess] = useState('')
 
   useEffect(() => {
     const fetchSalonData = async () => {
-      if (!user) return
+      if (!user) {
+        console.log('❌ No user found')
+        return
+      }
 
       try {
         setLoading(true)
@@ -26,15 +39,102 @@ export default function LinksPage() {
         if (userTeamMember) {
           // User is a team member, use their salonId
           salonId = userTeamMember.salonId
+          console.log('👥 User is a team member, using salonId:', salonId)
+        } else {
+          console.log('👤 User is a salon owner, using salonId:', salonId)
         }
+
+        console.log('🔍 Fetching salon data for salonId:', salonId)
 
         // Fetch salon data using the correct salon ID
         const salonData = await salonService.getSalon(salonId)
         if (salonData) {
-          setSalonData(salonData)
+          console.log('✅ Salon data fetched:', {
+            id: salonData.id,
+            name: salonData.name,
+            slug: salonData.slug,
+            bookingUrl: salonData.bookingUrl
+          })
+          
+          // Ensure we have the required fields with fallbacks
+          const businessName = salonData.name || 'My Salon'
+          const businessSlug = salonData.slug || generateSlug(businessName)
+          const enhancedSalonData = {
+            ...salonData,
+            name: businessName,
+            slug: businessSlug,
+            bookingUrl: salonData.bookingUrl || `https://glamslot.vercel.app/booking/${businessSlug}`
+          }
+          
+          console.log('🎯 Enhanced salon data:', enhancedSalonData)
+          setSalonData(enhancedSalonData)
+        } else {
+          console.log('❌ No salon data found for salonId:', salonId)
+          // Create a fallback salon data object with a proper slug
+          const fallbackName = 'My Salon'
+          const fallbackSlug = generateSlug(fallbackName)
+          const fallbackSalonData: Salon = {
+            id: salonId,
+            name: fallbackName,
+            slug: fallbackSlug,
+            bookingUrl: `https://glamslot.vercel.app/booking/${fallbackSlug}`,
+            settings: {
+              notifications: { 
+                email: true, 
+                sms: false, 
+                bookingConfirmation: true, 
+                bookingReminders: true 
+              },
+              booking: { requireConsultation: false, allowWaitlist: true },
+              businessHours: {
+                monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+                tuesday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+                wednesday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+                thursday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+                friday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+                saturday: { isOpen: true, openTime: '10:00', closeTime: '15:00' },
+                sunday: { isOpen: false }
+              }
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+          console.log('🔄 Using fallback salon data:', fallbackSalonData)
+          setSalonData(fallbackSalonData)
         }
       } catch (error: unknown) {
         console.error('Error fetching salon data:', error)
+        // Create a fallback salon data object on error
+        const fallbackName = 'My Salon'
+        const fallbackSlug = generateSlug(fallbackName)
+        const fallbackSalonData: Salon = {
+          id: user.uid,
+          name: fallbackName,
+          slug: fallbackSlug,
+          bookingUrl: `https://glamslot.vercel.app/booking/${fallbackSlug}`,
+          settings: {
+            notifications: { 
+              email: true, 
+              sms: false, 
+              bookingConfirmation: true, 
+              bookingReminders: true 
+            },
+            booking: { requireConsultation: false, allowWaitlist: true },
+            businessHours: {
+              monday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+              tuesday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+              wednesday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+              thursday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+              friday: { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+              saturday: { isOpen: true, openTime: '10:00', closeTime: '15:00' },
+              sunday: { isOpen: false }
+            }
+          },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        console.log('🔄 Using fallback salon data due to error:', fallbackSalonData)
+        setSalonData(fallbackSalonData)
       } finally {
         setLoading(false)
       }
@@ -43,9 +143,21 @@ export default function LinksPage() {
     fetchSalonData()
   }, [user])
 
-  const handleCopySuccess = () => {
-    setSuccess('Booking URL copied to clipboard!')
-    setTimeout(() => setSuccess(''), 3000)
+  // Generate Glampage URL
+  const getGlampageUrl = () => {
+    if (!salonData?.slug) {
+      console.log('❌ No slug found for salon:', salonData?.name)
+      return undefined
+    }
+    
+    // Use the current origin for localhost, or the production URL
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'https://glamslot.vercel.app'
+    
+    const glampageUrl = `${baseUrl}/glampage/${salonData.slug}`
+    console.log('🔗 Generated Glampage URL:', glampageUrl)
+    return glampageUrl
   }
 
   if (loading) {
@@ -61,6 +173,13 @@ export default function LinksPage() {
     )
   }
 
+  console.log('🎯 Rendering Links page with salonData:', {
+    name: salonData?.name,
+    slug: salonData?.slug,
+    bookingUrl: salonData?.bookingUrl,
+    glampageUrl: getGlampageUrl()
+  })
+
   return (
     <div className="min-h-screen bg-gray-50 py-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -68,29 +187,19 @@ export default function LinksPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Links</h1>
         </div>
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex">
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{success}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="space-y-6">
           {/* Booking URL Card */}
           <BookingUrlCard 
             bookingUrl={salonData?.bookingUrl}
-            onCopySuccess={handleCopySuccess}
+            className=""
           />
           
-          {/* Future link cards can be added here */}
-          {/* Example:
-          <SocialMediaCard />
-          <WebsiteCard />
-          */}
+          {/* Glampage Card */}
+          <GlampageCard 
+            glampageUrl={getGlampageUrl()}
+            salonData={salonData}
+            onSalonUpdate={(updatedSalon) => setSalonData(updatedSalon)}
+          />
         </div>
       </div>
     </div>

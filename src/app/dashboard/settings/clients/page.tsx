@@ -224,6 +224,11 @@ export default function ClientsPage() {
       default:
         return true
     }
+  }).sort((a, b) => {
+    // Sort by lastRequest date (most recent first)
+    const dateA = new Date(a.lastRequest || 0)
+    const dateB = new Date(b.lastRequest || 0)
+    return dateB.getTime() - dateA.getTime()
   })
 
   const formatDate = (dateString: string) => {

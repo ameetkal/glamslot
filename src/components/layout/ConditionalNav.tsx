@@ -12,9 +12,15 @@ export default function ConditionalNav({ children }: { children: React.ReactNode
   const isDashboardPage = pathname.startsWith('/dashboard');
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isJoinPage = pathname.startsWith('/join');
+  const isGlampage = pathname.startsWith('/glampage');
 
   // For dashboard pages, render children directly without any navigation or padding
   if (isDashboardPage) {
+    return <>{children}</>;
+  }
+
+  // For Glampage, render children directly without navigation or footer
+  if (isGlampage) {
     return <>{children}</>;
   }
 

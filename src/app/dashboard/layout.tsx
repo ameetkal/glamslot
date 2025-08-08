@@ -57,21 +57,6 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
     navigation.push({ name: 'Requests', href: '/dashboard/requests', icon: ChatBubbleLeftRightIcon })
   }
   
-  // Add Staff Schedule for management (admins only)
-  if (userRole === 'admin') {
-    navigation.push({ name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon })
-  }
-  
-  // Add Loyalty if user can view it (temporarily hidden)
-  // if (permissions.canViewLoyalty) {
-  //   navigation.push({ name: 'Loyalty', href: '/dashboard/loyalty', icon: GiftIcon })
-  // }
-  
-  // Add Dashboard (only for admins)
-  if (userRole === 'admin') {
-    navigation.push({ name: 'Dashboard', href: '/dashboard', icon: HomeIcon })
-  }
-  
   // Add provider-specific pages (only for service providers)
   if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
     navigation.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
@@ -83,8 +68,16 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   
   // Add Settings if user can view settings
   if (permissions.canViewSettings) {
-    // Create settings sub-items, conditionally adding Platform Admin
+    // Create settings sub-items, conditionally adding admin-specific items
     const settingsItems = [...settingsSubItems]
+    
+    // Add Staff Schedule and Dashboard for admins
+    if (userRole === 'admin') {
+      settingsItems.push(
+        { name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon },
+        { name: 'Dashboard', href: '/dashboard', icon: HomeIcon }
+      )
+    }
     
     // Add Platform Admin tab only for platform admins
     if (isPlatformAdmin(userEmail)) {

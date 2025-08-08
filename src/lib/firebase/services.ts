@@ -340,6 +340,15 @@ export const salonService = {
       ...updates,
       updatedAt: serverTimestamp()
     });
+  },
+
+  // Update external links
+  async updateExternalLinks(id: string, externalLinks: Salon['externalLinks']): Promise<void> {
+    const docRef = doc(db, 'salons', id);
+    await updateDoc(docRef, {
+      externalLinks,
+      updatedAt: serverTimestamp()
+    });
   }
 };
 
@@ -752,12 +761,21 @@ export const clientService = {
 
   // Create a new client
   async createClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'clients'), {
+    const clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> & {
+      createdAt: ReturnType<typeof serverTimestamp>;
+      updatedAt: ReturnType<typeof serverTimestamp>;
+    } = {
       ...client,
-      email: client.email?.toLowerCase(), // Normalize email
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
+    
+    // Only include email if it's provided
+    if (client.email) {
+      clientData.email = client.email.toLowerCase();
+    }
+    
+    const docRef = await addDoc(collection(db, 'clients'), clientData);
     return docRef.id;
   },
 
