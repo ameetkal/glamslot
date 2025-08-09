@@ -342,7 +342,7 @@ export default function RequestsPage() {
   const pendingRequests = requests.filter(req => req.status === 'pending')
   const providerRequests = requests.filter(req => req.status === 'provider-requested')
   const contactedRequests = requests.filter(req => 
-    req.status === 'contacted' || req.status === 'reviewed'
+    req.status === 'contacted'
   )
   const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
   
@@ -767,7 +767,7 @@ export default function RequestsPage() {
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
             >
               <DocumentTextIcon className="h-4 w-4 mr-2" />
-              View All Booking History
+              View All Request History
             </Link>
           </div>
         </div>
