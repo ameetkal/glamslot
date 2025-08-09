@@ -14,6 +14,8 @@ export default function ConditionalNav({ children }: { children: React.ReactNode
                           pathname === '/signup' ||
                           pathname.startsWith('/join');
 
+
+
   // For dashboard pages, render children directly without any wrapper
   if (isDashboardPage) {
     return <>{children}</>;
