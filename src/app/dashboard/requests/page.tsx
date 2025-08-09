@@ -251,7 +251,7 @@ export default function RequestsPage() {
     }
   }
 
-  const updateConsultationStatus = async (requestId: string, status: 'pending' | 'reviewed' | 'scheduled', e?: React.MouseEvent) => {
+  const updateConsultationStatus = async (requestId: string, status: 'pending' | 'reviewed', e?: React.MouseEvent) => {
     e?.stopPropagation() // Prevent card expansion when clicking buttons
     
     try {
@@ -309,6 +309,8 @@ export default function RequestsPage() {
       case 'not-booked':
         return 'bg-red-100 text-red-800'
       case 'contacted':
+        return 'bg-blue-100 text-blue-800'
+      case 'reviewed':
         return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
@@ -405,8 +407,7 @@ export default function RequestsPage() {
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
               {isConsultation ? (
                 request.status === 'pending' ? 'Pending Review' :
-                request.status === 'reviewed' ? 'Reviewed' :
-                request.status === 'scheduled' ? 'Scheduled' : 'Unknown'
+                request.status === 'reviewed' ? 'Reviewed' : 'Unknown'
               ) : (
                 request.status === 'pending' ? 'Pending' : 
                 request.status === 'provider-requested' ? 'Provider Requested' : 
@@ -417,26 +418,16 @@ export default function RequestsPage() {
             
             {/* Action buttons - different for consultation vs booking */}
             {isConsultation ? (
-              // Consultation action buttons
+              // Consultation action buttons - only Mark Reviewed needed
               request.status === 'pending' && (
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <button
-                    onClick={(e) => updateConsultationStatus(request.id, 'reviewed', e)}
-                    className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <EyeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    <span className="hidden sm:inline">Mark Reviewed</span>
-                    <span className="sm:hidden">Reviewed</span>
-                  </button>
-                  <button
-                    onClick={(e) => updateConsultationStatus(request.id, 'scheduled', e)}
-                    className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    <span className="hidden sm:inline">Schedule Consultation</span>
-                    <span className="sm:hidden">Schedule</span>
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => updateConsultationStatus(request.id, 'reviewed', e)}
+                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <EyeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Mark Reviewed</span>
+                  <span className="sm:hidden">Reviewed</span>
+                </button>
               )
             ) : (
               // Booking action buttons (existing logic)

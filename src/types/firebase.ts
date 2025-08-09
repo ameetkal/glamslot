@@ -60,7 +60,7 @@ export interface ConsultationSubmission {
   formData: Record<string, string | string[]>;
   files?: { fieldId: string; url: string; name: string; size: number }[];
   submittedAt: Date | string;
-  status: 'pending' | 'reviewed' | 'scheduled';
+  status: 'pending' | 'reviewed';
   clientInfo: {
     name: string;
     email: string;

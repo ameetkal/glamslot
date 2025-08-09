@@ -960,7 +960,7 @@ export const consultationService = {
   },
 
   // Update consultation submission status
-  async updateConsultationStatus(id: string, status: 'pending' | 'reviewed' | 'scheduled'): Promise<void> {
+  async updateConsultationStatus(id: string, status: 'pending' | 'reviewed'): Promise<void> {
     const docRef = doc(db, 'consultations', id);
     await updateDoc(docRef, {
       status,
