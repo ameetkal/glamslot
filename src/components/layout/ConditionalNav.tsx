@@ -1,37 +1,36 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/ui/Footer';
 
 export default function ConditionalNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isBookingPage = pathname.startsWith('/booking');
-  const isLoyaltyPage = pathname.startsWith('/loyalty');
   const isDashboardPage = pathname.startsWith('/dashboard');
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
-  const isJoinPage = pathname.startsWith('/join');
-  const isGlampage = pathname.startsWith('/glampage');
+  const isStandalonePage = pathname.startsWith('/booking') || 
+                          pathname.startsWith('/consultation') ||
+                          pathname.startsWith('/glampage') ||
+                          pathname.startsWith('/loyalty') ||
+                          pathname === '/login' || 
+                          pathname === '/signup' ||
+                          pathname.startsWith('/join');
 
-  // For dashboard pages, render children directly without any navigation or padding
+  // For dashboard pages, render children directly without any wrapper
   if (isDashboardPage) {
     return <>{children}</>;
   }
 
-  // For Glampage, render children directly without navigation or footer
-  if (isGlampage) {
+  // For standalone pages (booking, consultation, glampage, etc.), render children directly
+  if (isStandalonePage) {
     return <>{children}</>;
   }
 
+  // For any other pages (like homepage), render with minimal wrapper
   return (
-    <div className="min-h-full flex flex-col pb-16 sm:pb-0">
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <Navbar />}
+    <div className="min-h-full flex flex-col">
       <main className="flex-grow">
-        <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
-          {children}
-        </div>
+        {children}
       </main>
-      {!isBookingPage && !isLoyaltyPage && !isAuthPage && !isJoinPage && <Footer />}
+      <Footer />
     </div>
   );
 } 

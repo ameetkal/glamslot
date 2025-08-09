@@ -12,6 +12,98 @@ interface ConsultationPageProps {
   params: Promise<{ slug: string }>
 }
 
+// Default consultation form fields
+const createDefaultFields = () => [
+  {
+    id: 'name',
+    type: 'text' as const,
+    label: 'Full Name',
+    placeholder: 'Enter your full name',
+    required: true,
+    order: 1
+  },
+  {
+    id: 'email',
+    type: 'email' as const,
+    label: 'Email Address',
+    placeholder: 'your.email@example.com',
+    required: true,
+    order: 2
+  },
+  {
+    id: 'phone',
+    type: 'phone' as const,
+    label: 'Phone Number',
+    placeholder: '(555) 123-4567',
+    required: true,
+    order: 3
+  },
+  {
+    id: 'service-type',
+    type: 'select' as const,
+    label: 'Service Type',
+    required: true,
+    options: ['Hair Color', 'Extensions', 'Chemical Treatment', 'Cut & Style', 'Other'],
+    order: 4
+  },
+  {
+    id: 'current-hair',
+    type: 'textarea' as const,
+    label: 'Current Hair Condition',
+    placeholder: 'Describe your current hair (length, color, previous treatments, etc.)',
+    required: false,
+    order: 5
+  },
+  {
+    id: 'desired-result',
+    type: 'textarea' as const,
+    label: 'Desired Result',
+    placeholder: 'What look are you hoping to achieve?',
+    required: true,
+    order: 6
+  },
+  {
+    id: 'hair-photo-top',
+    type: 'file' as const,
+    label: 'Hair Photos - Top View',
+    required: true,
+    accept: 'image/*,video/*',
+    order: 7
+  },
+  {
+    id: 'hair-photo-front',
+    type: 'file' as const,
+    label: 'Hair Photos - Front View',
+    required: true,
+    accept: 'image/*,video/*',
+    order: 8
+  },
+  {
+    id: 'hair-photo-sides',
+    type: 'file' as const,
+    label: 'Hair Photos - Side Views',
+    required: false,
+    accept: 'image/*,video/*',
+    order: 9
+  },
+  {
+    id: 'hair-history',
+    type: 'textarea' as const,
+    label: 'Hair History & Allergies',
+    placeholder: 'Previous treatments, allergies, sensitivities, etc.',
+    required: false,
+    order: 10
+  },
+  {
+    id: 'additional-notes',
+    type: 'textarea' as const,
+    label: 'Additional Notes',
+    placeholder: 'Any other information we should know',
+    required: false,
+    order: 11
+  }
+]
+
 function ConsultationContent({ slug }: { slug: string }) {
   const [salon, setSalon] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
@@ -245,7 +337,9 @@ function ConsultationContent({ slug }: { slug: string }) {
     )
   }
 
-  const formFields = salon.consultationForm?.fields || []
+  // Use default fields if no custom fields are configured
+  const hasCustomFields = salon.consultationForm?.fields && salon.consultationForm.fields.length > 0
+  const formFields = hasCustomFields ? salon.consultationForm!.fields : createDefaultFields()
   const sortedFields = [...formFields].sort((a, b) => a.order - b.order)
 
   return (

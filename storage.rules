@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Firebase Storage Rules for GlamSlot
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Allow public uploads to consultation folder (for public consultation forms)
+    match /consultations/{salonId}/{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // Allow authenticated users to upload to their salon's folder
+    match /salons/{salonId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == salonId;
+    }
+    
+    // Allow authenticated team members to upload to their salon's folder
+    match /salons/{salonId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

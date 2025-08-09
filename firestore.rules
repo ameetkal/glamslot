@@ -138,6 +138,23 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
 
+    // Consultation submissions - allow public creation, salon owners can manage
+    match /consultations/{consultationId} {
+      // Allow anyone to create consultation submissions (public form)
+      allow create: if true;
+      
+      // Salon owners and team members can read/update their consultations
+      allow read, write: if hasSalonAccess(resource.data.salonId);
+      
+      // Allow platform admins to read all consultations
+      allow read: if isPlatformAdmin();
+    }
+
+    // Allow queries to consultations collection for dashboard
+    match /consultations {
+      allow list: if isAuthenticated();
+    }
+
     // Invitations - salon owners can manage invitations
     match /invitations/{invitationId} {
       allow read, write: if isSalonOwner(resource.data.salonId);
