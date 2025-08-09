@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
-import { salonService } from '@/lib/firebase/services'
-import { Salon } from '@/types/firebase'
+import { salonService, clientService } from '@/lib/firebase/services'
+import { Salon, Client } from '@/types/firebase'
 import { storage } from '@/lib/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { collection, addDoc } from 'firebase/firestore'
@@ -277,7 +277,40 @@ function ConsultationContent({ slug }: { slug: string }) {
         updatedAt: new Date()
       }
 
-      // Save to Firestore
+      // Save client data to Clients tab (same as booking system)
+      console.log('Saving client data:', { ...clientInfo, salonId: salon.id, source: 'virtual_consultation' })
+      
+      try {
+        // Check if client already exists by email or phone
+        const existingClient = await clientService.findClientByEmailOrPhone(salon.id, clientInfo.email, clientInfo.phone)
+        
+        if (existingClient) {
+          // Update existing client with any new information
+          await clientService.updateClient(existingClient.id, {
+            name: clientInfo.name,
+            email: clientInfo.email,
+            phone: clientInfo.phone,
+            updatedAt: new Date()
+          })
+          console.log('Updated existing client:', existingClient.id)
+        } else {
+          // Create new client
+          const clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> = {
+            name: clientInfo.name,
+            email: clientInfo.email,
+            phone: clientInfo.phone,
+            salonId: salon.id
+          }
+          
+          const clientId = await clientService.createClient(clientData)
+          console.log('Created new client from consultation:', clientId)
+        }
+      } catch (clientError) {
+        console.error('Error saving client data:', clientError)
+        // Don't fail the consultation if client creation fails
+      }
+
+      // Save consultation to Firestore
       await addDoc(collection(db, 'consultations'), submission)
 
       // Send notification (same system as booking requests)

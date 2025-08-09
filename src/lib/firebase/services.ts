@@ -13,7 +13,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client, ShiftChangeRequest } from '@/types/firebase';
+import { Provider, Service, BookingRequest, Salon, TeamMember, Invitation, LoyaltyProgram, CustomerPass, VisitRecord, Client, ShiftChangeRequest, ConsultationSubmission } from '@/types/firebase';
 
 // Provider Services
 export const providerService = {
@@ -910,6 +910,67 @@ export const shiftChangeRequestService = {
   // Delete a shift change request
   async deleteShiftChangeRequest(id: string): Promise<void> {
     const docRef = doc(db, 'shiftChangeRequests', id);
+    await deleteDoc(docRef);
+  }
+};
+
+// Consultation Services
+export const consultationService = {
+  // Get all consultation submissions for a salon
+  async getConsultationSubmissions(salonId: string): Promise<ConsultationSubmission[]> {
+    const q = query(
+      collection(db, 'consultations'),
+      where('salonId', '==', salonId)
+    );
+    const querySnapshot = await getDocs(q);
+    const consultations = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      // Convert Firestore Timestamps to Date objects
+      submittedAt: doc.data().submittedAt?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+    })) as ConsultationSubmission[];
+    
+    // Sort by submission date (newest first)
+    return consultations.sort((a, b) => {
+      const dateA = a.submittedAt instanceof Date ? a.submittedAt : new Date(a.submittedAt);
+      const dateB = b.submittedAt instanceof Date ? b.submittedAt : new Date(b.submittedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
+
+  // Get a single consultation submission
+  async getConsultationSubmission(id: string): Promise<ConsultationSubmission | null> {
+    const docRef = doc(db, 'consultations', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data,
+        submittedAt: data.submittedAt?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as ConsultationSubmission;
+    }
+    
+    return null;
+  },
+
+  // Update consultation submission status
+  async updateConsultationStatus(id: string, status: 'pending' | 'reviewed' | 'scheduled'): Promise<void> {
+    const docRef = doc(db, 'consultations', id);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  // Delete a consultation submission
+  async deleteConsultationSubmission(id: string): Promise<void> {
+    const docRef = doc(db, 'consultations', id);
     await deleteDoc(docRef);
   }
 }; 

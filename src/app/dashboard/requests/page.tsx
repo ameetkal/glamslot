@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { collection, query, where, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { teamService } from '@/lib/firebase/services'
+import { teamService, consultationService } from '@/lib/firebase/services'
 import Link from 'next/link'
 import { 
   CalendarIcon, 
@@ -16,15 +16,23 @@ import {
   XMarkIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  VideoCameraIcon,
+  PhotoIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline'
-import { BookingRequest } from '@/types/firebase'
+import { BookingRequest, ConsultationSubmission } from '@/types/firebase'
 import ClickablePhone from '@/components/ui/ClickablePhone'
 
 // Type alias to handle Firebase timestamp format
 type BookingRequestWithFirebaseTimestamps = Omit<BookingRequest, 'createdAt' | 'updatedAt'> & {
   createdAt: Date | { toDate: () => Date }
   updatedAt: Date | { toDate: () => Date }
+}
+
+// Unified request type that includes both booking and consultation requests
+type UnifiedRequest = (BookingRequestWithFirebaseTimestamps | ConsultationSubmission) & {
+  requestType: 'booking' | 'consultation'
 }
 
 // Type for booking data from Firestore
@@ -46,7 +54,7 @@ interface BookingData {
 
 export default function RequestsPage() {
   const { user } = useAuth()
-  const [requests, setRequests] = useState<BookingRequestWithFirebaseTimestamps[]>([])
+  const [requests, setRequests] = useState<UnifiedRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
   const [showRecentlyCompleted, setShowRecentlyCompleted] = useState(false)
@@ -115,8 +123,8 @@ export default function RequestsPage() {
             ...doc.data()
           })) as BookingData[]
 
-          // Transform bookings to match BookingRequest format for consistency
-          const transformedBookings: BookingRequestWithFirebaseTimestamps[] = bookingsData.map(booking => ({
+          // Transform bookings to match UnifiedRequest format for consistency
+          const transformedBookings: UnifiedRequest[] = bookingsData.map(booking => ({
             id: booking.id,
             clientName: booking.clientName || 'Unknown',
             clientEmail: booking.clientEmail || '',
@@ -130,49 +138,79 @@ export default function RequestsPage() {
             salonId: booking.salonId || salonId,
             submittedByProvider: false,
             createdAt: booking.createdAt || booking.date || new Date(),
-            updatedAt: booking.updatedAt || booking.date || new Date()
+            updatedAt: booking.updatedAt || booking.date || new Date(),
+            requestType: 'booking' as const
           }))
 
           setRequests(transformedBookings)
         } else {
-          // For admins, show all booking requests
-          const requestsQuery = query(
-            collection(db, 'bookingRequests'),
-            where('salonId', '==', salonId)
-          )
-          const snapshot = await getDocs(requestsQuery)
+          // For admins, show all booking requests AND consultation submissions
+          const [bookingRequests, consultationSubmissions] = await Promise.all([
+            // Fetch booking requests
+            getDocs(query(
+              collection(db, 'bookingRequests'),
+              where('salonId', '==', salonId)
+            )).then(snapshot => 
+              snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                requestType: 'booking' as const
+              })) as (BookingRequest & { requestType: 'booking' })[]
+            ),
+            
+            // Fetch consultation submissions
+            consultationService.getConsultationSubmissions(salonId).then(consultations =>
+              consultations.map(consultation => ({
+                ...consultation,
+                requestType: 'consultation' as const
+              }))
+            )
+          ])
           
-          const requestsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as BookingRequest[]
+          // Combine both types of requests
+          const allRequests: UnifiedRequest[] = [
+            ...bookingRequests,
+            ...consultationSubmissions
+          ]
           
-          // Sort in memory instead
-          const sortedRequests = requestsData.sort((a, b) => {
+          // Sort all requests
+          const sortedRequests = allRequests.sort((a, b) => {
             // Define status priority: pending > provider-requested > contacted > others
             const getStatusPriority = (status: string) => {
               switch (status) {
                 case 'pending': return 4;
                 case 'provider-requested': return 3;
                 case 'contacted': return 2;
+                case 'reviewed': return 2; // Same as contacted for consultations
                 default: return 1;
               }
             };
             
-            const priorityA = getStatusPriority(a.status);
-            const priorityB = getStatusPriority(b.status);
+            const statusA = a.requestType === 'booking' ? (a as BookingRequest).status : (a as ConsultationSubmission).status;
+            const statusB = b.requestType === 'booking' ? (b as BookingRequest).status : (b as ConsultationSubmission).status;
+            
+            const priorityA = getStatusPriority(statusA);
+            const priorityB = getStatusPriority(statusB);
             
             if (priorityA !== priorityB) {
               return priorityB - priorityA; // Higher priority first
             }
             
             // If both have the same status priority, sort by date (most recent first)
-            const dateA = typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
-              ? (a.createdAt as { toDate: () => Date }).toDate() 
-              : new Date(a.createdAt);
-            const dateB = typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
-              ? (b.createdAt as { toDate: () => Date }).toDate() 
-              : new Date(b.createdAt);
+            const getDate = (request: UnifiedRequest) => {
+              if (request.requestType === 'booking') {
+                const booking = request as BookingRequest;
+                return typeof booking.createdAt === 'object' && 'toDate' in booking.createdAt 
+                  ? (booking.createdAt as { toDate: () => Date }).toDate() 
+                  : new Date(booking.createdAt);
+              } else {
+                const consultation = request as ConsultationSubmission;
+                return consultation.submittedAt instanceof Date ? consultation.submittedAt : new Date(consultation.submittedAt);
+              }
+            };
+            
+            const dateA = getDate(a);
+            const dateB = getDate(b);
             return dateB.getTime() - dateA.getTime();
           });
           
@@ -198,15 +236,40 @@ export default function RequestsPage() {
       })
       
       // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId ? { 
-          ...req, 
-          status, 
-          updatedAt: new Date()
-        } : req
-      ))
+      setRequests(prev => prev.map(req => {
+        if (req.id === requestId && req.requestType === 'booking') {
+          return { 
+            ...req, 
+            status, 
+            updatedAt: new Date()
+          } as UnifiedRequest
+        }
+        return req
+      }))
     } catch (error) {
       console.error('Error updating request status:', error)
+    }
+  }
+
+  const updateConsultationStatus = async (requestId: string, status: 'pending' | 'reviewed' | 'scheduled', e?: React.MouseEvent) => {
+    e?.stopPropagation() // Prevent card expansion when clicking buttons
+    
+    try {
+      await consultationService.updateConsultationStatus(requestId, status)
+      
+      // Update local state
+      setRequests(prev => prev.map(req => {
+        if (req.id === requestId && req.requestType === 'consultation') {
+          return { 
+            ...req, 
+            status, 
+            updatedAt: new Date()
+          } as UnifiedRequest
+        }
+        return req
+      }))
+    } catch (error) {
+      console.error('Error updating consultation status:', error)
     }
   }
 
@@ -214,12 +277,18 @@ export default function RequestsPage() {
     setExpandedRequest(expandedRequest === requestId ? null : requestId)
   }
 
-  const formatDate = (timestamp: Date | { toDate: () => Date }) => {
+  const formatDate = (timestamp: Date | { toDate: () => Date } | string) => {
     if (!timestamp) return 'Unknown date'
     
-    const date = typeof timestamp === 'object' && 'toDate' in timestamp 
-      ? timestamp.toDate() 
-      : new Date(timestamp)
+    let date: Date
+    if (typeof timestamp === 'string') {
+      date = new Date(timestamp)
+    } else if (typeof timestamp === 'object' && 'toDate' in timestamp) {
+      date = timestamp.toDate()
+    } else {
+      date = timestamp as Date
+    }
+    
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -246,14 +315,23 @@ export default function RequestsPage() {
     }
   }
 
-  const isRecentlyCompleted = (request: BookingRequestWithFirebaseTimestamps) => {
+  const isRecentlyCompleted = (request: UnifiedRequest) => {
     if (request.status === 'pending') return false
     
     // Check if completed within last 48 hours
-    const updatedDate = typeof request.updatedAt === 'object' && 'toDate' in request.updatedAt 
-      ? (request.updatedAt as { toDate: () => Date }).toDate() 
-      : new Date(request.updatedAt);
+    const getUpdatedDate = (req: UnifiedRequest) => {
+      if (req.requestType === 'consultation') {
+        const consultation = req as ConsultationSubmission
+        return consultation.updatedAt instanceof Date ? consultation.updatedAt : new Date(consultation.updatedAt)
+      } else {
+        const booking = req as BookingRequestWithFirebaseTimestamps
+        return typeof booking.updatedAt === 'object' && 'toDate' in booking.updatedAt 
+          ? (booking.updatedAt as { toDate: () => Date }).toDate() 
+          : new Date(booking.updatedAt)
+      }
+    }
     
+    const updatedDate = getUpdatedDate(request)
     const hoursAgo = (new Date().getTime() - updatedDate.getTime()) / (1000 * 60 * 60)
     return hoursAgo <= 48
   }
@@ -261,14 +339,22 @@ export default function RequestsPage() {
   // Separate requests into categories
   const pendingRequests = requests.filter(req => req.status === 'pending')
   const providerRequests = requests.filter(req => req.status === 'provider-requested')
-  const contactedRequests = requests.filter(req => req.status === 'contacted')
+  const contactedRequests = requests.filter(req => 
+    req.status === 'contacted' || req.status === 'reviewed'
+  )
   const recentlyCompletedRequests = requests.filter(req => isRecentlyCompleted(req))
   
-  const renderRequestCard = (request: BookingRequestWithFirebaseTimestamps) => (
+  const renderRequestCard = (request: UnifiedRequest) => {
+    const isConsultation = request.requestType === 'consultation'
+    const consultation = isConsultation ? request as ConsultationSubmission : null
+    const booking = !isConsultation ? request as BookingRequestWithFirebaseTimestamps : null
+    
+    return (
     <li key={request.id}>
       <div 
         className={`px-4 py-4 sm:px-6 cursor-pointer hover:bg-gray-50 transition-colors ${
-          request.submittedByProvider ? 'border-l-4 border-l-purple-400' : ''
+          isConsultation ? 'border-l-4 border-l-green-400' : 
+          booking?.submittedByProvider ? 'border-l-4 border-l-purple-400' : ''
         }`}
         onClick={() => toggleExpanded(request.id)}
       >
@@ -278,20 +364,36 @@ export default function RequestsPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <UserIcon className="h-5 w-5 text-gray-400" />
+                {isConsultation ? (
+                  <VideoCameraIcon className="h-5 w-5 text-green-500" />
+                ) : (
+                  <UserIcon className="h-5 w-5 text-gray-400" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {request.clientName}
+                  {isConsultation ? consultation!.clientInfo.name : booking!.clientName}
                 </p>
                 <div className="flex items-center space-x-3 mt-1">
                   <div className="flex items-center text-sm text-gray-500">
                     <ClockIcon className="h-4 w-4 mr-1" />
-                    {formatDate(request.createdAt)}
+                    {isConsultation 
+                      ? formatDate(consultation!.submittedAt) 
+                      : formatDate(booking!.createdAt)
+                    }
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    {request.service}
+                    {isConsultation ? (
+                      <>
+                        <VideoCameraIcon className="h-4 w-4 mr-1" />
+                        Virtual Consultation
+                      </>
+                    ) : (
+                      <>
+                        <CalendarIcon className="h-4 w-4 mr-1" />
+                        {booking!.service}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -301,62 +403,95 @@ export default function RequestsPage() {
           {/* Right side - Status and actions */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-              {request.status === 'pending' ? 'Pending' : 
-               request.status === 'provider-requested' ? 'Provider Requested' : 
-               request.status === 'booked' ? 'Booked' : 
-               request.status === 'contacted' ? 'Contacted' : 'Not Booked'}
+              {isConsultation ? (
+                request.status === 'pending' ? 'Pending Review' :
+                request.status === 'reviewed' ? 'Reviewed' :
+                request.status === 'scheduled' ? 'Scheduled' : 'Unknown'
+              ) : (
+                request.status === 'pending' ? 'Pending' : 
+                request.status === 'provider-requested' ? 'Provider Requested' : 
+                request.status === 'booked' ? 'Booked' : 
+                request.status === 'contacted' ? 'Contacted' : 'Not Booked'
+              )}
             </span>
             
-            {/* Action buttons - consolidated logic */}
-            {(request.status === 'pending' || request.status === 'provider-requested') && (
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <PhoneIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Mark Contacted</span>
-                  <span className="sm:hidden">Contacted</span>
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Appointment Made</span>
-                  <span className="sm:hidden">Booked</span>
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Not Booked</span>
-                  <span className="sm:hidden">Not Booked</span>
-                </button>
-              </div>
-            )}
+            {/* Action buttons - different for consultation vs booking */}
+            {isConsultation ? (
+              // Consultation action buttons
+              request.status === 'pending' && (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <button
+                    onClick={(e) => updateConsultationStatus(request.id, 'reviewed', e)}
+                    className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <EyeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Mark Reviewed</span>
+                    <span className="sm:hidden">Reviewed</span>
+                  </button>
+                  <button
+                    onClick={(e) => updateConsultationStatus(request.id, 'scheduled', e)}
+                    className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Schedule Consultation</span>
+                    <span className="sm:hidden">Schedule</span>
+                  </button>
+                </div>
+              )
+            ) : (
+              // Booking action buttons (existing logic)
+              <>
+                {(request.status === 'pending' || request.status === 'provider-requested') && (
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <button
+                      onClick={(e) => updateRequestStatus(request.id, 'contacted', e)}
+                      className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <PhoneIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Mark Contacted</span>
+                      <span className="sm:hidden">Contacted</span>
+                    </button>
+                    <button
+                      onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                      className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Appointment Made</span>
+                      <span className="sm:hidden">Booked</span>
+                    </button>
+                    <button
+                      onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                      className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Not Booked</span>
+                      <span className="sm:hidden">Not Booked</span>
+                    </button>
+                  </div>
+                )}
 
-            {/* Action buttons for contacted requests */}
-            {request.status === 'contacted' && (
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Appointment Made</span>
-                  <span className="sm:hidden">Booked</span>
-                </button>
-                <button
-                  onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
-                  className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">Not Booked</span>
-                  <span className="sm:hidden">Not Booked</span>
-                </button>
-              </div>
+                {/* Action buttons for contacted requests */}
+                {request.status === 'contacted' && (
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <button
+                      onClick={(e) => updateRequestStatus(request.id, 'booked', e)}
+                      className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Appointment Made</span>
+                      <span className="sm:hidden">Booked</span>
+                    </button>
+                    <button
+                      onClick={(e) => updateRequestStatus(request.id, 'not-booked', e)}
+                      className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">Not Booked</span>
+                      <span className="sm:hidden">Not Booked</span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Status change buttons for completed requests (booked/not-booked) */}
@@ -412,45 +547,93 @@ export default function RequestsPage() {
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-gray-600">
                     <EnvelopeIcon className="h-4 w-4 mr-2" />
-                    {request.clientEmail}
+                    {isConsultation ? consultation!.clientInfo.email : booking!.clientEmail}
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <PhoneIcon className="h-4 w-4 mr-2" />
-                    <ClickablePhone phone={request.clientPhone} />
+                    <ClickablePhone phone={isConsultation ? consultation!.clientInfo.phone : booking!.clientPhone} />
                   </div>
                 </div>
               </div>
               
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Service:</span>
-                    <span className="ml-2 text-gray-600">{request.service}</span>
+              {isConsultation ? (
+                // Consultation-specific details
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Consultation Details</h4>
+                  <div className="space-y-2">
+                    {consultation!.formData && Object.entries(consultation!.formData).map(([key, value]) => (
+                      <div key={key} className="text-sm">
+                        <span className="font-medium text-gray-700 capitalize">
+                          {key.replace(/-/g, ' ')}:
+                        </span>
+                        <span className="ml-2 text-gray-600">{value}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Service Provider Preference:</span>
-                    <span className="ml-2 text-gray-600">{request.stylistPreference}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Preferred Date/Time:</span>
-                    <span className="ml-2 text-gray-600">{request.dateTimePreference}</span>
-                  </div>
-                  {request.waitlistOptIn && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Waitlist:</span>
-                      <span className="ml-2 text-gray-600">Yes, include me on waitlist</span>
+                  
+                  {/* Show uploaded files */}
+                  {consultation!.files && consultation!.files.length > 0 && (
+                    <div className="mt-4">
+                      <h5 className="font-medium text-gray-900 mb-2">Uploaded Files</h5>
+                      <div className="space-y-2">
+                        {consultation!.files.map((file, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <PhotoIcon className="h-4 w-4 text-gray-400" />
+                            <a 
+                              href={file.url.startsWith('placeholder:') ? '#' : file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`text-sm ${file.url.startsWith('placeholder:') ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}`}
+                            >
+                              {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                            </a>
+                            {file.url.startsWith('placeholder:') && (
+                              <span className="text-xs text-red-500">(Upload pending)</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
+              ) : (
+                // Booking-specific details
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Booking Details</h4>
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700">Service:</span>
+                      <span className="ml-2 text-gray-600">{booking!.service}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700">Service Provider Preference:</span>
+                      <span className="ml-2 text-gray-600">{booking!.stylistPreference}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700">Preferred Date/Time:</span>
+                      <span className="ml-2 text-gray-600">{booking!.dateTimePreference}</span>
+                    </div>
+                    {booking!.waitlistOptIn && (
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-700">Waitlist:</span>
+                        <span className="ml-2 text-gray-600">Yes, include me on waitlist</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             
-            {request.notes && (
+            {/* Additional notes - handle both types */}
+            {((isConsultation && consultation!.formData['additional-notes']) || 
+              (!isConsultation && booking!.notes)) && (
               <div className="mt-4">
                 <h4 className="font-medium text-gray-900 mb-2">Additional Notes</h4>
                 <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                  {request.notes}
+                  {isConsultation 
+                    ? consultation!.formData['additional-notes'] 
+                    : booking!.notes
+                  }
                 </p>
               </div>
             )}
@@ -459,6 +642,7 @@ export default function RequestsPage() {
       </div>
     </li>
   )
+  }
 
   if (loading) {
     return (
