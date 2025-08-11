@@ -43,8 +43,16 @@ export default function GlampageCard({
 
   const validateUrl = (url: string): boolean => {
     if (!url.trim()) return true // Empty URLs are valid
+    
+    let urlToValidate = url.trim()
+    
+    // If URL doesn't start with http:// or https://, add https://
+    if (!urlToValidate.match(/^https?:\/\//)) {
+      urlToValidate = `https://${urlToValidate}`
+    }
+    
     try {
-      new URL(url)
+      new URL(urlToValidate)
       return true
     } catch {
       return false
@@ -54,8 +62,16 @@ export default function GlampageCard({
   const handleSaveExternalLinks = async () => {
     if (!salonData?.id) return
 
+    // Format URLs - add https:// if needed
+    const formattedLinks: typeof externalLinks = {
+      bookNow: externalLinks.bookNow.trim() ? (externalLinks.bookNow.trim().match(/^https?:\/\//) ? externalLinks.bookNow.trim() : `https://${externalLinks.bookNow.trim()}`) : externalLinks.bookNow,
+      shop: externalLinks.shop.trim() ? (externalLinks.shop.trim().match(/^https?:\/\//) ? externalLinks.shop.trim() : `https://${externalLinks.shop.trim()}`) : externalLinks.shop,
+      instagram: externalLinks.instagram.trim() ? (externalLinks.instagram.trim().match(/^https?:\/\//) ? externalLinks.instagram.trim() : `https://${externalLinks.instagram.trim()}`) : externalLinks.instagram,
+      facebook: externalLinks.facebook.trim() ? (externalLinks.facebook.trim().match(/^https?:\/\//) ? externalLinks.facebook.trim() : `https://${externalLinks.facebook.trim()}`) : externalLinks.facebook
+    }
+
     // Validate URLs
-    const invalidUrls = Object.entries(externalLinks)
+    const invalidUrls = Object.entries(formattedLinks)
       .filter(([, url]) => url.trim() && !validateUrl(url))
       .map(([field]) => field)
 
@@ -66,15 +82,18 @@ export default function GlampageCard({
 
     setSaving(true)
     try {
-      await salonService.updateExternalLinks(salonData.id, externalLinks)
+      await salonService.updateExternalLinks(salonData.id, formattedLinks)
       
       // Update local salon data
       if (onSalonUpdate && salonData) {
         onSalonUpdate({
           ...salonData,
-          externalLinks
+          externalLinks: formattedLinks
         })
       }
+      
+      // Update local state with formatted URLs
+      setExternalLinks(formattedLinks)
       
       // Show save success message
       setSuccess('External links saved successfully!')
@@ -144,11 +163,11 @@ export default function GlampageCard({
               type="url"
               value={externalLinks.bookNow}
               onChange={(e) => handleInputChange('bookNow', e.target.value)}
-              placeholder="https://your-booking-system.com"
+              placeholder="your-booking-system.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leave empty to use the default Glamslot booking system
+              Leave empty to use the default Glamslot booking system. You can enter just the domain (e.g., &quot;example.com&quot;)
             </p>
           </div>
 
@@ -160,7 +179,7 @@ export default function GlampageCard({
               type="url"
               value={externalLinks.shop}
               onChange={(e) => handleInputChange('shop', e.target.value)}
-              placeholder="https://your-shop.com"
+              placeholder="your-shop.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
             />
           </div>
@@ -173,7 +192,7 @@ export default function GlampageCard({
               type="url"
               value={externalLinks.instagram}
               onChange={(e) => handleInputChange('instagram', e.target.value)}
-              placeholder="https://instagram.com/your-handle"
+              placeholder="instagram.com/your-handle"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
             />
           </div>
@@ -186,7 +205,7 @@ export default function GlampageCard({
               type="url"
               value={externalLinks.facebook}
               onChange={(e) => handleInputChange('facebook', e.target.value)}
-              placeholder="https://facebook.com/your-page"
+              placeholder="facebook.com/your-page"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
             />
           </div>

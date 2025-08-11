@@ -81,6 +81,14 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
       )
     }
 
+    // Add My Schedule for service providers
+    if (userRole === 'service_provider') {
+      items.push(
+        { name: 'Provider Settings', href: '/dashboard/settings/provider', icon: UserIcon },
+        { name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon }
+      )
+    }
+
     // Add Platform Admin tab only for platform admins
     if (isPlatformAdmin(userEmail)) {
       items.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
@@ -124,11 +132,11 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
       <div className="fixed inset-x-0 bottom-0 z-50">
         <div className="bg-white rounded-t-2xl shadow-xl max-h-[80vh] overflow-hidden">
           {/* Handle and Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 relative">
             <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto"></div>
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 p-2 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600"
             >
               <XMarkIcon className="w-6 h-6" />
             </button>
