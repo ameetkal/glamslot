@@ -14,7 +14,8 @@ import {
   ArrowRightOnRectangleIcon,
   CalendarIcon,
   ChartBarIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
@@ -22,6 +23,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import BottomNav from '@/components/layout/BottomNav'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { getPermissionsForRole } from '@/lib/permissions'
+import { getSettingsItems } from '@/lib/settingsUtils'
 
 interface NavigationItem {
   name: string
@@ -31,24 +33,12 @@ interface NavigationItem {
   isSignOut?: boolean
 }
 
-const settingsSubItems = [
-  { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
-  { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
-  { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
-  { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
-  { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
-  { name: 'Links', href: '/dashboard/settings/links', icon: GlobeAltIcon },
-  { name: 'Team Management', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
-]
+// We'll generate settings items dynamically using the shared utility
 
 const getNavigation = (userRole: string, userEmail?: string | null): NavigationItem[] => {
   const permissions = getPermissionsForRole(userRole)
   
-  // Helper function to check if user is a platform admin
-  const isPlatformAdmin = (email: string | null | undefined): boolean => {
-    if (!email) return false
-    return email === 'ameet@gofisherman.com' || email === 'ameetk96@gmail.com'
-  }
+
   
   const navigation: NavigationItem[] = []
   
@@ -59,25 +49,34 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
   
   // Add Settings if user can view settings
   if (permissions.canViewSettings) {
-    // Create settings sub-items, conditionally adding admin-specific items
-    const settingsItems: NavigationItem[] = [...settingsSubItems]
+    // Get settings items from shared utility
+    const baseSettingsItems = getSettingsItems(userRole, userEmail)
     
-    // Add Staff Schedule and Dashboard for admins
-    if (userRole === 'admin') {
-      settingsItems.push(
-        { name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon },
-        { name: 'Dashboard', href: '/dashboard', icon: HomeIcon }
-      )
-    }
+    // Convert to NavigationItem format with icons
+    const settingsItems: NavigationItem[] = baseSettingsItems.map(item => {
+      const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+        'Providers': UserGroupIcon,
+        'Services': WrenchScrewdriverIcon,
+        'Clients': UserGroupIcon,
+        'Notifications': BellIcon,
+        'Profile': UserIcon,
+        'Links': GlobeAltIcon,
+        'Team Management': ShieldCheckIcon,
+        'Billing': CreditCardIcon,
+        'Staff Schedule': CalendarIcon,
+        'Dashboard': HomeIcon,
+        'Platform Admin': ChartBarIcon,
+      }
+      
+      return {
+        ...item,
+        icon: iconMap[item.name] || UserIcon
+      }
+    })
     
-    // Add My Schedule for service providers
-    if (permissions.canManageOwnSchedule && userRole === 'service_provider') {
+    // Add My Schedule for service providers (if not already included)
+    if (permissions.canManageOwnSchedule && userRole === 'service_provider' && !settingsItems.find(item => item.name === 'My Schedule')) {
       settingsItems.push({ name: 'My Schedule', href: '/dashboard/schedule', icon: CalendarIcon })
-    }
-    
-    // Add Platform Admin tab only for platform admins
-    if (isPlatformAdmin(userEmail)) {
-      settingsItems.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
     }
     
     // Add Sign Out at the very bottom

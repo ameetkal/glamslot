@@ -25,9 +25,9 @@ interface SettingsModalProps {
   userEmail?: string | null
 }
 
-interface SettingsItem {
-  name: string
-  href: string
+import { SettingsItem, getSettingsItems } from '@/lib/settingsUtils'
+
+interface SettingsItemWithIcon extends SettingsItem {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   isSignOut?: boolean
 }
@@ -56,37 +56,34 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
     }
   }, [isOpen, onClose])
 
-  // Helper function to check if user is a platform admin
-  const isPlatformAdmin = (email: string | null | undefined): boolean => {
-    if (!email) return false
-    return email === 'ameet@gofisherman.com' || email === 'ameetk96@gmail.com'
-  }
+
 
   // Generate settings items based on user role
-  const getSettingsItems = (): SettingsItem[] => {
-    const items: SettingsItem[] = [
-      { name: 'Providers', href: '/dashboard/settings/providers', icon: UserGroupIcon },
-      { name: 'Services', href: '/dashboard/settings/services', icon: WrenchScrewdriverIcon },
-      { name: 'Clients', href: '/dashboard/settings/clients', icon: UserGroupIcon },
-      { name: 'Notifications', href: '/dashboard/settings/notifications', icon: BellIcon },
-      { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
-      { name: 'Links', href: '/dashboard/settings/links', icon: GlobeAltIcon },
-      { name: 'Team Management', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
-      { name: 'Billing', href: '/dashboard/settings/billing', icon: CreditCardIcon }, // Billing tab
-    ]
-
-    // Add Staff Schedule and Dashboard for admins
-    if (userRole === 'admin') {
-      items.push(
-        { name: 'Staff Schedule', href: '/dashboard/staff-schedule', icon: CalendarIcon },
-        { name: 'Dashboard', href: '/dashboard', icon: HomeIcon }
-      )
-    }
-
-    // Add Platform Admin tab only for platform admins
-    if (isPlatformAdmin(userEmail)) {
-      items.push({ name: 'Platform Admin', href: '/dashboard/settings/platform-admin', icon: ChartBarIcon })
-    }
+  const getSettingsItemsWithIcons = (): SettingsItemWithIcon[] => {
+    // Get base settings items from shared utility
+    const baseItems = getSettingsItems(userRole, userEmail)
+    
+    // Map to items with icons
+    const items: SettingsItemWithIcon[] = baseItems.map(item => {
+      const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+        'Providers': UserGroupIcon,
+        'Services': WrenchScrewdriverIcon,
+        'Clients': UserGroupIcon,
+        'Notifications': BellIcon,
+        'Profile': UserIcon,
+        'Links': GlobeAltIcon,
+        'Team Management': ShieldCheckIcon,
+        'Billing': CreditCardIcon,
+        'Staff Schedule': CalendarIcon,
+        'Dashboard': HomeIcon,
+        'Platform Admin': ChartBarIcon,
+      }
+      
+      return {
+        ...item,
+        icon: iconMap[item.name] || UserIcon
+      }
+    })
 
     // Add Sign Out at the very bottom
     items.push({ name: 'Sign Out', href: '#signout', icon: ArrowRightOnRectangleIcon, isSignOut: true })
@@ -103,7 +100,7 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
     }
   }
 
-  const handleItemClick = (item: SettingsItem) => {
+  const handleItemClick = (item: SettingsItemWithIcon) => {
     if (item.isSignOut) {
       handleLogout()
     } else {
@@ -141,7 +138,7 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Settings</h2>
             
             <div className="space-y-1">
-              {getSettingsItems().map((item) => {
+              {getSettingsItemsWithIcons().map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
                 
                 return (
