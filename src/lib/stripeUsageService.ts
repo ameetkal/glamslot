@@ -26,22 +26,17 @@ export class StripeUsageService {
       console.log('Quantity:', quantity)
       console.log('Timestamp:', timestamp || 'now')
       
-      // Temporarily disabled due to Stripe API changes
-      // const usageRecord = await stripe.subscriptionItems.createUsageRecord(
-      //   subscriptionItemId,
-      //   {
-      //     quantity,
-      //     timestamp: timestamp || Math.floor(Date.now() / 1000),
-      //     action: 'increment',
-      //   }
-      // )
+      // Use the new Stripe API for usage recording
+      const meterEvent = await stripe.billing.meterEvents.create({
+        event_name: 'request_submission', // Your existing Stripe meter name
+        payload: {
+          value: quantity.toString(),
+          stripe_customer_id: await this.getCustomerIdFromSubscription(subscriptionItemId)
+        }
+      })
       
-      const usageRecord = { id: 'temp', total_usage: 0 }
-      
-      console.log('✅ Usage recorded to Stripe:', usageRecord.id)
-      console.log('Total usage this period:', usageRecord.total_usage)
-      
-      return usageRecord
+      console.log('✅ Usage recorded to Stripe via meter event: created successfully')
+      return meterEvent
     } catch (error) {
       console.error('❌ Failed to record usage to Stripe:', error)
       throw error
@@ -49,25 +44,33 @@ export class StripeUsageService {
   }
 
   /**
+   * Get customer ID from subscription item ID
+   */
+  private static async getCustomerIdFromSubscription(subscriptionItemId: string): Promise<string> {
+    try {
+      // Get the subscription item to find the subscription
+      const subscriptionItem = await stripe.subscriptionItems.retrieve(subscriptionItemId)
+      
+      // Get the subscription to find the customer
+      const subscription = await stripe.subscriptions.retrieve(subscriptionItem.subscription as string)
+      
+      return subscription.customer as string
+    } catch (error) {
+      console.error('❌ Failed to get customer ID from subscription:', error)
+      throw error
+    }
+  }
+
+  /**
    * Get current usage for a subscription item
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static async getCurrentUsage(subscriptionItemId: string): Promise<number> {
     try {
-      // Temporarily disabled due to Stripe API changes
-      // const usageRecords = await stripe.subscriptionItems.listUsageRecordSummaries(
-      //   subscriptionItemId,
-      //   {
-      //     limit: 1,
-      //   }
-      // )
+      // Note: Stripe API method names may have changed
+      console.log('⚠️ Stripe usage retrieval temporarily disabled due to API changes')
+      console.log('Would get usage for subscription item:', subscriptionItemId)
       
-      const usageRecords = { data: [{ total_usage: 0 }] }
-      
-      if (usageRecords.data.length > 0) {
-        return usageRecords.data[0].total_usage
-      }
-      
+      // Return mock data for now
       return 0
     } catch (error) {
       console.error('❌ Failed to get current usage:', error)
@@ -79,26 +82,17 @@ export class StripeUsageService {
    * Get usage summary for a specific period
    */
   static async getUsageForPeriod(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     subscriptionItemId: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     startDate: Date,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     endDate: Date
   ): Promise<unknown[]> {
     try {
-      // Temporarily disabled due to Stripe API changes
-      // const usageRecords = await stripe.subscriptionItems.listUsageRecordSummaries(
-      //   subscriptionItemId,
-      //   {
-      //     start: Math.floor(startDate.getTime() / 1000),
-      //     end: Math.floor(endDate.getTime() / 1000),
-      //   }
-      // )
+      // Note: Stripe API method names may have changed
+      console.log('⚠️ Stripe usage period retrieval temporarily disabled due to API changes')
+      console.log('Would get usage for period:', { subscriptionItemId, startDate, endDate })
       
-      const usageRecords = { data: [] }
-      
-      return usageRecords.data
+      // Return mock data for now
+      return []
     } catch (error) {
       console.error('❌ Failed to get usage for period:', error)
       return []
