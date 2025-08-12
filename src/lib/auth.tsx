@@ -9,7 +9,11 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  PhoneAuthProvider,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  signInWithCredential
 } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from './firebase'
@@ -23,6 +27,9 @@ interface AuthContextType {
   logout: () => Promise<void>
   loginWithGoogle: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  loginWithPhone: (phoneNumber: string) => Promise<{ verificationId: string }>
+  verifyPhoneCode: (verificationId: string, code: string) => Promise<void>
+  signupWithPhone: (phoneNumber: string, userData: UserData) => Promise<{ verificationId: string }>
 }
 
 interface UserData {
@@ -123,6 +130,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const loginWithPhone = async (phoneNumber: string) => {
+    try {
+      // Create reCAPTCHA verifier
+      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'normal',
+        'callback': () => {
+          console.log('reCAPTCHA solved')
+        }
+      })
+
+      // Request SMS code
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier)
+      return { verificationId: confirmationResult.verificationId }
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Phone login failed')
+    }
+  }
+
+  const verifyPhoneCode = async (verificationId: string, code: string) => {
+    try {
+      // Create credential from verification ID and code
+      const credential = PhoneAuthProvider.credential(verificationId, code)
+      await signInWithCredential(auth, credential)
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Code verification failed')
+    }
+  }
+
+  const signupWithPhone = async (phoneNumber: string, userData: UserData) => {
+    try {
+      // Create reCAPTCHA verifier
+      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'normal',
+        'callback': () => {
+          console.log('reCAPTCHA solved')
+        }
+      })
+
+      // Request SMS code
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier)
+      
+      // Store user data temporarily for after verification
+      sessionStorage.setItem('pendingUserData', JSON.stringify(userData))
+      sessionStorage.setItem('verificationId', confirmationResult.verificationId)
+      
+      return { verificationId: confirmationResult.verificationId }
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : 'Phone signup failed')
+    }
+  }
+
   const createAccountForInvite = async (email: string, password: string) => {
     try {
       await createUserWithEmailAndPassword(auth, email, password)
@@ -152,7 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     createAccountForInvite,
     logout,
     loginWithGoogle,
-    resetPassword
+    resetPassword,
+    loginWithPhone,
+    verifyPhoneCode,
+    signupWithPhone
   }
 
   return (

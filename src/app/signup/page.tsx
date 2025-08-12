@@ -78,10 +78,10 @@ export default function SignupPage() {
         transition={{ duration: 0.5 }}
       >
         <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Booking Requests
+          GlamSlot
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          by Glammatic
+          By Glammatic
         </p>
       </motion.div>
 
