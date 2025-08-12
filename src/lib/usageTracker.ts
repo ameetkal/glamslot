@@ -68,37 +68,35 @@ export class UsageTracker {
   }
 
   /**
-   * Record usage to Stripe for active billing accounts
+   * Record usage to Stripe using salon's Stripe customer ID
    */
   private static async recordUsageToStripe(salonId: string): Promise<void> {
     try {
-      // Check if salon has active billing account
-      const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+      // Get the salon document to find Stripe customer ID
+      const { doc, getDoc } = await import('firebase/firestore')
       const { db } = await import('@/lib/firebase')
       
-      const billingRef = collection(db, 'billing_accounts')
-      const q = query(billingRef, where('salonId', '==', salonId), where('status', '==', 'active'), limit(1))
-      const snapshot = await getDocs(q)
+      const salonRef = doc(db, 'salons', salonId)
+      const salonDoc = await getDoc(salonRef)
       
-      if (snapshot.empty) {
-        console.log('ℹ️ No active billing account found for salon:', salonId)
+      if (!salonDoc.exists()) {
+        console.log('⚠️ Salon not found:', salonId)
         return
       }
       
-      const billingAccount = snapshot.docs[0].data()
-      console.log('🔍 Found active billing account, recording usage to Stripe...')
+      const salonData = salonDoc.data()
       
-      // Get subscription item ID and record usage
+      // Check if salon has Stripe customer ID
+      if (!salonData.stripeCustomerId) {
+        console.log('ℹ️ Salon has no Stripe customer ID, skipping usage recording')
+        return
+      }
+      
+      console.log('🔍 Found Stripe customer ID, recording usage to Stripe...')
+      
+      // Record usage directly to Stripe using the salon's customer ID
       const { StripeUsageService } = await import('./stripeUsageService')
-      const subscriptionItemId = await StripeUsageService.getSubscriptionItemId(billingAccount.subscriptionId)
-      
-      if (!subscriptionItemId) {
-        console.log('⚠️ Could not get subscription item ID for subscription:', billingAccount.subscriptionId)
-        return
-      }
-      
-      // Record 1 unit of usage (=$1) to Stripe
-      await StripeUsageService.recordUsage(subscriptionItemId, 1)
+      await StripeUsageService.recordUsageDirect(salonData.stripeCustomerId, 1)
       console.log('✅ Usage recorded to Stripe: $1 charged for this request')
       
     } catch (error) {

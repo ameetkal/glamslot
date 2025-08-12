@@ -5,7 +5,7 @@ export interface UsageRecord {
 
 export class StripeUsageService {
   /**
-   * Record usage to Stripe via server API
+   * Record usage to Stripe via server API (using subscription item ID)
    */
   static async recordUsage(
     subscriptionItemId: string,
@@ -38,6 +38,47 @@ export class StripeUsageService {
 
       const result = await response.json()
       console.log('✅ Usage recorded to Stripe via API:', result.message)
+      return result
+    } catch (error) {
+      console.error('❌ Failed to record usage to Stripe:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Record usage to Stripe directly using customer ID (simpler approach)
+   */
+  static async recordUsageDirect(
+    customerId: string,
+    quantity: number = 1,
+    timestamp?: number
+  ): Promise<unknown> {
+    try {
+      console.log('📊 === RECORDING USAGE TO STRIPE DIRECTLY ===')
+      console.log('Customer ID:', customerId)
+      console.log('Quantity:', quantity)
+      console.log('Timestamp:', timestamp || 'now')
+      
+      // Call the server API to record usage directly
+      const response = await fetch('/api/stripe/record-usage-direct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId,
+          quantity,
+          timestamp
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to record usage')
+      }
+
+      const result = await response.json()
+      console.log('✅ Usage recorded to Stripe directly:', result.message)
       return result
     } catch (error) {
       console.error('❌ Failed to record usage to Stripe:', error)

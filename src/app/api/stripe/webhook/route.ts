@@ -129,11 +129,22 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     }
     
     // Add to billing_accounts collection
-    const { addDoc, collection } = await import('firebase/firestore')
+    const { addDoc, collection, updateDoc, doc } = await import('firebase/firestore')
     const { db } = await import('@/lib/firebase')
     
     const docRef = await addDoc(collection(db, 'billing_accounts'), billingAccount)
     console.log('✅ Billing account created with ID:', docRef.id)
+    
+    // Also update the salon document with the Stripe customer ID
+    try {
+      await updateDoc(doc(db, 'salons', salonId), {
+        stripeCustomerId: customer.id,
+        updatedAt: new Date()
+      })
+      console.log('✅ Salon document updated with Stripe customer ID:', customer.id)
+    } catch (salonError) {
+      console.log('⚠️ Could not update salon document:', salonError)
+    }
     
   } catch (error) {
     console.error('❌ Error handling subscription created:', error)
