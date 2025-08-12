@@ -235,9 +235,12 @@ service cloud.firestore {
     // Usage metrics - salon owners and team members can manage their own usage data
     match /usage_metrics/{metricId} {
       allow read, write: if hasSalonAccess(resource.data.salonId);
-      allow create: if isAuthenticated() && 
+      allow create: if (isAuthenticated() && 
         request.resource.data.salonId != null && 
-        hasSalonAccess(request.resource.data.salonId);
+        hasSalonAccess(request.resource.data.salonId)) ||
+        // Allow server-side API calls to create usage metrics
+        (request.resource.data.salonId != null && 
+         request.resource.data.type != null);
     }
 
     // Allow queries to usage_metrics collection for dashboard
