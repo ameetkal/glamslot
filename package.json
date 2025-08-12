@@ -28,6 +28,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",
+    "stripe": "^18.4.0",
     "styled-jsx": "^5.1.7",
     "tailwind-merge": "^3.3.1",
     "twilio": "^5.7.1",

@@ -2,17 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bookingRequestService, salonService, providerService, teamService } from '@/lib/firebase/services'
 import { smsService } from '@/lib/smsService'
 import { sendEmail } from '@/lib/mailjet'
+import { UsageTracker } from '@/lib/usageTracker'
 
 console.log('=== BOOKING API ROUTE LOADED ===')
 
 export async function POST(request: NextRequest) {
-  console.log('=== BOOKING API CALLED ===')
+  console.log('🚀 === BOOKING API POST FUNCTION STARTED ===')
   
-  // Wrap everything in a try-catch to catch any early errors
   try {
-    console.log('=== PARSING REQUEST BODY ===')
-    const body = await request.json()
-    console.log('Received booking request:', body)
+    console.log('📥 === PARSING REQUEST BODY ===')
+    const body = await request.text()
+    console.log('📄 Request body received, length:', body.length)
+    
+    const bookingRequest = JSON.parse(body)
+    console.log('✅ JSON parsed successfully')
+    console.log('📋 Received booking request:', {
+      name: bookingRequest.name,
+      email: bookingRequest.email,
+      phone: bookingRequest.phone,
+      service: bookingRequest.service,
+      salonSlug: bookingRequest.salonSlug
+    })
     
     // Extract booking data
     const {
@@ -28,7 +38,7 @@ export async function POST(request: NextRequest) {
       submittedByProvider,
       providerId,
       providerName
-    } = body
+    } = bookingRequest
 
     // Validate required fields
     if (!service || !dateTimePreference || !name || !salonSlug) {
@@ -61,7 +71,7 @@ export async function POST(request: NextRequest) {
     console.log('Found salon:', salon.name)
 
     // Create booking request
-    const bookingRequest = {
+    const bookingData = {
       clientName: name,
       clientEmail: email || '',
       clientPhone: phone || '',
@@ -77,11 +87,41 @@ export async function POST(request: NextRequest) {
       ...(providerName && { providerName })
     }
 
-    console.log('Creating booking request:', bookingRequest)
+    console.log('Creating booking request:', bookingData)
     let requestId: string
     try {
-      requestId = await bookingRequestService.createBookingRequest(bookingRequest)
-      console.log('Booking request created with ID:', requestId)
+      requestId = await bookingRequestService.createBookingRequest(bookingData)
+      console.log('✅ Booking request created with ID:', requestId)
+      
+      console.log('🔍 ABOUT TO START USAGE TRACKING...')
+      
+      console.log('🔍 ENTERING USAGE TRACKING TRY-CATCH...')
+      
+      // Track usage for billing
+      try {
+        console.log('=== USAGE TRACKING START ===')
+        console.log('Attempting to track usage for salon:', salon.id, 'request:', requestId)
+        console.log('UsageTracker available:', typeof UsageTracker)
+        console.log('UsageTracker.trackUsage available:', typeof UsageTracker.trackUsage)
+        
+        const usageId = await UsageTracker.trackUsage(
+          salon.id,
+          'booking',
+          'system', // Since this is a system-generated tracking
+          requestId
+        )
+        console.log('✅ Usage tracked successfully with ID:', usageId)
+        console.log('=== USAGE TRACKING SUCCESS ===')
+      } catch (usageError: unknown) {
+        console.error('❌ Failed to track usage for booking request:', usageError)
+        console.error('Usage error details:', {
+          message: usageError instanceof Error ? usageError.message : 'Unknown error',
+          code: usageError instanceof Error && 'code' in usageError ? String(usageError.code) : 'No code',
+          stack: usageError instanceof Error ? usageError.stack : 'No stack'
+        })
+        console.error('=== USAGE TRACKING FAILED ===')
+        // Don't fail the booking request if usage tracking fails
+      }
     } catch (error) {
       console.error('Error creating booking request:', error)
       console.error('Booking request data:', bookingRequest)

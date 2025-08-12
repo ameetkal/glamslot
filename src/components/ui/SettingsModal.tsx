@@ -13,7 +13,8 @@ import {
   CalendarIcon,
   HomeIcon,
   ChartBarIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/auth'
 
@@ -71,6 +72,7 @@ export default function SettingsModal({ isOpen, onClose, userRole, userEmail }: 
       { name: 'Profile', href: '/dashboard/settings/profile', icon: UserIcon },
       { name: 'Links', href: '/dashboard/settings/links', icon: GlobeAltIcon },
       { name: 'Team Management', href: '/dashboard/settings/admin', icon: ShieldCheckIcon },
+      { name: 'Billing', href: '/dashboard/settings/billing', icon: CreditCardIcon }, // Billing tab
     ]
 
     // Add Staff Schedule and Dashboard for admins

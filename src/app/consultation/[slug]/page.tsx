@@ -7,6 +7,7 @@ import { storage } from '@/lib/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { UsageTracker } from '@/lib/usageTracker'
 
 interface ConsultationPageProps {
   params: Promise<{ slug: string }>
@@ -311,7 +312,21 @@ function ConsultationContent({ slug }: { slug: string }) {
       }
 
       // Save consultation to Firestore
-      await addDoc(collection(db, 'consultations'), submission)
+      const consultationRef = await addDoc(collection(db, 'consultations'), submission)
+      
+      // Track usage for billing
+      try {
+        await UsageTracker.trackUsage(
+          salon.id,
+          'consultation',
+          'system', // Since this is a system-generated tracking
+          consultationRef.id
+        )
+        console.log('Usage tracked for consultation submission')
+      } catch (usageError) {
+        console.error('Failed to track usage for consultation:', usageError)
+        // Don't fail the consultation if usage tracking fails
+      }
 
       // Send notification (same system as booking requests)
       try {
