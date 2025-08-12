@@ -40,23 +40,23 @@ export async function POST(request: NextRequest) {
     // Create or retrieve Stripe customer
     let customer: Stripe.Customer
     try {
-      // Check if customer already exists
-      const existingCustomers = await stripe.customers.list({
-        email: email,
-        limit: 1,
-      })
+                 // Check if customer already exists
+           const existingCustomers = await stripe.customers.list({
+             email: email,
+             limit: 1,
+           })
       
       if (existingCustomers.data.length > 0) {
         customer = existingCustomers.data[0]
         console.log('✅ Existing customer found:', customer.id)
         
-        // Update customer metadata if needed
-        if (customer.metadata.salonId !== salonId) {
-          customer = await stripe.customers.update(customer.id, {
-            metadata: { salonId }
-          })
-          console.log('✅ Customer metadata updated')
-        }
+                       // Update customer metadata if needed
+               if (customer.metadata.salonId !== salonId) {
+                 customer = await stripe.customers.update(customer.id, {
+                   metadata: { salonId }
+                 })
+                 console.log('✅ Customer metadata updated')
+               }
       } else {
         // Create new customer
         customer = await stripe.customers.create({
