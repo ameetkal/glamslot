@@ -8,6 +8,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
+// Handle GET requests (for testing)
+export async function GET() {
+  return NextResponse.json({ 
+    message: 'Stripe webhook endpoint is working. Use POST for webhook events.',
+    timestamp: new Date().toISOString()
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
