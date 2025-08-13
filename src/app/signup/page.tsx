@@ -88,7 +88,7 @@ export default function SignupPage() {
         businessType: 'salon'
       })
       
-      router.push('/dashboard/requests')
+      router.push('/setup-wizard')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Invalid SMS code')
     } finally {

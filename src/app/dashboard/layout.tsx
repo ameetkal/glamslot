@@ -20,6 +20,7 @@ import {
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { SetupWizardGuard } from '@/components/auth/SetupWizardGuard'
 import BottomNav from '@/components/layout/BottomNav'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { getPermissionsForRole } from '@/lib/permissions'
@@ -330,7 +331,9 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      <SetupWizardGuard>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </SetupWizardGuard>
     </AuthGuard>
   )
 } 

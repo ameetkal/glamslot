@@ -58,6 +58,10 @@ export default function LoginPage() {
     
     try {
       await loginWithGoogle()
+      
+      // After Google sign-in, check if user has a salon document
+      // If not, they're a new user and need to go through setup
+      // This will be handled by the auth state change
       router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')

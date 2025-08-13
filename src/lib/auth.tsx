@@ -26,12 +26,13 @@ interface AuthContextType {
   signup: (email: string, password: string, userData: UserData) => Promise<void>
   createAccountForInvite: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  loginWithGoogle: () => Promise<void>
+  loginWithGoogle: () => Promise<{ isNewUser: boolean }>
   resetPassword: (email: string) => Promise<void>
   loginWithPhone: (phoneNumber: string) => Promise<{ verificationId: string }>
   verifyPhoneCode: (verificationId: string, code: string) => Promise<void>
   signupWithPhone: (phoneNumber: string, userData: UserData) => Promise<{ verificationId: string }>
   createSalonForPhoneUser: (userData: UserData) => Promise<void>
+  createSalonForGoogleUser: () => Promise<void>
   // SuperAdmin salon context switching
   selectedSalonId: string | null
   setSelectedSalonId: (salonId: string | null) => void
@@ -57,9 +58,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [selectedSalonData, setSelectedSalonData] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       setLoading(false)
+      
+      // If this is a new Google user, check if they have a salon document
+      if (user && user.providerData.some(provider => provider.providerId === 'google.com')) {
+        try {
+          const { doc, getDoc } = await import('firebase/firestore')
+          const { db } = await import('@/lib/firebase')
+          
+          const salonRef = doc(db, 'salons', user.uid)
+          const salonDoc = await getDoc(salonRef)
+          
+          if (!salonDoc.exists()) {
+            // New Google user without salon, create one and redirect to setup wizard
+            await createSalonForGoogleUser()
+            // The redirect will be handled by the component
+          }
+        } catch (error) {
+          console.error('Error checking salon for Google user:', error)
+        }
+      }
     })
 
     return unsubscribe
@@ -147,6 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider()
       await signInWithPopup(auth, provider)
+      
+      // We can't detect new users directly from the sign-in result
+      // Instead, we'll check if the user has a salon document after sign-in
+      // This will be handled in the component's useEffect
+      return { isNewUser: false }
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'Google login failed')
     }
@@ -270,6 +295,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const createSalonForGoogleUser = async () => {
+    try {
+      if (!auth.currentUser) throw new Error('No authenticated user')
+      
+      // Create a default business name from user's display name or email
+      const businessName = auth.currentUser.displayName || 
+        auth.currentUser.email?.split('@')[0] || 
+        'My Business'
+      
+      // Create a clean slug from business name
+      const businessSlug = businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .trim()
+
+      // Create salon document for Google user
+      const salonData = {
+        id: auth.currentUser.uid,
+        name: businessName,
+        slug: businessSlug,
+        bookingUrl: `https://glamslot.vercel.app/booking/${businessSlug}`,
+        ownerName: auth.currentUser.displayName || 'Business Owner',
+        ownerEmail: auth.currentUser.email,
+        ownerPhone: null, // Will be collected in setup wizard
+        businessType: 'salon', // Default, can be changed in setup wizard
+        settings: {
+          notifications: {
+            email: true, // Enable email notifications since we have email
+            sms: false // Will be enabled if phone is added in setup wizard
+          },
+          booking: {
+            requireConsultation: false,
+            allowWaitlist: true
+          }
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      await setDoc(doc(db, 'salons', auth.currentUser.uid), salonData)
+      
+      // Create team member record for the salon owner (admin role)
+      const teamMemberData = {
+        id: auth.currentUser.uid,
+        name: auth.currentUser.displayName || 'Business Owner',
+        email: auth.currentUser.email,
+        phone: null, // Will be collected in setup wizard
+        role: 'admin', // Salon owners get admin role by default
+        status: 'active',
+        invitedAt: new Date().toISOString(),
+        joinedAt: new Date().toISOString(),
+        salonId: auth.currentUser.uid,
+        userId: auth.currentUser.uid,
+        permissions: ROLE_PERMISSIONS.admin // Full admin permissions
+      }
+      
+      await setDoc(doc(db, 'teamMembers', auth.currentUser.uid), teamMemberData)
+      console.log('✅ Salon and admin team member created for Google user')
+    } catch (error: unknown) {
+      console.error('❌ Error creating salon for Google user:', error)
+      throw new Error('Failed to create salon account')
+    }
+  }
+
   const createAccountForInvite = async (email: string, password: string) => {
     try {
       await createUserWithEmailAndPassword(auth, email, password)
@@ -346,6 +437,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyPhoneCode,
     signupWithPhone,
     createSalonForPhoneUser,
+    createSalonForGoogleUser,
     // SuperAdmin salon context switching
     selectedSalonId,
     setSelectedSalonId,

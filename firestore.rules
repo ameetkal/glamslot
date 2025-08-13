@@ -86,12 +86,19 @@ service cloud.firestore {
     // Allow public queries to providers collection for Glampage
     match /providers {
       allow list: if true;
+      
+      // Allow SuperAdmins to query all providers (for context switching)
+      allow list: if isPlatformAdmin();
+      
+      // Allow queries filtered by salonId for SuperAdmins
+      allow list: if isPlatformAdmin() && 
+        request.query.limit <= 1000; // Prevent unlimited queries
     }
 
     // Services - allow public access for Glampage
     match /services/{serviceId} {
       // Salon owners and team members can manage
-      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow read, write: if hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
@@ -106,6 +113,13 @@ service cloud.firestore {
     // Allow public queries to services collection for Glampage
     match /services {
       allow list: if true;
+      
+      // Allow SuperAdmins to query all services (for context switching)
+      allow list: if isPlatformAdmin();
+      
+      // Allow queries filtered by salonId for SuperAdmins
+      allow list: if isPlatformAdmin() && 
+        request.query.limit <= 1000; // Prevent unlimited queries
     }
 
     // Booking requests - salon owners and team members can manage their salon's requests
@@ -211,6 +225,19 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
+    }
+
+    // Allow queries to clients collection for dashboard
+    match /clients {
+      // Allow authenticated users to list clients
+      allow list: if isAuthenticated();
+      
+      // Allow SuperAdmins to query all clients (for context switching)
+      allow list: if isPlatformAdmin();
+      
+      // Allow queries filtered by salonId for SuperAdmins
+      allow list: if isPlatformAdmin() && 
+        request.query.limit <= 1000; // Prevent unlimited queries
     }
 
     // Shift change requests - salon owners and team members can manage
