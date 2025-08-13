@@ -36,7 +36,8 @@ service cloud.firestore {
     function isPlatformAdmin() {
       return isAuthenticated() && 
         (request.auth.email == "ameet@gofisherman.com" ||
-         request.auth.email == "ameetk96@gmail.com");
+         request.auth.email == "ameetk96@gmail.com" ||
+         request.auth.email == "nick@gofisherman.com");
     }
 
     // Salon documents - allow public access for Glampage
@@ -70,7 +71,7 @@ service cloud.firestore {
     // Providers - allow public access for Glampage
     match /providers/{providerId} {
       // Salon owners and team members can manage
-      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow read, write: if hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
@@ -114,11 +115,21 @@ service cloud.firestore {
       
       // Allow any authenticated user to read (for admin dashboard)
       allow read: if isAuthenticated();
+      
+      // Allow SuperAdmins to read any salon's requests (for context switching)
+      allow read: if isPlatformAdmin();
     }
 
     // Allow queries to bookingRequests collection for dashboard
     match /bookingRequests {
       allow list: if isAuthenticated();
+      
+      // Allow SuperAdmins to query all booking requests (for context switching)
+      allow list: if isPlatformAdmin();
+      
+      // Allow queries filtered by salonId for SuperAdmins
+      allow list: if isPlatformAdmin() && 
+        request.query.limit <= 1000; // Prevent unlimited queries
     }
 
     // Team members - salon owners can manage their team, team members can read their own record
@@ -126,7 +137,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isSalonOwner(resource.data.salonId) || 
         request.auth.uid == memberId
-      );
+      ) || isPlatformAdmin();
       allow write: if isSalonOwner(resource.data.salonId);
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
@@ -153,11 +164,18 @@ service cloud.firestore {
     // Allow queries to consultations collection for dashboard
     match /consultations {
       allow list: if isAuthenticated();
+      
+      // Allow SuperAdmins to query all consultations (for context switching)
+      allow list: if isPlatformAdmin();
+      
+      // Allow queries filtered by salonId for SuperAdmins
+      allow list: if isPlatformAdmin() && 
+        request.query.limit <= 1000; // Prevent unlimited queries
     }
 
     // Invitations - salon owners can manage invitations
     match /invitations/{invitationId} {
-      allow read, write: if isSalonOwner(resource.data.salonId);
+      allow read, write: if isSalonOwner(resource.data.salonId) || isPlatformAdmin();
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         isSalonOwner(request.resource.data.salonId);
@@ -189,7 +207,7 @@ service cloud.firestore {
 
     // Clients - salon owners and team members can manage
     match /clients/{clientId} {
-      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow read, write: if hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
       allow create: if isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId);
@@ -216,7 +234,7 @@ service cloud.firestore {
       allow create: if true; // Allow public creation for analytics
       allow read, write: if isAuthenticated() && 
         resource.data.salonId != null && 
-        hasSalonAccess(resource.data.salonId);
+        hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
     }
 
     // Sessions - allow creation for analytics and reading by salon owners/team members
@@ -224,7 +242,7 @@ service cloud.firestore {
       allow create: if true; // Allow public creation for analytics
       allow read, write: if isAuthenticated() && 
         resource.data.salonId != null && 
-        hasSalonAccess(resource.data.salonId);
+        hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
     }
 
     // Allow public queries to sessions collection for analytics
@@ -234,7 +252,7 @@ service cloud.firestore {
 
     // Usage metrics - salon owners and team members can manage their own usage data
     match /usage_metrics/{metricId} {
-      allow read, write: if hasSalonAccess(resource.data.salonId);
+      allow read, write: if hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
       allow create: if (isAuthenticated() && 
         request.resource.data.salonId != null && 
         hasSalonAccess(request.resource.data.salonId)) ||
@@ -250,7 +268,7 @@ service cloud.firestore {
 
     // Billing accounts - salon owners and team members can read, only owners can write
     match /billing_accounts/{accountId} {
-      allow read: if hasSalonAccess(resource.data.salonId);
+      allow read: if hasSalonAccess(resource.data.salonId) || isPlatformAdmin();
       allow write: if isSalonOwner(resource.data.salonId);
       allow create: if (isAuthenticated() && 
         request.resource.data.salonId != null && 

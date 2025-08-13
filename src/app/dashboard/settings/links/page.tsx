@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { Salon } from '@/types/firebase'
 import BookingUrlCard from '@/components/ui/BookingUrlCard'
@@ -20,29 +21,39 @@ const generateSlug = (businessName: string): string => {
 
 export default function LinksPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const [salonData, setSalonData] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchSalonData = async () => {
-      if (!user) {
-        console.log('❌ No user found')
+      if (!user || !contextSalonId) {
+        console.log('❌ No user or contextSalonId found')
         return
       }
 
       try {
         setLoading(true)
         
-        // First, check if user is a team member
-        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
-        let salonId = user.uid // Default to user.uid for salon owners
+        // For SuperAdmin context switching, use the selected salon ID
+        // For regular users, determine their salon ID
+        let salonId = contextSalonId;
         
-        if (userTeamMember) {
-          // User is a team member, use their salonId
-          salonId = userTeamMember.salonId
-          console.log('👥 User is a team member, using salonId:', salonId)
+        if (!isImpersonating) {
+          // Regular user: check if they're a team member
+          const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+          
+          if (userTeamMember) {
+            // User is a team member, use their salonId
+            salonId = userTeamMember.salonId
+            console.log('👥 User is a team member, using salonId:', salonId)
+          } else {
+            // User is a salon owner, use their own ID
+            salonId = user.uid
+            console.log('👤 User is a salon owner, using salonId:', salonId)
+          }
         } else {
-          console.log('👤 User is a salon owner, using salonId:', salonId)
+          console.log('👑 SuperAdmin impersonating salon:', salonId)
         }
 
         console.log('🔍 Fetching salon data for salonId:', salonId)
@@ -142,7 +153,7 @@ export default function LinksPage() {
     }
 
     fetchSalonData()
-  }, [user])
+  }, [user, contextSalonId, isImpersonating])
 
   // Generate Glampage URL
   const getGlampageUrl = () => {
@@ -204,6 +215,11 @@ export default function LinksPage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">Links</h1>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

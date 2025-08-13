@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { 
@@ -54,6 +55,7 @@ interface Salon {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     appointmentsCreated: 0,
     requestedNotFulfilled: 0,
@@ -75,16 +77,22 @@ export default function DashboardPage() {
       setLoading(true)
 
       try {
-        // First, check if user is a team member
-        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
-        let salonId = user.uid // Default to user.uid for salon admins
+        // Use context salon ID if SuperAdmin is impersonating, otherwise determine user's salon
+        let salonId = contextSalonId || user.uid
         
-        if (userTeamMember) {
-          // User is a team member, use their salonId
-          salonId = userTeamMember.salonId
-          console.log('User is a team member, using salonId:', salonId)
+        if (!contextSalonId) {
+          // Only check team member status if not impersonating
+          const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
+          
+          if (userTeamMember) {
+            // User is a team member, use their salonId
+            salonId = userTeamMember.salonId
+            console.log('User is a team member, using salonId:', salonId)
+          } else {
+            console.log('User is a salon admin, using user.uid as salonId')
+          }
         } else {
-          console.log('User is a salon admin, using user.uid as salonId')
+          console.log('SuperAdmin impersonating salon:', salonId)
         }
 
         // Fetch salon data - first try by user ID, then by ownerEmail
@@ -236,6 +244,11 @@ export default function DashboardPage() {
             <p className="mt-2 text-sm text-gray-700 mb-4">
               Overview of your salon&apos;s booking activity and performance
             </p>
+            {isImpersonating && (
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+              </div>
+            )}
           </div>
         </div>
 

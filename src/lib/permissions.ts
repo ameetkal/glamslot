@@ -3,7 +3,7 @@ import { TeamMemberPermissions, RoleDefinition } from '@/types/firebase'
 // Default permissions for each role
 export const ROLE_PERMISSIONS: Record<string, TeamMemberPermissions> = {
   admin: {
-    // Dashboard Access - Full access (everything owner had)
+    // Dashboard Access - Full access to salon
     canViewRequests: true,
     canManageRequests: true,
     canViewClients: true,
@@ -11,7 +11,7 @@ export const ROLE_PERMISSIONS: Record<string, TeamMemberPermissions> = {
     canViewLoyalty: true,
     canManageLoyalty: true,
     
-    // Settings Access - Full access (everything owner had)
+    // Settings Access - Full access to salon
     canViewSettings: true,
     canManageServices: true,
     canManageProviders: true,
@@ -19,20 +19,20 @@ export const ROLE_PERMISSIONS: Record<string, TeamMemberPermissions> = {
     canManageTeam: true,
     canManageSalon: true,
     
-    // Admin Access - Full access (everything owner had)
+    // Admin Access - Full access to salon
     canViewAnalytics: true,
     canManageBilling: true,
     canAccessAdmin: true,
     
-    // Provider-specific permissions (everything owner had)
+    // Provider-specific permissions - Full access
     canManageOwnSchedule: true,
     canViewOwnBookings: true,
     canManageOwnServices: true,
   },
   
   service_provider: {
-    // Dashboard Access - Limited to own bookings
-    canViewRequests: true, // Allow service providers to view their own bookings as "Requests"
+    // Dashboard Access - Limited to own work
+    canViewRequests: true, // Can view their own bookings as "Requests"
     canManageRequests: false,
     canViewClients: false,
     canManageClients: false,
@@ -52,7 +52,7 @@ export const ROLE_PERMISSIONS: Record<string, TeamMemberPermissions> = {
     canManageBilling: false,
     canAccessAdmin: false,
     
-    // Provider-specific permissions - Full access
+    // Provider-specific permissions - Full access to own work
     canManageOwnSchedule: true,
     canViewOwnBookings: true,
     canManageOwnServices: true,

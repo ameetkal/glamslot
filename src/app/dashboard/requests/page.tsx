@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { collection, query, where, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { teamService, consultationService } from '@/lib/firebase/services'
@@ -54,6 +55,7 @@ interface BookingData {
 
 export default function RequestsPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, isImpersonating, isPlatformAdmin, selectedSalonId } = useSalonContext()
   const [requests, setRequests] = useState<UnifiedRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null)
@@ -64,8 +66,10 @@ export default function RequestsPage() {
       if (!user) return
 
       try {
-        // Get the user's salon ID - check if they're a team member first
-        let salonId = user.uid // Default to user.uid for salon owners
+        // Use salon context (either selected salon for SuperAdmin or user's own salon)
+        const salonId = contextSalonId || user.uid
+        
+        // Get the user's role - check if they're a team member first
         let userTeamMember = null
         let userRole = 'admin' // Default to admin
         
@@ -73,7 +77,6 @@ export default function RequestsPage() {
           userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
           
           if (userTeamMember) {
-            salonId = userTeamMember.salonId
             // Determine user role
             if (userTeamMember.role === 'owner' || userTeamMember.role === 'admin' || userTeamMember.role === 'front_desk') {
               userRole = 'admin'
@@ -83,7 +86,6 @@ export default function RequestsPage() {
           }
         } catch (teamMemberError) {
           console.error('Error fetching team member data:', teamMemberError)
-          salonId = user.uid
         }
         
         if (userRole === 'service_provider') {
@@ -145,27 +147,57 @@ export default function RequestsPage() {
           setRequests(transformedBookings)
         } else {
           // For admins, show all booking requests AND consultation submissions
-          const [bookingRequests, consultationSubmissions] = await Promise.all([
-            // Fetch booking requests
-            getDocs(query(
+          // Fetch booking requests and consultation submissions separately for better error handling
+          let bookingRequests: (BookingRequest & { requestType: 'booking' })[] = []
+          let consultationSubmissions: (ConsultationSubmission & { requestType: 'consultation' })[] = []
+          
+          try {
+            console.log('🔍 Fetching booking requests for salon:', salonId)
+            const bookingSnapshot = await getDocs(query(
               collection(db, 'bookingRequests'),
               where('salonId', '==', salonId)
-            )).then(snapshot => 
-              snapshot.docs.map(doc => ({
+            ))
+            bookingRequests = bookingSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              requestType: 'booking' as const
+            })) as (BookingRequest & { requestType: 'booking' })[]
+            console.log('✅ Booking requests fetched:', bookingRequests.length)
+          } catch (bookingError) {
+            console.error('❌ Error fetching booking requests:', bookingError)
+            throw new Error(`Failed to fetch booking requests: ${bookingError}`)
+          }
+          
+          try {
+            console.log('🔍 Fetching consultation submissions for salon:', salonId)
+            // For SuperAdmin context switching, temporarily skip consultations to avoid permission issues
+            if (isPlatformAdmin && selectedSalonId) {
+              console.log('⚠️ Skipping consultations for SuperAdmin context switching (permission issue)')
+              consultationSubmissions = []
+            } else {
+              // Query consultations directly instead of using the service
+              const consultationQuery = query(
+                collection(db, 'consultations'),
+                where('salonId', '==', salonId)
+              )
+              const consultationSnapshot = await getDocs(consultationQuery)
+              const consultations = consultationSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                requestType: 'booking' as const
-              })) as (BookingRequest & { requestType: 'booking' })[]
-            ),
-            
-            // Fetch consultation submissions
-            consultationService.getConsultationSubmissions(salonId).then(consultations =>
-              consultations.map(consultation => ({
-                ...consultation,
-                requestType: 'consultation' as const
-              }))
-            )
-          ])
+                requestType: 'consultation' as const,
+                // Convert Firestore Timestamps to Date objects
+                submittedAt: doc.data().submittedAt?.toDate() || new Date(),
+                createdAt: doc.data().createdAt?.toDate() || new Date(),
+                updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+              })) as (ConsultationSubmission & { requestType: 'consultation' })[]
+              
+              consultationSubmissions = consultations
+              console.log('✅ Consultation submissions fetched:', consultationSubmissions.length)
+            }
+          } catch (consultationError) {
+            console.error('❌ Error fetching consultation submissions:', consultationError)
+            throw new Error(`Failed to fetch consultation submissions: ${consultationError}`)
+          }
           
           // Combine both types of requests
           const allRequests: UnifiedRequest[] = [
@@ -224,7 +256,7 @@ export default function RequestsPage() {
     }
 
     fetchRequests()
-  }, [user])
+  }, [user, contextSalonId])
 
   const updateRequestStatus = async (requestId: string, status: 'booked' | 'not-booked' | 'pending' | 'contacted' | 'provider-requested', e?: React.MouseEvent) => {
     e?.stopPropagation() // Prevent card expansion when clicking buttons
@@ -657,6 +689,11 @@ export default function RequestsPage() {
             <p className="mt-2 text-sm text-gray-700">
               Manage and respond to client booking requests
             </p>
+            {isImpersonating && (
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <span>👁️ Viewing as SuperAdmin</span>
+              </div>
+            )}
           </div>
         </div>
 

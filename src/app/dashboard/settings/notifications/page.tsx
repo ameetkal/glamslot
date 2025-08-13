@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { useSalonContext } from '@/lib/hooks/useSalonContext';
 import { salonService } from '@/lib/firebase/services';
 import { PhoneIcon, PlusIcon, XMarkIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
@@ -111,6 +112,7 @@ function formatPhoneForSMS(phone: string): string {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext();
   const [salonNotifications, setSalonNotifications] = useState<SalonNotifications>(initialSalonNotifications);
   const [clientNotifications, setClientNotifications] = useState<ClientNotifications>(initialClientNotifications);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
@@ -123,17 +125,17 @@ export default function NotificationsPage() {
 
   // Save notification settings to Firestore automatically
   const saveNotificationSettings = async () => {
-    if (!user || loading) return;
+    if (!user || !contextSalonId || loading) return;
     
     try {
-      console.log('Saving notification settings:', {
+      console.log('Saving notification settings for salon:', contextSalonId, {
         email: salonNotifications.email,
         sms: salonNotifications.sms,
         smsRecipients: salonNotifications.smsRecipients,
         emailRecipients: salonNotifications.emailRecipients
       });
       
-      await salonService.updateSalonSettings(user.uid, {
+      await salonService.updateSalonSettings(contextSalonId, {
         notifications: {
           email: salonNotifications.email,
           sms: salonNotifications.sms,
@@ -159,11 +161,12 @@ export default function NotificationsPage() {
   // Load existing notification settings from Firestore
   useEffect(() => {
     const loadNotificationSettings = async () => {
-      if (!user) return;
+      if (!user || !contextSalonId) return;
       
       try {
         setLoading(true);
-        const salon = await salonService.getSalon(user.uid);
+        console.log('🔍 Fetching notification settings for salon:', contextSalonId);
+        const salon = await salonService.getSalon(contextSalonId);
         
         if (salon?.settings?.notifications) {
           const notifications = salon.settings.notifications;
@@ -222,7 +225,7 @@ export default function NotificationsPage() {
     };
 
     loadNotificationSettings();
-  }, [user]);
+  }, [user, contextSalonId]);
 
   function handleSalonToggle(key: keyof Omit<SalonNotifications, 'smsRecipients' | 'emailRecipients'>) {
     setSalonNotifications((prev) => {
@@ -554,7 +557,14 @@ export default function NotificationsPage() {
       ) : (
         <>
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
+              {isImpersonating && (
+                <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="max-w-4xl mx-auto space-y-6">

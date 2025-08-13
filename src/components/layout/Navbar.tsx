@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth'
 import { getSettingsItems } from '@/lib/settingsUtils'
 import { useState, useEffect } from 'react'
 import { salonService, teamService } from '@/lib/firebase/services'
+import { BusinessSelector } from '@/components/ui/BusinessSelector'
 
 interface NavbarProps {
   className?: string
@@ -106,6 +107,9 @@ export default function Navbar({ className = '' }: NavbarProps) {
                   {item.name}
                 </Link>
               ))}
+              
+              {/* SuperAdmin Business Selector */}
+              <BusinessSelector />
               
               {/* Settings dropdown */}
               <div className="relative">

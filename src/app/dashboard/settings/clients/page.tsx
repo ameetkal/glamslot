@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { bookingRequestService, clientService } from '@/lib/firebase/services'
 import { BookingRequest } from '@/types/firebase'
 import { 
@@ -44,6 +45,7 @@ interface Client {
 
 export default function ClientsPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const [clients, setClients] = useState<Client[]>([])
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,19 +57,19 @@ export default function ClientsPage() {
 
   const fetchClients = useCallback(async () => {
     console.log('fetchClients called, user:', user?.uid || 'no user')
-    if (!user) {
-      console.log('No user found, returning early')
+    if (!user || !contextSalonId) {
+      console.log('No user or contextSalonId found, returning early')
       return
     }
 
     try {
       setLoading(true)
-      console.log('Fetching clients for salon:', user.uid)
+      console.log('🔍 Fetching clients for salon:', contextSalonId)
       
       // Fetch both booking requests and direct clients
       const [bookingRequests, loyaltyClients] = await Promise.all([
-        bookingRequestService.getBookingRequests(user.uid),
-        clientService.getClients(user.uid)
+        bookingRequestService.getBookingRequests(contextSalonId),
+        clientService.getClients(contextSalonId)
       ])
       
       console.log('Booking requests found:', bookingRequests.length)
@@ -193,14 +195,14 @@ export default function ClientsPage() {
   }, [user])
 
   useEffect(() => {
-    console.log('useEffect triggered, user:', user?.uid || 'no user')
-    if (user) {
-      console.log('User found, calling fetchClients')
+    console.log('useEffect triggered, user:', user?.uid || 'no user', 'contextSalonId:', contextSalonId)
+    if (user && contextSalonId) {
+      console.log('User and contextSalonId found, calling fetchClients')
       fetchClients()
     } else {
-      console.log('No user, not calling fetchClients')
+      console.log('No user or contextSalonId, not calling fetchClients')
     }
-  }, [user, fetchClients])
+  }, [user, contextSalonId, fetchClients])
 
   const toggleExpanded = (clientId: string) => {
     setExpandedClient(expandedClient === clientId ? null : clientId)
@@ -289,6 +291,11 @@ export default function ClientsPage() {
             <p className="mt-2 text-sm text-gray-700">
               View and manage your client list, including appointment history and spending
             </p>
+            {isImpersonating && (
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+              </div>
+            )}
           </div>
           <div className="mt-4 sm:ml-16 sm:mt-0">
             <Button

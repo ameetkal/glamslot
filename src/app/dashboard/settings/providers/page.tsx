@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useSalonContext } from '@/lib/hooks/useSalonContext';
 import { providerService, serviceService, teamService } from '@/lib/firebase/services';
 import { Provider, Service, ProviderService, TeamMember } from '@/types/firebase';
 import { getAvailableRoles, getPermissionsForRole } from '@/lib/permissions';
@@ -9,6 +10,7 @@ import DraggableList from '@/components/ui/DraggableList';
 
 export default function ProvidersPage() {
   const { user } = useAuth();
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,31 +31,33 @@ export default function ProvidersPage() {
   const [filteredTeamMembers, setFilteredTeamMembers] = useState<TeamMember[]>([]);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !contextSalonId) return;
     
     try {
       setLoading(true);
+      console.log('🔍 Fetching providers data for salon:', contextSalonId);
       const [providersData, servicesData, teamMembersData] = await Promise.all([
-        providerService.getProviders(user.uid),
-        serviceService.getServices(user.uid),
-        teamService.getTeamMembers(user.uid)
+        providerService.getProviders(contextSalonId),
+        serviceService.getServices(contextSalonId),
+        teamService.getTeamMembers(contextSalonId)
       ]);
       setProviders(providersData);
       setServices(servicesData);
       setTeamMembers(teamMembersData);
+      console.log('✅ Providers data fetched:', { providers: providersData.length, services: servicesData.length, teamMembers: teamMembersData.length });
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, contextSalonId]);
 
   useEffect(() => {
-    if (user) {
+    if (user && contextSalonId) {
       fetchData();
     }
-  }, [user, fetchData]);
+  }, [user, contextSalonId, fetchData]);
 
   function openAddModal() {
     setEditing({
@@ -61,7 +65,7 @@ export default function ProvidersPage() {
       name: '',
       email: '',
       phone: '',
-      salonId: user?.uid || '',
+      salonId: contextSalonId || '',
       availability: {},
       services: [],
       isTeamMember: false,
@@ -153,7 +157,7 @@ export default function ProvidersPage() {
           phone: inviteForm.phone,
           role: inviteForm.role,
           permissions: permissions,
-          salonId: user.uid,
+          salonId: contextSalonId,
           invitedBy: user.email
         }),
       });
@@ -412,6 +416,11 @@ export default function ProvidersPage() {
           <p className="text-sm text-gray-600 mt-1">
             Add service providers with their name and services. Contact details can be added when they join the platform.
           </p>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
         </div>
         <button 
           className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm"

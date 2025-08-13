@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { salonService } from '@/lib/firebase/services'
 import { UsageTracker } from '@/lib/usageTracker'
 import { CreditCardIcon, ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
@@ -34,6 +35,7 @@ interface BillingSummary {
 
 export default function BillingPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const searchParams = useSearchParams()
   const [salon, setSalon] = useState<Salon | null>(null)
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null)
@@ -43,12 +45,12 @@ export default function BillingPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('Billing page useEffect - user:', user?.uid)
-    if (user?.uid) {
+    console.log('Billing page useEffect - user:', user?.uid, 'contextSalonId:', contextSalonId)
+    if (user?.uid && contextSalonId) {
       loadSalonData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid])
+    }, [user?.uid, contextSalonId])
   
   // Effect to handle Stripe checkout success/cancel
   useEffect(() => {
@@ -74,13 +76,13 @@ export default function BillingPage() {
   }, [searchParams, salon?.id])
   
   const loadSalonData = async () => {
-    if (!user?.uid) return
+    if (!user?.uid || !contextSalonId) return
     
     try {
       setLoading(true)
-      console.log('Loading salon data for user:', user.uid)
-      const salonData = await salonService.getSalon(user.uid)
-      console.log('Salon data loaded:', salonData)
+      console.log('🔍 Loading salon data for salon:', contextSalonId)
+      const salonData = await salonService.getSalon(contextSalonId)
+      console.log('✅ Salon data loaded:', salonData)
       setSalon(salonData)
     } catch (err) {
       console.error('Error loading salon data:', err)
@@ -326,6 +328,11 @@ export default function BillingPage() {
           <p className="text-gray-600 mt-2">
             Manage your billing account and view usage statistics
           </p>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
           
           {/* Success Message */}
           {successMessage && (

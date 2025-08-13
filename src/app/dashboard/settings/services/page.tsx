@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useSalonContext } from '@/lib/hooks/useSalonContext';
 import { serviceService } from '@/lib/firebase/services';
 import { Service } from '@/types/firebase';
 import Modal from '@/components/ui/Modal';
@@ -9,6 +10,7 @@ import DraggableList from '@/components/ui/DraggableList';
 
 export default function ServicesPage() {
   const { user } = useAuth();
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,32 +19,34 @@ export default function ServicesPage() {
   const [isReordering, setIsReordering] = useState(false);
 
   const fetchServices = useCallback(async () => {
-    if (!user) return;
+    if (!user || !contextSalonId) return;
     
     try {
       setLoading(true);
-      const fetchedServices = await serviceService.getServices(user.uid);
+      console.log('🔍 Fetching services for salon:', contextSalonId);
+      const fetchedServices = await serviceService.getServices(contextSalonId);
       setServices(fetchedServices);
+      console.log('✅ Services fetched:', fetchedServices.length);
     } catch (error) {
       console.error('Error fetching services:', error);
       setError('Failed to load services');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, contextSalonId]);
 
   useEffect(() => {
-    if (user) {
+    if (user && contextSalonId) {
       fetchServices();
     }
-  }, [user, fetchServices]);
+  }, [user, contextSalonId, fetchServices]);
 
   const openAddModal = () => {
     setEditing({
       id: '',
       name: '',
       description: '',
-      salonId: user?.uid || '',
+      salonId: contextSalonId || '',
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -78,7 +82,7 @@ export default function ServicesPage() {
         await serviceService.createService({
           name: editing.name,
           description: editing.description,
-          salonId: user.uid
+          salonId: contextSalonId || ''
         });
       }
       
@@ -165,6 +169,11 @@ export default function ServicesPage() {
           <p className="text-sm text-gray-600 mt-1">
             Drag and drop to reorder services. The order will be reflected on your booking form.
           </p>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
         </div>
         <button 
           className="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition shadow-sm"

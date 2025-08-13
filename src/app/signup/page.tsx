@@ -1,59 +1,27 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
-import * as yup from 'yup'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Input from '@/components/ui/Input'
 import { useAuth } from '@/lib/auth'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
-const schema = yup.object({
-  name: yup.string().required('Full name is required'),
-  email: yup.string().email('Invalid email address').required('Email is required'),
-  password: yup.string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters'),
-  businessName: yup.string().required('Business name is required'),
-  phone: yup.string().required('Phone number is required'),
-}).required()
 
-type SignupFormData = yup.InferType<typeof schema>
 
 export default function SignupPage() {
-  const { signup, loginWithGoogle } = useAuth()
+  const { loginWithGoogle, signupWithPhone, verifyPhoneCode, createSalonForPhoneUser } = useAuth()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [verificationId, setVerificationId] = useState('')
+  const [smsCode, setSmsCode] = useState('')
+  const [smsSent, setSmsSent] = useState(false)
+  const [businessName, setBusinessName] = useState('')
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SignupFormData>({
-    resolver: yupResolver(schema),
-  })
 
-  const onSubmit = async (data: SignupFormData) => {
-    setIsLoading(true)
-    setError('')
-    
-    try {
-      await signup(data.email, data.password, {
-        name: data.name,
-        businessName: data.businessName,
-        phone: data.phone,
-        businessType: 'salon' // Default to salon since we removed the selector
-      })
-      router.push('/dashboard/requests')
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleGoogleSignup = async () => {
     setIsLoading(true)
@@ -64,6 +32,65 @@ export default function SignupPage() {
       router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePhoneSignup = async () => {
+    if (!phoneNumber.trim()) {
+      setError('Please enter a phone number')
+      return
+    }
+
+    if (!businessName.trim()) {
+      setError('Please enter a business name')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      const result = await signupWithPhone(phoneNumber, {
+        name: 'Business Owner', // Default name for phone signup
+        businessName: businessName,
+        phone: phoneNumber,
+        businessType: 'salon'
+      })
+      setVerificationId(result.verificationId)
+      setSmsSent(true)
+      setError('')
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to send SMS code')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (!smsCode.trim()) {
+      setError('Please enter the SMS code')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      await verifyPhoneCode(verificationId, smsCode)
+      
+      // Create salon account for the phone-only user
+      await createSalonForPhoneUser({
+        name: 'Business Owner',
+        businessName: businessName,
+        phone: phoneNumber,
+        businessType: 'salon'
+      })
+      
+      router.push('/dashboard/requests')
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Invalid SMS code')
     } finally {
       setIsLoading(false)
     }
@@ -95,85 +122,98 @@ export default function SignupPage() {
           <h3 className="text-center text-xl font-semibold text-gray-900 mb-6">
             Create your account
           </h3>
-          
-          {error && (
+
+                    {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            <Input
-              label="Full name"
-              type="text"
-              autoComplete="name"
-              error={errors.name?.message}
-              disabled={isLoading}
-              {...register('name')}
-            />
+          {/* Phone Auth Form */}
+          <div className="space-y-6">
+              {!smsSent ? (
+                <>
+                  <div>
+                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-2">
+                      Business Name
+                    </label>
+                    <input
+                      type="text"
+                      id="businessName"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="Your Salon Name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isLoading}
+                    />
+                  </div>
 
-            <Input
-              label="Business name"
-              type="text"
-              error={errors.businessName?.message}
-              disabled={isLoading}
-              {...register('businessName')}
-            />
-
-            <Input
-              label="Email address"
-              type="email"
-              autoComplete="email"
-              error={errors.email?.message}
-              disabled={isLoading}
-              {...register('email')}
-            />
-
-            <Input
-              label="Salon Phone"
-              type="tel"
-              autoComplete="tel"
-              error={errors.phone?.message}
-              disabled={isLoading}
-              {...register('phone')}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              autoComplete="new-password"
-              error={errors.password?.message}
-              disabled={isLoading}
-              {...register('password')}
-            />
-
-            <div className="flex items-center">
-              <input
-                id="terms"
-                name="terms"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
-                required
-                disabled={isLoading}
-              />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-                I agree to the{' '}
-                <Link href="#" className="font-medium text-accent-600 hover:text-accent-500">
-                  Terms and Conditions
-                </Link>
-              </label>
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <PhoneInput
+                      international
+                      defaultCountry="US"
+                      value={phoneNumber}
+                      onChange={(value) => setPhoneNumber(value || '')}
+                      placeholder="Enter phone number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div id="recaptcha-container"></div>
+                  
+                  <button
+                    type="button"
+                    onClick={handlePhoneSignup}
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Sending SMS...' : 'Send SMS Code'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="smsCode" className="block text-sm font-medium text-gray-700 mb-2">
+                      SMS Code
+                    </label>
+                    <input
+                      type="text"
+                      id="smsCode"
+                      value={smsCode}
+                      onChange={(e) => setSmsCode(e.target.value)}
+                      placeholder="123456"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={handleVerifyCode}
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify Code & Create Account'}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSmsSent(false)
+                      setVerificationId('')
+                      setSmsCode('')
+                    }}
+                    className="w-full text-gray-600 py-2 px-4 rounded-md font-medium hover:text-gray-800 focus:outline-none"
+                  >
+                    Use Different Number
+                  </button>
+                </>
+              )}
             </div>
-
-            <div>
-              <button 
-                type="submit" 
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating account...' : 'Create account'}
-              </button>
-            </div>
-          </form>
 
           <div className="mt-6">
             <div className="relative">

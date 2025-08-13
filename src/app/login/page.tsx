@@ -24,7 +24,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('phone')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [verificationId, setVerificationId] = useState('')
   const [smsCode, setSmsCode] = useState('')
@@ -130,32 +130,32 @@ export default function LoginPage() {
       >
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 ring-1 ring-gray-200">
           <h3 className="text-center text-xl font-semibold text-gray-900 mb-6">
-            Welcome
+            Welcome back!
           </h3>
 
           {/* Auth Method Toggle */}
           <div className="flex rounded-md shadow-sm mb-6">
             <button
               type="button"
-              onClick={() => setAuthMethod('email')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md border ${
-                authMethod === 'email'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Email
-            </button>
-            <button
-              type="button"
               onClick={() => setAuthMethod('phone')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md border ${
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md border ${
                 authMethod === 'phone'
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >
               Phone
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMethod('email')}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md border ${
+                authMethod === 'email'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Email
             </button>
           </div>
           

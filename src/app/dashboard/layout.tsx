@@ -24,6 +24,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import { salonService, teamService } from '@/lib/firebase/services'
 import { getPermissionsForRole } from '@/lib/permissions'
 import { getSettingsItems } from '@/lib/settingsUtils'
+import { BusinessSelector } from '@/components/ui/BusinessSelector'
 
 interface NavigationItem {
   name: string
@@ -105,37 +106,15 @@ const getNavigation = (userRole: string, userEmail?: string | null): NavigationI
 }
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth()
+  const { user, logout, currentSalonName } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith('/dashboard/settings'))
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [salonName, setSalonName] = useState<string>('')
   const [userRole, setUserRole] = useState<string>('owner')
 
-  useEffect(() => {
-    const fetchSalon = async () => {
-      if (!user) return
-      
-      try {
-        // First, try to find the user in team members to get their salon ID
-        const userTeamMember = await teamService.getTeamMemberByUserId(user.uid)
-        
-        if (userTeamMember) {
-          // User is a team member, get salon using their salonId
-          const salon = await salonService.getSalon(userTeamMember.salonId)
-          if (salon && salon.name) setSalonName(salon.name)
-        } else {
-          // User might be a salon owner, try using their uid as salon ID
-          const salon = await salonService.getSalon(user.uid)
-          if (salon && salon.name) setSalonName(salon.name)
-        }
-      } catch (error) {
-        console.error('Error fetching salon name:', error)
-      }
-    }
-    fetchSalon()
-  }, [user])
+  // Use currentSalonName from context (either selected salon or user's own salon)
+  const displaySalonName = currentSalonName || 'Business Name'
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -185,7 +164,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <div className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">{salonName || 'Business Name'}</h1>
+            <h1 className="text-lg font-semibold text-gray-900">{displaySalonName}</h1>
             <p className="text-sm text-gray-500">by Glammatic</p>
           </div>
         </div>
@@ -203,7 +182,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           <div className="flex items-center flex-shrink-0 px-4 py-6">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">{salonName || 'Business Name'}</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{displaySalonName}</h1>
               <p className="text-sm text-gray-500 mt-1">by Glammatic</p>
             </div>
           </div>
@@ -228,6 +207,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </div>
+
+          {/* SuperAdmin Business Selector */}
+          <BusinessSelector />
 
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
             {getNavigation(userRole, user?.email).map((item: NavigationItem) => {

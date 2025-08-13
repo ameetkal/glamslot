@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useSalonContext } from '@/lib/hooks/useSalonContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -22,55 +23,80 @@ interface Booking {
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const fetchMyBookings = useCallback(async () => {
-    if (!user?.uid) return;
+    if (!user?.uid || !contextSalonId) return;
 
     try {
       setLoading(true);
+      console.log('🔍 Fetching bookings for salon:', contextSalonId);
       
-      // Get the provider's services
-      const providerDoc = await getDocs(
-        query(
-          collection(db, 'providers'),
-          where('teamMemberId', '==', user.uid)
-        )
-      );
+      // For SuperAdmin context switching, get all bookings for the selected salon
+      // For regular users, get their own bookings
+      let bookingsQuery;
+      
+      if (isImpersonating) {
+        // SuperAdmin: Get all bookings for the selected salon
+        bookingsQuery = query(
+          collection(db, 'bookings'),
+          where('salonId', '==', contextSalonId),
+          orderBy('createdAt', 'desc')
+        );
+        
+        // Add status filter if not 'all'
+        if (statusFilter !== 'all') {
+          bookingsQuery = query(
+            collection(db, 'bookings'),
+            where('salonId', '==', contextSalonId),
+            where('status', '==', statusFilter),
+            orderBy('createdAt', 'desc')
+          );
+        }
+      } else {
+        // Regular user: Get their own bookings
+        const providerDoc = await getDocs(
+          query(
+            collection(db, 'providers'),
+            where('teamMemberId', '==', user.uid)
+          )
+        );
 
-      if (providerDoc.empty) {
-        setBookings([]);
-        setLoading(false);
-        return;
-      }
+        if (providerDoc.empty) {
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
 
-      const provider = providerDoc.docs[0].data();
-      const serviceIds = provider.services || [];
+        const provider = providerDoc.docs[0].data();
+        const serviceIds = provider.services || [];
 
-      if (serviceIds.length === 0) {
-        setBookings([]);
-        setLoading(false);
-        return;
-      }
+        if (serviceIds.length === 0) {
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
 
-      // Get bookings for the provider's services
-      let bookingsQuery = query(
-        collection(db, 'bookings'),
-        where('serviceId', 'in', serviceIds),
-        orderBy('createdAt', 'desc')
-      );
-
-      // Add status filter if not 'all'
-      if (statusFilter !== 'all') {
+        // Get bookings for the provider's services
         bookingsQuery = query(
           collection(db, 'bookings'),
           where('serviceId', 'in', serviceIds),
-          where('status', '==', statusFilter),
           orderBy('createdAt', 'desc')
         );
+
+        // Add status filter if not 'all'
+        if (statusFilter !== 'all') {
+          bookingsQuery = query(
+            collection(db, 'bookings'),
+            where('serviceId', '==', statusFilter),
+            where('serviceId', 'in', serviceIds),
+            orderBy('createdAt', 'desc')
+          );
+        }
       }
 
       const bookingsSnapshot = await getDocs(bookingsQuery);
@@ -92,19 +118,20 @@ export default function MyBookingsPage() {
         });
       });
 
+      console.log(`✅ Found ${bookingsData.length} bookings for salon:`, contextSalonId);
       setBookings(bookingsData);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, statusFilter]);
+  }, [user?.uid, contextSalonId, statusFilter, isImpersonating]);
 
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && contextSalonId) {
       fetchMyBookings();
     }
-  }, [fetchMyBookings, user?.uid]);
+  }, [fetchMyBookings, user?.uid, contextSalonId]);
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
@@ -208,8 +235,20 @@ export default function MyBookingsPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">My Bookings</h1>
-          <p className="text-gray-600">Manage your booking requests and appointments</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isImpersonating ? 'Salon Bookings' : 'My Bookings'}
+          </h1>
+          <p className="text-gray-600">
+            {isImpersonating 
+              ? `Manage booking requests and appointments for ${salonName}`
+              : 'Manage your booking requests and appointments'
+            }
+          </p>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
         </div>
 
         {/* Status Filter */}

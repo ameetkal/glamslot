@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { teamService } from '@/lib/firebase/services'
 import { TeamMember, Invitation, TeamMemberPermissions } from '@/types/firebase'
 import { getAvailableRoles, getRoleDefinition, getPermissionsForRole } from '@/lib/permissions'
@@ -19,6 +20,7 @@ import Link from 'next/link'
 
 export default function AdminPage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,15 +40,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if (!user) return
+      if (!user || !contextSalonId) return
 
       try {
         setLoading(true)
+        console.log('🔍 Fetching team data for salon:', contextSalonId)
         
         // Fetch real team members and invitations from Firestore
         const [teamMembersData, invitationsData] = await Promise.all([
-          teamService.getTeamMembers(user.uid),
-          teamService.getInvitations(user.uid)
+          teamService.getTeamMembers(contextSalonId),
+          teamService.getInvitations(contextSalonId)
         ])
         
         // Convert Firestore timestamps to Date objects
@@ -81,7 +84,7 @@ export default function AdminPage() {
     }
 
     fetchTeamData()
-  }, [user])
+  }, [user, contextSalonId])
 
   const handleInviteSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -106,7 +109,7 @@ export default function AdminPage() {
           email: inviteForm.email,
           role: inviteForm.role,
           permissions: permissions,
-          salonId: user.uid,
+          salonId: contextSalonId,
           invitedBy: user.email
         }),
       })
@@ -152,7 +155,7 @@ export default function AdminPage() {
       await teamService.removeTeamMember(userId)
       
       // Refresh team members list
-      const teamMembersData = await teamService.getTeamMembers(user!.uid)
+      const teamMembersData = await teamService.getTeamMembers(contextSalonId || '')
       setTeamMembers(teamMembersData)
       
       setSuccess('Team member removed successfully!')
@@ -176,7 +179,7 @@ export default function AdminPage() {
       }
 
       // Refresh invitations list
-      const invitationsData = await teamService.getInvitations(user!.uid)
+      const invitationsData = await teamService.getInvitations(contextSalonId || '')
       setInvitations(invitationsData)
       
       setSuccess('Invitation cancelled successfully!')
@@ -334,6 +337,11 @@ export default function AdminPage() {
             <p className="mt-2 text-sm text-gray-700">
               Manage team members and their access permissions
             </p>
+            {isImpersonating && (
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+              </div>
+            )}
           </div>
           <div className="mt-4 sm:mt-0">
             <button

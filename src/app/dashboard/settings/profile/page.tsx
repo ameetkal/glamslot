@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { salonService } from '@/lib/firebase/services'
 import { Salon } from '@/types/firebase'
 import { 
@@ -15,6 +16,7 @@ import {
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const { salonId: contextSalonId, salonName, isImpersonating } = useSalonContext()
   const [salon, setSalon] = useState<Salon | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -31,11 +33,12 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchSalonData = async () => {
-      if (!user) return
+      if (!user || !contextSalonId) return
 
       try {
         setLoading(true)
-        const salonData = await salonService.getSalon(user.uid)
+        console.log('🔍 Fetching salon profile for salon:', contextSalonId)
+        const salonData = await salonService.getSalon(contextSalonId)
         
         if (salonData) {
           setSalon(salonData)
@@ -46,6 +49,7 @@ export default function ProfilePage() {
             ownerPhone: salonData.ownerPhone || '',
             businessType: salonData.businessType || 'salon'
           })
+          console.log('✅ Salon profile fetched:', salonData.name)
         }
       } catch (error) {
         console.error('Error fetching salon data:', error)
@@ -56,7 +60,7 @@ export default function ProfilePage() {
     }
 
     fetchSalonData()
-  }, [user])
+  }, [user, contextSalonId])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -68,7 +72,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!user || !salon) return
+    if (!user || !salon || !contextSalonId) return
 
     try {
       setSaving(true)
@@ -76,7 +80,7 @@ export default function ProfilePage() {
       setSuccess('')
 
       // Update salon data
-      await salonService.updateSalon(user.uid, {
+      await salonService.updateSalon(contextSalonId, {
         name: formData.name,
         ownerName: formData.ownerName,
         ownerEmail: formData.ownerEmail,
@@ -120,6 +124,11 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">Profile Settings</h1>
+          {isImpersonating && (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span>👁️ Viewing as SuperAdmin: {salonName}</span>
+            </div>
+          )}
         </div>
 
         {/* Success/Error Messages */}
