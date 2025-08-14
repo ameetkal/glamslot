@@ -1,8 +1,7 @@
-import './globals.css'
 import { Inter } from 'next/font/google'
+import './globals.css'
 import ConditionalNav from '@/components/layout/ConditionalNav'
 import { AuthProvider } from '@/lib/auth'
-import PWAInstaller from '@/components/PWAInstaller'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,7 +48,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body className={`${inter.className} h-full flex flex-col`}>
-        <PWAInstaller />
         <AuthProvider>
           <ConditionalNav>
             {children}

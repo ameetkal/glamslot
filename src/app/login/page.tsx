@@ -288,7 +288,7 @@ export default function LoginPage() {
                             setSelectedCountry(newCountry)
                             setPhoneNumber(newPhoneNumber)
                           }}
-                          className="text-gray-900 text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer"
+                          className="text-gray-900 text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer [appearance:none] [-webkit-appearance:none] [-moz-appearance:none]"
                           disabled={isLoading}
                         >
                           <option value="+1">🇺🇸 +1</option>

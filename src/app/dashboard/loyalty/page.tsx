@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, QrCodeIcon, GiftIcon, CameraIcon, BeakerIcon } from '@heroicons/react/24/outline'
+import { useAuth } from '@/lib/auth'
+import { loyaltyProgramService, salonService, visitRecordService } from '@/lib/firebase/services'
+import { LoyaltyProgram, VisitRecord } from '@/types/firebase'
+import { PlusIcon, QrCodeIcon, GiftIcon, CameraIcon } from '@heroicons/react/24/outline'
 import LoyaltyProgramForm from '@/components/forms/LoyaltyProgramForm'
 import QRCodeDisplay from '@/components/ui/QRCodeDisplay'
 import QRCodeScanner from '@/components/ui/QRCodeScanner'
-import TestQRGenerator from '@/components/ui/TestQRGenerator'
 import ManualEntryModal from '@/components/ui/ManualEntryModal'
-import { useAuth } from '@/lib/auth'
-import { salonService, loyaltyProgramService, visitRecordService } from '@/lib/firebase/services'
-import { LoyaltyProgram, VisitRecord } from '@/types/firebase'
 
 interface Redemption {
   id: string
@@ -29,7 +28,6 @@ export default function LoyaltyPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false)
   const [isScannerOpen, setIsScannerOpen] = useState(false)
-  const [isTestGeneratorOpen, setIsTestGeneratorOpen] = useState(false)
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false)
   const [salonName, setSalonName] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
@@ -342,37 +340,23 @@ export default function LoyaltyPage() {
               </div>
             </div>
 
-            {/* Test QR Generator */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setIsTestGeneratorOpen(true)}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            {/* Test Registration Link */}
+            {currentProgram && (
+              <div className="mt-4">
+                <p className="text-xs text-gray-500 mb-2">Test Client Registration:</p>
+                <a
+                  href={`/loyalty/${currentProgram.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-3 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
-                  <BeakerIcon className="h-4 w-4 mr-2" />
-                  Generate Test QR
-                </button>
-                
-                {/* Test Registration Link */}
-                {currentProgram && (
-                  <div className="mt-4">
-                    <p className="text-xs text-gray-500 mb-2">Test Client Registration:</p>
-                    <a
-                      href={`/loyalty/${currentProgram.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Test Registration Page
-                    </a>
-                  </div>
-                )}
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Test Registration Page
+                </a>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Recent Redemptions Section */}
@@ -475,12 +459,6 @@ export default function LoyaltyPage() {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
-      />
-
-      {/* Test QR Generator Modal */}
-      <TestQRGenerator
-        isOpen={isTestGeneratorOpen}
-        onClose={() => setIsTestGeneratorOpen(false)}
       />
 
       {/* Manual Entry Modal */}
