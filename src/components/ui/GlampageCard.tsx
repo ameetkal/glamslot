@@ -160,7 +160,7 @@ export default function GlampageCard({
               type="url"
               value={externalLinks.shop}
               onChange={(e) => handleInputChange('shop', e.target.value)}
-              placeholder="https://your-shop.com"
+              placeholder="https://www.saloninteractive.com/"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent text-gray-900"
             />
           </div>

@@ -72,6 +72,16 @@ export default function SetupWizardPage() {
   const totalSteps = steps.length
   const progress = ((currentStep + 1) / totalSteps) * 100
 
+  // Debug logging
+  console.log('🔍 Setup Wizard Debug:', {
+    steps,
+    totalSteps,
+    currentStep,
+    progress,
+    userEmail: user?.email,
+    userPhone: user?.phoneNumber
+  })
+
   useEffect(() => {
     if (!user) {
       router.push('/login')
@@ -165,6 +175,9 @@ export default function SetupWizardPage() {
           externalLinks.virtualConsultation = `https://glamslot.vercel.app/consultation/${salonData.slug}`
         }
         
+        // Always include default shop URL for SalonInteractive
+        externalLinks.shop = 'https://www.saloninteractive.com/'
+        
         updateData.externalLinks = externalLinks
       }
 
@@ -196,7 +209,7 @@ export default function SetupWizardPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               What&apos;s your full name?
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-700 mb-8">
               This is the name that will appear as the owner of your business
             </p>
             <div className="max-w-md mx-auto">
@@ -208,7 +221,7 @@ export default function SetupWizardPage() {
                   type="text"
                   value={wizardData.fullName}
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -228,7 +241,7 @@ export default function SetupWizardPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               What&apos;s your email address?
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-700 mb-8">
               We&apos;ll use this to send you important updates about your business
             </p>
             <div className="max-w-md mx-auto">
@@ -240,7 +253,7 @@ export default function SetupWizardPage() {
                   type="email"
                   value={wizardData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                   placeholder="your.email@example.com"
                 />
               </div>
@@ -260,7 +273,7 @@ export default function SetupWizardPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               What&apos;s your mobile phone number?
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-700 mb-8">
               We&apos;ll use this to send you SMS notifications about your business
             </p>
             <div className="max-w-md mx-auto">
@@ -272,7 +285,7 @@ export default function SetupWizardPage() {
                   type="tel"
                   value={wizardData.mobilePhone}
                   onChange={(e) => handleInputChange('mobilePhone', e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -292,20 +305,20 @@ export default function SetupWizardPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               What type of business do you run?
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-700 mb-8">
               This helps us customize your experience
             </p>
             <div className="max-w-md mx-auto space-y-4">
               <select
                 value={wizardData.businessType}
                 onChange={(e) => handleInputChange('businessType', e.target.value)}
-                className="block w-full px-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                className="block w-full px-3 py-3 border border-gray-300 rounded-lg text-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
               >
-                <option value="salon">Salon</option>
-                <option value="spa">Spa</option>
-                <option value="barbershop">Barbershop</option>
-                <option value="independent">Independent Professional</option>
-                <option value="other">Other</option>
+                <option value="salon" className="text-gray-900">Salon</option>
+                <option value="spa" className="text-gray-900">Spa</option>
+                <option value="barbershop" className="text-gray-900">Barbershop</option>
+                <option value="independent" className="text-gray-900">Independent Professional</option>
+                <option value="other" className="text-gray-900">Other</option>
               </select>
               
               {wizardData.businessType === 'other' && (
@@ -313,7 +326,7 @@ export default function SetupWizardPage() {
                   type="text"
                   value={wizardData.customBusinessType}
                   onChange={(e) => handleInputChange('customBusinessType', e.target.value)}
-                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg text-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                   placeholder="Please specify your business type"
                 />
               )}
@@ -333,7 +346,7 @@ export default function SetupWizardPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               Which free GlamSlot products do you want?
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-700 mb-8">
               All products are completely free and ready to use
             </p>
             <div className="max-w-md mx-auto space-y-4">
@@ -347,7 +360,7 @@ export default function SetupWizardPage() {
                   />
                   <div className="ml-3 text-left">
                     <div className="text-lg font-medium text-gray-900">{product.name}</div>
-                    <div className="text-sm text-gray-500">{product.description}</div>
+                    <div className="text-sm text-gray-700">{product.description}</div>
                   </div>
                 </label>
               ))}
@@ -369,11 +382,14 @@ export default function SetupWizardPage() {
       <div className="w-full max-w-2xl">
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
             <div 
-              className="bg-accent-600 h-2 rounded-full transition-all duration-300 ease-out"
+              className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
               style={{ width: `${progress}%` }}
             />
+          </div>
+          <div className="mt-2 text-center text-sm text-gray-700 font-medium">
+            Step {currentStep + 1} of {totalSteps}
           </div>
         </div>
 
@@ -388,9 +404,9 @@ export default function SetupWizardPage() {
             <button
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-3 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {currentStep > 0 ? 'Back' : ''}
+              {currentStep > 0 ? '← Back' : ''}
             </button>
 
             <div className="flex gap-3">
@@ -398,13 +414,13 @@ export default function SetupWizardPage() {
                 <>
                   <button
                     onClick={skipStep}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
+                    className="px-6 py-3 text-gray-700 hover:text-gray-900 transition-colors font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Skip
                   </button>
                   <button
                     onClick={nextStep}
-                    className="px-6 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 transition-colors flex items-center gap-2"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-sm"
                   >
                     Next
                     <ArrowRightIcon className="h-4 w-4" />
@@ -414,7 +430,7 @@ export default function SetupWizardPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="px-8 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium shadow-sm"
                 >
                   {loading ? (
                     <>

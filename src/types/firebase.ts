@@ -104,6 +104,7 @@ export interface Salon {
     instagram?: string;
     facebook?: string;
     virtualConsultation?: string;
+    glampage?: string;
   };
   consultationForm?: {
     fields: ConsultationFormField[];

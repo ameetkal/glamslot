@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { 
   User, 
   signInWithEmailAndPassword, 
@@ -11,9 +11,9 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
   PhoneAuthProvider,
-  RecaptchaVerifier,
   signInWithPhoneNumber,
-  signInWithCredential
+  signInWithCredential,
+  RecaptchaVerifier
 } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from './firebase'
@@ -31,6 +31,7 @@ interface AuthContextType {
   loginWithPhone: (phoneNumber: string) => Promise<{ verificationId: string }>
   verifyPhoneCode: (verificationId: string, code: string) => Promise<void>
   signupWithPhone: (phoneNumber: string, userData: UserData) => Promise<{ verificationId: string }>
+  resendPhoneCode: (phoneNumber: string) => Promise<{ verificationId: string }>
   createSalonForPhoneUser: (userData: UserData) => Promise<void>
   createSalonForGoogleUser: () => Promise<void>
   // SuperAdmin salon context switching
@@ -186,10 +187,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const loginWithPhone = async (phoneNumber: string) => {
+    let recaptchaVerifier: RecaptchaVerifier | null = null
     try {
-      // Create reCAPTCHA verifier
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'normal',
+      // Create an invisible reCAPTCHA verifier
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
         'callback': () => {
           console.log('reCAPTCHA solved')
         }
@@ -199,7 +201,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier)
       return { verificationId: confirmationResult.verificationId }
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'Phone login failed')
+      // Clean up reCAPTCHA verifier on error
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear()
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup reCAPTCHA verifier:', cleanupError)
+        }
+      }
+      
+      // Provide user-friendly error messages for phone authentication
+      if (error instanceof Error) {
+        if (error.message.includes('auth/invalid-phone-number')) {
+          throw new Error('Please enter a valid phone number.')
+        } else if (error.message.includes('auth/too-many-requests')) {
+          throw new Error('Too many SMS requests. Please wait before trying again.')
+        } else if (error.message.includes('auth/quota-exceeded')) {
+          throw new Error('SMS quota exceeded. Please try again later.')
+        } else {
+          throw new Error('Failed to send SMS code. Please try again.')
+        }
+      }
+      throw new Error('Phone authentication failed. Please try again.')
     }
   }
 
@@ -209,15 +232,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = PhoneAuthProvider.credential(verificationId, code)
       await signInWithCredential(auth, credential)
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'Code verification failed')
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes('auth/invalid-verification-code')) {
+          throw new Error('The verification code you entered is incorrect. Please try again.')
+        } else if (error.message.includes('auth/code-expired')) {
+          throw new Error('The verification code has expired. Please request a new one.')
+        } else if (error.message.includes('auth/too-many-requests')) {
+          throw new Error('Too many attempts. Please wait a moment before trying again.')
+        } else {
+          throw new Error('Code verification failed. Please check your code and try again.')
+        }
+      }
+      throw new Error('Code verification failed. Please try again.')
     }
   }
 
   const signupWithPhone = async (phoneNumber: string, userData: UserData) => {
+    let recaptchaVerifier: RecaptchaVerifier | null = null
     try {
-      // Create reCAPTCHA verifier
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'normal',
+      // Create an invisible reCAPTCHA verifier
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
         'callback': () => {
           console.log('reCAPTCHA solved')
         }
@@ -232,7 +268,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return { verificationId: confirmationResult.verificationId }
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'Phone signup failed')
+      // Clean up reCAPTCHA verifier on error
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear()
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup reCAPTCHA verifier:', cleanupError)
+        }
+      }
+      
+      // Provide user-friendly error messages for phone authentication
+      if (error instanceof Error) {
+        if (error.message.includes('auth/invalid-phone-number')) {
+          throw new Error('Please enter a valid phone number.')
+        } else if (error.message.includes('auth/too-many-requests')) {
+          throw new Error('Too many SMS requests. Please wait before trying again.')
+        } else if (error.message.includes('auth/quota-exceeded')) {
+          throw new Error('SMS quota exceeded. Please try again later.')
+        } else {
+          throw new Error('Failed to send SMS code. Please try again.')
+        }
+      }
+      throw new Error('Phone signup failed. Please try again.')
+    }
+  }
+
+  const resendPhoneCode = async (phoneNumber: string) => {
+    let recaptchaVerifier: RecaptchaVerifier | null = null
+    try {
+      // Create an invisible reCAPTCHA verifier
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => {
+          console.log('reCAPTCHA solved')
+        }
+      })
+
+      // Request new SMS code
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier)
+      return { verificationId: confirmationResult.verificationId }
+    } catch (error: unknown) {
+      // Clean up reCAPTCHA verifier on error
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear()
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup reCAPTCHA verifier:', cleanupError)
+        }
+      }
+      
+      // Debug logging
+      console.log('🔍 Phone resend error details:', error)
+      console.log('🔍 Error type:', typeof error)
+      console.log('🔍 Error message:', error instanceof Error ? error.message : 'Not an Error instance')
+      console.log('🔍 Full error object:', JSON.stringify(error, null, 2))
+      
+      // Provide user-friendly error messages for phone authentication
+      if (error instanceof Error) {
+        if (error.message.includes('auth/invalid-phone-number')) {
+          throw new Error('Please enter a valid phone number.')
+        } else if (error.message.includes('auth/too-many-requests')) {
+          throw new Error('Too many SMS requests. Please wait before trying again.')
+        } else if (error.message.includes('auth/quota-exceeded')) {
+          throw new Error('SMS quota exceeded. Please try again later.')
+        } else {
+          throw new Error('Failed to send SMS code. Please try again.')
+        }
+      }
+      throw new Error('Failed to resend SMS code. Please try again.')
     }
   }
 
@@ -424,7 +527,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentSalonId = selectedSalonId || user?.uid || null
   const currentSalonName = selectedSalonData?.name || null
 
-  const value = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     loading,
     login,
@@ -436,6 +540,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loginWithPhone,
     verifyPhoneCode,
     signupWithPhone,
+    resendPhoneCode,
     createSalonForPhoneUser,
     createSalonForGoogleUser,
     // SuperAdmin salon context switching
@@ -445,7 +550,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Salon context override for SuperAdmin impersonation
     currentSalonId,
     currentSalonName
-  }
+  }), [
+    user,
+    loading,
+    selectedSalonId,
+    isPlatformAdmin,
+    currentSalonId,
+    currentSalonName
+  ])
 
   return (
     <AuthContext.Provider value={value}>

@@ -9,8 +9,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Input from '@/components/ui/Input'
 import { useAuth } from '@/lib/auth'
-import PhoneInput from 'react-phone-number-input'
-import 'react-phone-number-input/style.css'
+
 
 const schema = yup.object({
   email: yup.string().email('Invalid email address').required('Email is required'),
@@ -20,15 +19,19 @@ const schema = yup.object({
 type LoginFormData = yup.InferType<typeof schema>
 
 export default function LoginPage() {
-  const { login, loginWithGoogle, loginWithPhone, verifyPhoneCode } = useAuth()
+  const { login, loginWithGoogle, loginWithPhone, verifyPhoneCode, resendPhoneCode } = useAuth()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('phone')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [displayDigits, setDisplayDigits] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState('🇺🇸+1')
   const [verificationId, setVerificationId] = useState('')
   const [smsCode, setSmsCode] = useState('')
   const [smsSent, setSmsSent] = useState(false)
+
+
 
   const {
     register,
@@ -76,11 +79,23 @@ export default function LoginPage() {
       return
     }
 
+    // Validate phone number format
+    // if (!phoneNumber.startsWith('+')) {
+    //   setError('Please enter a valid phone number with country code (e.g., +1234567890)')
+    //   return
+    // }
+    
+    // Basic length validation - PhoneInput should handle the rest
+    if (phoneNumber.length < 10) {
+      setError('Please enter a complete phone number')
+      return
+    }
+
     setIsLoading(true)
     setError('')
     
     try {
-      const result = await loginWithPhone(phoneNumber)
+      const result = await loginWithPhone("+"+phoneNumber)
       setVerificationId(result.verificationId)
       setSmsSent(true)
       setError('')
@@ -105,6 +120,42 @@ export default function LoginPage() {
       router.push('/dashboard/requests')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Invalid SMS code')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    if (!phoneNumber.trim()) {
+      setError('Please enter a phone number')
+      return
+    }
+
+    // Validate phone number format
+    if (!phoneNumber.startsWith('+')) {
+      setError('Please enter a valid phone number with country code (e.g., +1234567890)')
+      return
+    }
+    
+    // Basic length validation - PhoneInput should handle the rest
+    if (phoneNumber.length < 10) {
+      setError('Please enter a complete phone number')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      const result = await resendPhoneCode(phoneNumber)
+      setVerificationId(result.verificationId)
+      setSmsCode('') // Clear the old code
+      setError('')
+      // Show success message
+      setError('New SMS code sent! Please check your phone.')
+      setTimeout(() => setError(''), 3000) // Clear success message after 3 seconds
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to resend SMS code')
     } finally {
       setIsLoading(false)
     }
@@ -219,18 +270,67 @@ export default function LoginPage() {
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                       Phone Number
                     </label>
-                    <PhoneInput
-                      international
-                      defaultCountry="US"
-                      value={phoneNumber}
-                      onChange={(value) => setPhoneNumber(value || '')}
-                      placeholder="Enter phone number"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={isLoading}
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                        <select
+                          value={selectedCountry}
+                          onChange={(e) => {
+                            const newCountry = e.target.value
+                            const digitsOnly = displayDigits
+                            const countryCode = newCountry.replace(/^[^\d]+/, '') // Extract just the +number part
+                            const newPhoneNumber = countryCode + digitsOnly
+                            
+                            console.log('🔧 Country changed to:', newCountry)
+                            console.log('🔧 Country code extracted:', countryCode)
+                            console.log('🔧 Digits preserved:', digitsOnly)
+                            console.log('🔧 New phone number:', newPhoneNumber)
+                            
+                            setSelectedCountry(newCountry)
+                            setPhoneNumber(newPhoneNumber)
+                          }}
+                          className="text-gray-900 text-lg font-medium bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer"
+                          disabled={isLoading}
+                        >
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+1">🇨🇦 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                          <option value="+61">🇦🇺 +61</option>
+                          <option value="+86">🇨🇳 +86</option>
+                          <option value="+91">🇮🇳 +91</option>
+                          <option value="+81">🇯🇵 +81</option>
+                          <option value="+49">🇩🇪 +49</option>
+                          <option value="+33">🇫🇷 +33</option>
+                        </select>
+                      </div>
+                      <input
+                        type="tel"
+                        value={displayDigits}
+                        onChange={(e) => {
+                          // Only allow digits
+                          const digitsOnly = e.target.value.replace(/\D/g, '')
+                          const countryCode = selectedCountry.replace(/^[^\d]+/, '') // Extract just the +number part
+                          const fullNumber = countryCode + digitsOnly
+                          
+                          console.log('🔧 Raw input value:', e.target.value)
+                          console.log('🔧 Cleaned digits only:', digitsOnly)
+                          console.log('🔧 Selected country:', selectedCountry)
+                          console.log('🔧 Country code extracted:', countryCode)
+                          console.log('🔧 Full phone number:', fullNumber)
+                          console.log('🔧 Total length:', fullNumber.length)
+                          
+                          setDisplayDigits(digitsOnly)
+                          setPhoneNumber(fullNumber)
+                        }}
+                        placeholder="(555) 123-4567"
+                        className="w-full pl-20 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={isLoading}
+                        maxLength={15} // Allow for longer country codes
+                      />
+                    </div>
                   </div>
                   
-                  <div id="recaptcha-container"></div>
+                  {/* Hidden reCAPTCHA container for invisible verification */}
+                  <div id="recaptcha-container" className="hidden"></div>
                   
                   <button
                     type="button"
@@ -253,7 +353,7 @@ export default function LoginPage() {
                       value={smsCode}
                       onChange={(e) => setSmsCode(e.target.value)}
                       placeholder="123456"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isLoading}
                     />
                   </div>
@@ -267,17 +367,28 @@ export default function LoginPage() {
                     {isLoading ? 'Verifying...' : 'Verify Code'}
                   </button>
                   
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSmsSent(false)
-                      setVerificationId('')
-                      setSmsCode('')
-                    }}
-                    className="w-full text-gray-600 py-2 px-4 rounded-md font-medium hover:text-gray-800 focus:outline-none"
-                  >
-                    Use Different Number
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={isLoading}
+                      className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Sending...' : 'Resend Code'}
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSmsSent(false)
+                        setVerificationId('')
+                        setSmsCode('')
+                      }}
+                      className="flex-1 text-gray-700 py-2 px-4 rounded-md font-medium hover:text-gray-900 focus:outline-none"
+                    >
+                      Use Different Number
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -289,7 +400,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                <span className="bg-white px-2 text-gray-700">Or continue with</span>
               </div>
             </div>
 
@@ -298,7 +409,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
-                className="inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="sr-only">Sign in with Google</span>
                 <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
@@ -309,7 +420,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-700">
             Not a member?{' '}
             <Link href="/signup" className="font-semibold leading-6 text-accent-600 hover:text-accent-500 transition-colors duration-200">
               Sign up now

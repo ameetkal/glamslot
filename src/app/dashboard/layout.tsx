@@ -17,7 +17,7 @@ import {
   GlobeAltIcon,
   CreditCardIcon
 } from '@heroicons/react/24/outline'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/lib/auth'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { SetupWizardGuard } from '@/components/auth/SetupWizardGuard'
@@ -117,6 +117,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // Use currentSalonName from context (either selected salon or user's own salon)
   const displaySalonName = currentSalonName || 'Business Name'
 
+  // Memoize navigation to prevent unnecessary re-computations
+  const navigation = useMemo(() => getNavigation(userRole, user?.email), [userRole, user?.email])
+
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user) return
@@ -213,7 +216,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <BusinessSelector />
 
           <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
-            {getNavigation(userRole, user?.email).map((item: NavigationItem) => {
+            {navigation.map((item: NavigationItem) => {
               if (!item.subItems) {
                 const isActive = pathname === item.href
                 return (

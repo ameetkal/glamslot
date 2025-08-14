@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/lib/auth'
 import Select from './Select'
 
@@ -14,6 +14,15 @@ export function BusinessSelector() {
   const { user, isPlatformAdmin, selectedSalonId, setSelectedSalonId } = useAuth()
   const [salons, setSalons] = useState<Salon[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Memoize options to prevent unnecessary re-renders
+  const options = useMemo(() => [
+    { value: 'platform', label: loading ? 'Loading...' : '🏢 Platform View' },
+    ...salons.map(salon => ({
+      value: salon.id,
+      label: salon.name
+    }))
+  ], [loading, salons])
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -59,15 +68,6 @@ export function BusinessSelector() {
 
   const currentSalon = salons.find(s => s.id === selectedSalonId)
   const isImpersonating = selectedSalonId !== null
-
-  // Prepare options for the Select component
-  const options = [
-    { value: 'platform', label: loading ? 'Loading...' : '🏢 Platform View' },
-    ...salons.map(salon => ({
-      value: salon.id,
-      label: salon.name
-    }))
-  ]
 
   return (
     <div className="px-4 py-3 border-b border-gray-200">
