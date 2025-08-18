@@ -171,9 +171,7 @@ export default function SetupWizardPage() {
         if (wizardData.selectedProducts.includes('bookings')) {
           externalLinks.bookNow = `https://glamslot.vercel.app/booking/${salonData.slug}`
         }
-        if (wizardData.selectedProducts.includes('consultations')) {
-          externalLinks.virtualConsultation = `https://glamslot.vercel.app/consultation/${salonData.slug}`
-        }
+        // Virtual consultation is a built-in feature, not an external link
         
         // Always include default shop URL for SalonInteractive
         externalLinks.shop = 'https://www.saloninteractive.com/'

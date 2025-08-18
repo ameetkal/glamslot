@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth'
 import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { salonService } from '@/lib/firebase/services'
 import GlampageCard from '@/components/ui/GlampageCard'
+import VirtualConsultationCard from '@/components/ui/VirtualConsultationCard'
 import { Salon } from '@/types/firebase'
 
 export default function LinksPage() {
@@ -185,33 +186,14 @@ export default function LinksPage() {
           </div>
         </div>
 
-        {/* Virtual Consultation Link */}
-        {salonData.externalLinks?.virtualConsultation && (
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex items-center mb-4">
-              <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2z" />
-                </svg>
-            </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Virtual Consultation</h3>
-                <p className="text-sm text-gray-500">Online consultation form</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="bg-gray-50 p-3 rounded border">
-                <p className="text-sm text-gray-600 break-all">{salonData.externalLinks.virtualConsultation}</p>
-              </div>
-              <button
-                onClick={() => navigator.clipboard.writeText(salonData.externalLinks!.virtualConsultation!)}
-                className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
-              >
-                Copy Link
-            </button>
-            </div>
-          </div>
-        )}
+        {/* Virtual Consultation Card - Full Width */}
+        <div className="md:col-span-2 lg:col-span-3">
+          <VirtualConsultationCard
+            consultationUrl={`https://glamslot.vercel.app/consultation/${salonData.slug}`}
+            salonData={salonData}
+            onSalonUpdate={(updatedSalon) => setSalonData(updatedSalon)}
+          />
+        </div>
       </div>
 
       {/* Setup Instructions */}

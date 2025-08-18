@@ -103,7 +103,6 @@ export interface Salon {
     shop?: string;
     instagram?: string;
     facebook?: string;
-    virtualConsultation?: string;
     glampage?: string;
   };
   consultationForm?: {
