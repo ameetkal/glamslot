@@ -2,108 +2,315 @@
 
 import { useState, useEffect, use } from 'react'
 import { salonService, clientService } from '@/lib/firebase/services'
-import { Salon, Client } from '@/types/firebase'
+import { Salon, Client, ConsultationFormField } from '@/types/firebase'
 import { storage } from '@/lib/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { UsageTracker } from '@/lib/usageTracker'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 interface ConsultationPageProps {
   params: Promise<{ slug: string }>
 }
 
 // Default consultation form fields
-const createDefaultFields = () => [
-  {
-    id: 'name',
-    type: 'text' as const,
-    label: 'Full Name',
-    placeholder: 'Enter your full name',
-    required: true,
-    order: 1
-  },
-  {
-    id: 'email',
-    type: 'email' as const,
-    label: 'Email Address',
-    placeholder: 'your.email@example.com',
-    required: true,
-    order: 2
-  },
-  {
-    id: 'phone',
-    type: 'phone' as const,
-    label: 'Phone Number',
-    placeholder: '(555) 123-4567',
-    required: true,
-    order: 3
-  },
+const createDefaultFields = (): ConsultationFormField[] => [
   {
     id: 'service-type',
-    type: 'select' as const,
+    type: 'select',
     label: 'Service Type',
     required: true,
     options: ['Hair Color', 'Extensions', 'Chemical Treatment', 'Cut & Style', 'Other'],
-    order: 4
+    order: 1
   },
   {
     id: 'current-hair',
-    type: 'textarea' as const,
-    label: 'Current Hair Condition',
-    placeholder: 'Describe your current hair (length, color, previous treatments, etc.)',
-    required: false,
-    order: 5
-  },
-  {
-    id: 'desired-result',
-    type: 'textarea' as const,
-    label: 'Desired Result',
-    placeholder: 'What look are you hoping to achieve?',
+    type: 'select',
+    label: 'How long is your hair?',
     required: true,
-    order: 6
+    options: ['Short', 'Medium', 'Long'],
+    order: 2
   },
   {
     id: 'hair-photo-top',
-    type: 'file' as const,
-    label: 'Hair Photos - Top View',
+    type: 'file',
+    label: 'Hair Photos - Roots View',
     required: true,
     accept: 'image/*,video/*',
-    order: 7
-  },
-  {
-    id: 'hair-photo-front',
-    type: 'file' as const,
-    label: 'Hair Photos - Front View',
-    required: true,
-    accept: 'image/*,video/*',
-    order: 8
+    order: 3
   },
   {
     id: 'hair-photo-sides',
-    type: 'file' as const,
-    label: 'Hair Photos - Side Views',
-    required: false,
+    type: 'file',
+    label: 'Hair Photos - Side View',
+    required: true,
     accept: 'image/*,video/*',
-    order: 9
+    order: 4
   },
   {
-    id: 'hair-history',
-    type: 'textarea' as const,
-    label: 'Hair History & Allergies',
-    placeholder: 'Previous treatments, allergies, sensitivities, etc.',
-    required: false,
-    order: 10
+    id: 'desired-result',
+    type: 'file',
+    label: 'Inspo Photo (Desired Result)',
+    placeholder: 'What look are you hoping to achieve?',
+    required: true,
+    accept: 'image/*',
+    order: 5
   },
   {
     id: 'additional-notes',
-    type: 'textarea' as const,
+    type: 'textarea',
     label: 'Additional Notes',
-    placeholder: 'Any other information we should know',
+    placeholder: 'Previous treatments, allergies, hair history, or other information we should know',
     required: false,
-    order: 11
+    order: 6
+  },
+  {
+    id: 'name',
+    type: 'text',
+    label: 'Full Name',
+    placeholder: 'Enter your full name',
+    required: true,
+    order: 7
+  },
+  {
+    id: 'email',
+    type: 'email',
+    label: 'Email Address',
+    placeholder: 'your.email@example.com',
+    required: false,
+    order: 8
+  },
+  {
+    id: 'phone',
+    type: 'phone',
+    label: 'Phone Number',
+    placeholder: '(555) 123-4567',
+    required: true,
+    order: 9
   }
 ]
+
+// Progress Bar Component
+const ProgressBar = ({ current, total }: { current: number; total: number }) => {
+  const progress = ((current + 1) / total) * 100
+  
+  return (
+    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+      <div 
+        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  )
+}
+
+// Step Navigation Component
+const StepNavigation = ({ 
+  currentStep, 
+  totalSteps, 
+  onPrevious, 
+  onNext, 
+  onSubmit,
+  canProceed,
+  submitting
+}: { 
+  currentStep: number; 
+  totalSteps: number; 
+  onPrevious: () => void; 
+  onNext: () => void; 
+  onSubmit: () => void;
+  canProceed: boolean;
+  submitting: boolean;
+}) => {
+  const isFirstStep = currentStep === 0
+  const isLastStep = currentStep === totalSteps - 1
+  
+  return (
+    <div className="flex justify-between items-center w-full px-4 py-6">
+      {/* Previous Button */}
+      <button
+        onClick={onPrevious}
+        disabled={isFirstStep}
+        className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+          isFirstStep 
+            ? 'text-gray-400 cursor-not-allowed' 
+            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+        }`}
+      >
+        <ChevronLeftIcon className="w-5 h-5 mr-1" />
+        Previous
+      </button>
+      
+      {/* Center - Empty Space */}
+      <div></div>
+      
+      {/* Right Side - Next/Submit */}
+      <div className="flex space-x-2">
+        {isLastStep ? (
+          <button
+            onClick={onSubmit}
+            disabled={!canProceed || submitting}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              canProceed && !submitting
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {submitting ? 'Submitting...' : 'Submit'}
+          </button>
+        ) : (
+          <button
+            onClick={onNext}
+            disabled={!canProceed}
+            className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+              canProceed
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Next
+            <ChevronRightIcon className="w-5 h-5 ml-1" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Individual Field Renderer
+const FieldRenderer = ({ 
+  field, 
+  value, 
+  onChange, 
+  onFileChange,
+  uploadProgress 
+}: { 
+  field: ConsultationFormField; 
+  value: string | string[] | File[]; 
+  onChange: (value: string | string[]) => void;
+  onFileChange?: (files: FileList | null) => void;
+  uploadProgress?: number;
+}) => {
+  const renderField = () => {
+    switch (field.type) {
+      case 'text':
+      case 'email':
+      case 'phone':
+        return (
+          <input
+            type={field.type}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        )
+      
+      case 'textarea':
+        return (
+          <textarea
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          />
+        )
+      
+      case 'select':
+        return (
+          <select
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select an option</option>
+            {field.options?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        )
+      
+      case 'file':
+        return (
+          <div className="w-full">
+            {/* Placeholder Image for hair-photo-top (Roots View) */}
+            {field.id === 'hair-photo-top' && !value && (
+              <div className="mb-4 text-center">
+                <img 
+                  src="/roots-placeholder-photo.jpg" 
+                  alt="Example: Hair photo from roots view"
+                  className="w-32 h-32 mx-auto rounded-lg border-2 border-dashed border-gray-300 object-cover"
+                />
+                <p className="text-xs text-gray-500 mt-1">Example photo</p>
+              </div>
+            )}
+            
+            {/* Placeholder Image for hair-photo-sides (Side View) */}
+            {field.id === 'hair-photo-sides' && !value && (
+              <div className="mb-4 text-center">
+                <img 
+                  src="/side-placeholder-photo.jpg" 
+                  alt="Example: Hair photo from side view"
+                  className="w-32 h-32 mx-auto rounded-lg border-2 border-dashed border-gray-300 object-cover"
+                />
+                <p className="text-xs text-gray-500 mt-1">Example photo</p>
+              </div>
+            )}
+            
+            {/* Placeholder Image for desired-result */}
+            {field.id === 'desired-result' && !value && (
+              <div className="mb-4 text-center">
+                <img 
+                  src="/inspo-placeholder-photo.jpg" 
+                  alt="Example: Desired hair style inspiration"
+                  className="w-32 h-32 mx-auto rounded-lg border-2 border-dashed border-gray-300 object-cover"
+                />
+                <p className="text-xs text-gray-500 mt-1">Inspiration photo</p>
+              </div>
+            )}
+            
+            <input
+              type="file"
+              accept={field.accept}
+              onChange={(e) => onFileChange?.(e.target.files)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {uploadProgress !== undefined && uploadProgress < 100 && (
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mt-2">
+              Accepted formats: {field.accept}
+            </p>
+          </div>
+        )
+      
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="w-full max-w-md">
+      <label className="block text-lg font-medium text-gray-900 mb-3">
+        {field.label}
+        {field.required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      {renderField()}
+      {field.placeholder && (
+        <p className="text-sm text-gray-500 mt-2">{field.placeholder}</p>
+      )}
+    </div>
+  )
+}
 
 function ConsultationContent({ slug }: { slug: string }) {
   const [salon, setSalon] = useState<Salon | null>(null)
@@ -111,8 +318,11 @@ function ConsultationContent({ slug }: { slug: string }) {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Record<string, string | File[]>>({})
+  const [formData, setFormData] = useState<Record<string, string | string[] | File[]>>({})
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  
+  // Step-by-step form state
+  const [currentStep, setCurrentStep] = useState(0)
 
   useEffect(() => {
     const fetchSalon = async () => {
@@ -135,7 +345,23 @@ function ConsultationContent({ slug }: { slug: string }) {
     fetchSalon()
   }, [slug])
 
-  const handleInputChange = (fieldId: string, value: string) => {
+  // Step navigation handlers
+  const handleNext = () => {
+    if (currentStep < (salon?.consultationForm?.fields?.length || createDefaultFields().length) - 1) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+
+
+  const handleFieldChange = (fieldId: string, value: string | string[]) => {
+    // Update the main formData for submission
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
@@ -160,6 +386,21 @@ function ConsultationContent({ slug }: { slug: string }) {
         [fieldId]: fileArray
       }))
     }
+  }
+
+  const canProceedToNext = () => {
+    const fields = salon?.consultationForm?.fields || createDefaultFields()
+    const currentField = fields[currentStep]
+    if (!currentField.required) return true
+    
+    const currentValue = formData[currentField.id]
+    if (!currentValue) return false
+    
+    if (Array.isArray(currentValue)) {
+      return currentValue.length > 0
+    }
+    
+    return typeof currentValue === 'string' && currentValue.trim().length > 0
   }
 
   const uploadFile = async (file: File, fieldId: string): Promise<{ url: string; name: string; size: number }> => {
@@ -196,13 +437,12 @@ function ConsultationContent({ slug }: { slug: string }) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     if (!salon) return
 
     setSubmitting(true)
     try {
-      const fields = salon.consultationForm?.fields || []
+      const fields = salon.consultationForm?.fields || createDefaultFields()
       
       // Validate required fields
       const missingFields = fields
@@ -226,7 +466,7 @@ function ConsultationContent({ slug }: { slug: string }) {
       
       for (const [fieldId, value] of Object.entries(formData)) {
         if (Array.isArray(value) && value.length > 0 && value[0] instanceof File) {
-          for (const file of value) {
+          for (const file of value as File[]) {
             try {
               const uploadResult = await uploadFile(file, fieldId)
               uploadedFiles.push({
@@ -364,12 +604,10 @@ function ConsultationContent({ slug }: { slug: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading consultation form...</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading consultation form...</p>
         </div>
       </div>
     )
@@ -377,12 +615,10 @@ function ConsultationContent({ slug }: { slug: string }) {
 
   if (error || !salon) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Form Not Available</h1>
-            <p className="text-gray-600">{error || 'Consultation form not found.'}</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Form Not Available</h1>
+          <p className="text-gray-600">{error || 'Consultation form not found.'}</p>
         </div>
       </div>
     )
@@ -390,23 +626,21 @@ function ConsultationContent({ slug }: { slug: string }) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-4">Thank You!</h1>
-            <p className="text-gray-600 mb-6">
-              {salon.consultationForm?.successMessage || 
-               "We'll review your consultation request and contact you soon."}
-            </p>
-            <p className="text-sm text-gray-500">
-              A confirmation has been sent to {salon.name}.
-            </p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center max-w-md mx-4">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Thank You!</h1>
+          <p className="text-gray-600 mb-6">
+            {salon.consultationForm?.successMessage || 
+             "We'll review your consultation request and contact you soon."}
+          </p>
+          <p className="text-sm text-gray-500">
+            A confirmation has been sent to {salon.name}.
+          </p>
         </div>
       </div>
     )
@@ -416,103 +650,58 @@ function ConsultationContent({ slug }: { slug: string }) {
   const hasCustomFields = salon.consultationForm?.fields && salon.consultationForm.fields.length > 0
   const formFields = hasCustomFields ? salon.consultationForm!.fields : createDefaultFields()
   const sortedFields = [...formFields].sort((a, b) => a.order - b.order)
+  const currentField = sortedFields[currentStep]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-12">
-      <div className="bg-white rounded-lg shadow-sm">
-        {/* Header */}
-        <div className="px-6 py-8 border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="px-6 py-8 border-b border-gray-200 bg-white">
+        <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Virtual Consultation
           </h1>
           <p className="text-gray-600">
-            Please fill out this form so we can better understand your needs and provide you with the best service.
+            Please fill out this form so we can provide you with the best service.
           </p>
           <div className="mt-4 text-sm text-gray-500">
             <strong>{salon.name}</strong>
           </div>
         </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
-          {sortedFields.map((field) => (
-            <div key={field.id}>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              
-              {field.type === 'textarea' ? (
-                <textarea
-                  value={(formData[field.id] as string) || ''}
-                  onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                />
-              ) : field.type === 'select' ? (
-                <select
-                  value={(formData[field.id] as string) || ''}
-                  onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  required={field.required}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                >
-                  <option value="">Select an option...</option>
-                  {field.options?.map((option, index) => (
-                    <option key={index} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'file' ? (
-                <div className="space-y-2">
-                  <input
-                    type="file"
-                    accept={field.accept || 'image/*,video/*'}
-                    multiple
-                    onChange={(e) => handleFileChange(field.id, e.target.files)}
-                    required={field.required}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                  {uploadProgress[field.id] !== undefined && uploadProgress[field.id] < 100 && (
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${uploadProgress[field.id]}%` }}
-                      ></div>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    Accepted formats: Images and videos. Max size: {field.accept?.includes('video') ? '50MB' : '10MB'}
-                  </p>
-                </div>
-              ) : (
-                <input
-                  type={field.type}
-                  value={(formData[field.id] as string) || ''}
-                  onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                />
-              )}
-            </div>
-          ))}
-
-          {/* Submit Button */}
-          <div className="pt-6">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitting ? 'Submitting...' : (salon.consultationForm?.submitButtonText || 'Submit Consultation Request')}
-            </button>
-          </div>
-        </form>
       </div>
+
+      {/* Progress Bar */}
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
+        <div className="max-w-2xl mx-auto">
+          <ProgressBar current={currentStep} total={sortedFields.length} />
+        </div>
+      </div>
+
+      {/* Question Container - Full Height Centered */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl">
+          <FieldRenderer
+            field={currentField}
+            value={formData[currentField.id] || ''}
+            onChange={(value) => handleFieldChange(currentField.id, value)}
+            onFileChange={(files) => handleFileChange(currentField.id, files)}
+            uploadProgress={uploadProgress[currentField.id]}
+          />
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="bg-white border-t border-gray-200">
+        <div className="max-w-2xl mx-auto">
+          <StepNavigation
+            currentStep={currentStep}
+            totalSteps={sortedFields.length}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            onSubmit={handleSubmit}
+            canProceed={canProceedToNext()}
+            submitting={submitting}
+          />
+        </div>
       </div>
     </div>
   )

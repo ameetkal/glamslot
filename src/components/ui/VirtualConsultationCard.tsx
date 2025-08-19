@@ -15,20 +15,70 @@ interface VirtualConsultationCardProps {
 // Default consultation form fields
 const createDefaultFields = (): ConsultationFormField[] => [
   {
+    id: 'service-type',
+    type: 'select',
+    label: 'Service Type',
+    required: true,
+    options: ['Hair Color', 'Extensions', 'Chemical Treatment', 'Cut & Style', 'Other'],
+    order: 1
+  },
+  {
+    id: 'current-hair',
+    type: 'select',
+    label: 'How long is your hair?',
+    required: true,
+    options: ['Short', 'Medium', 'Long'],
+    order: 2
+  },
+
+  {
+    id: 'hair-photo-top',
+    type: 'file',
+    label: 'Hair Photos - Roots View',
+    required: true,
+    accept: 'image/*,video/*',
+    order: 3
+  },
+
+  {
+    id: 'hair-photo-sides',
+    type: 'file',
+    label: 'Hair Photos - Side View',
+    required: true,
+    accept: 'image/*,video/*',
+    order: 4
+  },
+  {
+    id: 'desired-result',
+    type: 'file',
+    label: 'Inspo Photo (Desired Result)',
+    placeholder: 'What look are you hoping to achieve?',
+    required: true,
+    order: 5
+  },
+  {
+    id: 'additional-notes',
+    type: 'textarea',
+    label: 'Additional Notes',
+    placeholder: 'Previous treatments, allergies, hair history, or other information we should know',
+    required: false,
+    order: 6
+  },
+  {
     id: 'name',
     type: 'text',
     label: 'Full Name',
     placeholder: 'Enter your full name',
     required: true,
-    order: 1
+    order: 7
   },
   {
     id: 'email',
     type: 'email',
     label: 'Email Address',
     placeholder: 'your.email@example.com',
-    required: true,
-    order: 2
+    required: false,
+    order: 8
   },
   {
     id: 'phone',
@@ -36,72 +86,8 @@ const createDefaultFields = (): ConsultationFormField[] => [
     label: 'Phone Number',
     placeholder: '(555) 123-4567',
     required: true,
-    order: 3
-  },
-  {
-    id: 'service-type',
-    type: 'select',
-    label: 'Service Type',
-    required: true,
-    options: ['Hair Color', 'Extensions', 'Chemical Treatment', 'Cut & Style', 'Other'],
-    order: 4
-  },
-  {
-    id: 'current-hair',
-    type: 'textarea',
-    label: 'Current Hair Condition',
-    placeholder: 'Describe your current hair (length, color, previous treatments, etc.)',
-    required: false,
-    order: 5
-  },
-  {
-    id: 'desired-result',
-    type: 'textarea',
-    label: 'Desired Result',
-    placeholder: 'What look are you hoping to achieve?',
-    required: true,
-    order: 6
-  },
-  {
-    id: 'hair-photo-top',
-    type: 'file',
-    label: 'Hair Photos - Top View',
-    required: true,
-    accept: 'image/*,video/*',
-    order: 7
-  },
-  {
-    id: 'hair-photo-front',
-    type: 'file',
-    label: 'Hair Photos - Front View',
-    required: true,
-    accept: 'image/*,video/*',
-    order: 8
-  },
-  {
-    id: 'hair-photo-sides',
-    type: 'file',
-    label: 'Hair Photos - Side Views',
-    required: false,
-    accept: 'image/*,video/*',
     order: 9
   },
-  {
-    id: 'hair-history',
-    type: 'textarea',
-    label: 'Hair History & Allergies',
-    placeholder: 'Previous treatments, allergies, sensitivities, etc.',
-    required: false,
-    order: 10
-  },
-  {
-    id: 'additional-notes',
-    type: 'textarea',
-    label: 'Additional Notes',
-    placeholder: 'Any other information we should know',
-    required: false,
-    order: 11
-  }
 ]
 
 export default function VirtualConsultationCard({ 
@@ -176,7 +162,7 @@ export default function VirtualConsultationCard({
     setFormFields(formFields.filter(f => f.id !== fieldId))
   }
 
-  const handleFieldChange = (fieldId: string, updates: Partial<ConsultationFormField>) => {
+  const handleFieldChangeInBuilder = (fieldId: string, updates: Partial<ConsultationFormField>) => {
     setFormFields(formFields.map(field => 
       field.id === fieldId ? { ...field, ...updates } : field
     ))
@@ -320,13 +306,13 @@ export default function VirtualConsultationCard({
                     <input
                       type="text"
                       value={field.label}
-                      onChange={(e) => handleFieldChange(field.id, { label: e.target.value })}
+                      onChange={(e) => handleFieldChangeInBuilder(field.id, { label: e.target.value })}
                       className="px-2 py-1 border border-gray-300 rounded text-gray-900"
                       placeholder="Field label"
                     />
                     <select
                       value={field.type}
-                      onChange={(e) => handleFieldChange(field.id, { type: e.target.value as ConsultationFormField['type'] })}
+                      onChange={(e) => handleFieldChangeInBuilder(field.id, { type: e.target.value as ConsultationFormField['type'] })}
                       className="px-2 py-1 border border-gray-300 rounded text-gray-900"
                     >
                       <option value="text">Text</option>
@@ -339,7 +325,7 @@ export default function VirtualConsultationCard({
                     <input
                       type="text"
                       value={field.placeholder || ''}
-                      onChange={(e) => handleFieldChange(field.id, { placeholder: e.target.value })}
+                      onChange={(e) => handleFieldChangeInBuilder(field.id, { placeholder: e.target.value })}
                       className="px-2 py-1 border border-gray-300 rounded text-gray-900"
                       placeholder="Placeholder text"
                     />
@@ -347,7 +333,7 @@ export default function VirtualConsultationCard({
                       <input
                         type="checkbox"
                         checked={field.required}
-                        onChange={(e) => handleFieldChange(field.id, { required: e.target.checked })}
+                        onChange={(e) => handleFieldChangeInBuilder(field.id, { required: e.target.checked })}
                         className="rounded"
                       />
                       <span>Required</span>
@@ -359,7 +345,7 @@ export default function VirtualConsultationCard({
                     <div className="mt-2">
                       <textarea
                         value={(field.options || []).join('\n')}
-                        onChange={(e) => handleFieldChange(field.id, { 
+                        onChange={(e) => handleFieldChangeInBuilder(field.id, { 
                           options: e.target.value.split('\n').filter(opt => opt.trim()) 
                         })}
                         placeholder="Enter options (one per line)"
@@ -385,7 +371,7 @@ export default function VirtualConsultationCard({
                 disabled={saving}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {saving ? 'Saving...' : 'Save Form'}
+                {saving ? 'Saving Form...' : 'Save Form'}
               </button>
             </div>
             
