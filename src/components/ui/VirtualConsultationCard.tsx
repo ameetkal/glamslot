@@ -195,6 +195,87 @@ export default function VirtualConsultationCard({
     setFormFields(updatedFields)
   }
 
+  const handleConditionalToggle = (fieldId: string, enabled: boolean) => {
+    if (enabled) {
+      // Initialize conditional rules for this field
+      const field = formFields.find(f => f.id === fieldId)
+      if (field && field.options) {
+        const conditionalRules = field.options.map(option => ({
+          triggerValue: option,
+          showFields: []
+        }))
+        
+        setFormFields(formFields.map(f => 
+          f.id === fieldId 
+            ? { ...f, conditionalRules }
+            : f
+        ))
+      }
+    } else {
+      // Remove conditional rules and mark conditional fields as regular
+      const updatedFields = formFields.map(f => {
+        if (f.id === fieldId) {
+          return { ...f, conditionalRules: undefined }
+        }
+        if (f.parentFieldId === fieldId) {
+          return { ...f, isConditional: false, parentFieldId: undefined }
+        }
+        return f
+      })
+      setFormFields(updatedFields)
+    }
+  }
+
+  const addConditionalField = (parentFieldId: string, triggerValue: string) => {
+    const newField: ConsultationFormField = {
+      id: `conditional-${Date.now()}`,
+      type: 'text',
+      label: 'New conditional question',
+      required: false,
+      order: Math.max(...formFields.map(f => f.order)) + 1,
+      isConditional: true,
+      parentFieldId
+    }
+    
+    // Add the new field and update the conditional rule in one operation
+    setFormFields(currentFields => {
+      const fieldsWithNewField = [...currentFields, newField]
+      
+      return fieldsWithNewField.map(f => {
+        if (f.id === parentFieldId && f.conditionalRules) {
+          const updatedRules = f.conditionalRules.map(rule => 
+            rule.triggerValue === triggerValue
+              ? { ...rule, showFields: [...rule.showFields, newField.id] }
+              : rule
+          )
+          return { ...f, conditionalRules: updatedRules }
+        }
+        return f
+      })
+    })
+  }
+
+  const removeConditionalField = (parentFieldId: string, triggerValue: string, fieldId: string) => {
+    // Remove the field and update the conditional rule in one operation
+    setFormFields(currentFields => {
+      // First remove the field from conditional rules and then filter out the field
+      const fieldsWithUpdatedRules = currentFields.map(f => {
+        if (f.id === parentFieldId && f.conditionalRules) {
+          const updatedRules = f.conditionalRules.map(rule => 
+            rule.triggerValue === triggerValue
+              ? { ...rule, showFields: rule.showFields.filter(id => id !== fieldId) }
+              : rule
+          )
+          return { ...f, conditionalRules: updatedRules }
+        }
+        return f
+      })
+      
+      // Then remove the conditional field entirely
+      return fieldsWithUpdatedRules.filter(f => f.id !== fieldId)
+    })
+  }
+
   if (!consultationUrl) {
     return (
       <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
@@ -261,7 +342,10 @@ export default function VirtualConsultationCard({
             
             {/* Form Fields List */}
             <div className="space-y-2">
-              {[...formFields].sort((a, b) => a.order - b.order).map((field, index) => (
+              {[...formFields]
+                .filter(field => !field.isConditional) // Don't show conditional fields in main list
+                .sort((a, b) => a.order - b.order)
+                .map((field, index) => (
                 <div key={field.id} className="border border-gray-200 rounded-md p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -275,6 +359,16 @@ export default function VirtualConsultationCard({
                           Required
                         </span>
                       )}
+                      {field.isConditional && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          Conditional
+                        </span>
+                      )}
+                      {field.parentFieldId && (
+                        <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                          ↳ Depends on: {formFields.find(f => f.id === field.parentFieldId)?.label || 'Unknown'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center space-x-1">
                       <button
@@ -286,7 +380,7 @@ export default function VirtualConsultationCard({
                       </button>
                       <button
                         onClick={() => moveField(field.id, 'down')}
-                        disabled={index === formFields.length - 1}
+                        disabled={index === formFields.filter(f => !f.isConditional).length - 1}
                         className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
                       >
                         ↓
@@ -341,7 +435,7 @@ export default function VirtualConsultationCard({
                   
                   {/* Select Options */}
                   {field.type === 'select' && (
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-3">
                       <textarea
                         value={(field.options || []).join('\n')}
                         onChange={(e) => handleFieldChangeInBuilder(field.id, { 
@@ -351,6 +445,121 @@ export default function VirtualConsultationCard({
                         className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900"
                         rows={3}
                       />
+                      
+                      {/* Conditional Logic Toggle */}
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`conditional-${field.id}`}
+                          checked={Boolean(field.conditionalRules && field.conditionalRules.length > 0)}
+                          onChange={(e) => handleConditionalToggle(field.id, e.target.checked)}
+                          className="rounded"
+                        />
+                        <label htmlFor={`conditional-${field.id}`} className="text-xs text-gray-700">
+                          Add conditional questions
+                        </label>
+                      </div>
+                      
+                      {/* Conditional Fields Display */}
+                      {field.conditionalRules && field.conditionalRules.length > 0 && (
+                        <div className="border-t border-gray-200 pt-2 space-y-2">
+                          <h5 className="text-xs font-medium text-gray-900">Conditional Questions:</h5>
+                          {field.options?.map((option) => (
+                            <div key={option} className="border border-gray-200 rounded p-2">
+                              <div className="text-xs font-medium text-gray-700 mb-2">
+                                When &quot;{option}&quot; is selected:
+                              </div>
+                              <div className="space-y-2">
+                                {field.conditionalRules?.find(rule => rule.triggerValue === option)?.showFields.map((fieldId) => {
+                                  const conditionalField = formFields.find(f => f.id === fieldId);
+                                  return conditionalField ? (
+                                    <div key={fieldId} className="ml-4 border-l-2 border-blue-200 pl-3">
+                                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center space-x-2">
+                                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                              Conditional
+                                            </span>
+                                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                              ↳ {option}
+                                            </span>
+                                          </div>
+                                          <button
+                                            onClick={() => removeConditionalField(field.id, option, fieldId)}
+                                            className="p-1 text-red-400 hover:text-red-600"
+                                          >
+                                            <TrashIcon className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                        
+                                        {/* Conditional Field Editing Interface */}
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <input
+                                            type="text"
+                                            value={conditionalField.label}
+                                            onChange={(e) => handleFieldChangeInBuilder(conditionalField.id, { label: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-gray-900"
+                                            placeholder="Field label"
+                                          />
+                                          <select
+                                            value={conditionalField.type}
+                                            onChange={(e) => handleFieldChangeInBuilder(conditionalField.id, { type: e.target.value as ConsultationFormField['type'] })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-gray-900"
+                                          >
+                                            <option value="text">Text</option>
+                                            <option value="email">Email</option>
+                                            <option value="phone">Phone</option>
+                                            <option value="textarea">Textarea</option>
+                                            <option value="select">Select</option>
+                                            <option value="file">File Upload</option>
+                                          </select>
+                                          <input
+                                            type="text"
+                                            value={conditionalField.placeholder || ''}
+                                            onChange={(e) => handleFieldChangeInBuilder(conditionalField.id, { placeholder: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-gray-900"
+                                            placeholder="Placeholder text"
+                                          />
+                                          <label className="flex items-center space-x-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={conditionalField.required}
+                                              onChange={(e) => handleFieldChangeInBuilder(conditionalField.id, { required: e.target.checked })}
+                                              className="rounded"
+                                            />
+                                            <span>Required</span>
+                                          </label>
+                                        </div>
+                                        
+                                        {/* Select Options for Conditional Select Fields */}
+                                        {conditionalField.type === 'select' && (
+                                          <div className="mt-2">
+                                            <textarea
+                                              value={(conditionalField.options || []).join('\n')}
+                                              onChange={(e) => handleFieldChangeInBuilder(conditionalField.id, { 
+                                                options: e.target.value.split('\n').filter(opt => opt.trim()) 
+                                              })}
+                                              placeholder="Enter options (one per line)"
+                                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900"
+                                              rows={2}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : null;
+                                })}
+                                <button
+                                  onClick={() => addConditionalField(field.id, option)}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  + Add Question
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

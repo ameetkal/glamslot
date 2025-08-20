@@ -92,14 +92,17 @@ const createDefaultFields = (): ConsultationFormField[] => [
 ]
 
 // Progress Bar Component
-const ProgressBar = ({ current, total }: { current: number; total: number }) => {
+const ProgressBar = ({ current, total, primaryColor }: { current: number; total: number; primaryColor?: string }) => {
   const progress = ((current + 1) / total) * 100
   
   return (
     <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
       <div 
-        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out"
-        style={{ width: `${progress}%` }}
+        className="h-2 rounded-full transition-all duration-300 ease-in-out"
+        style={{ 
+          width: `${progress}%`,
+          backgroundColor: primaryColor || '#3B82F6'
+        }}
       />
     </div>
   )
@@ -113,7 +116,8 @@ const StepNavigation = ({
   onNext, 
   onSubmit,
   canProceed,
-  submitting
+  submitting,
+  primaryColor
 }: { 
   currentStep: number; 
   totalSteps: number; 
@@ -122,6 +126,7 @@ const StepNavigation = ({
   onSubmit: () => void;
   canProceed: boolean;
   submitting: boolean;
+  primaryColor?: string;
 }) => {
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === totalSteps - 1
@@ -153,9 +158,12 @@ const StepNavigation = ({
             disabled={!canProceed || submitting}
             className={`px-6 py-2 rounded-lg font-medium transition-colors ${
               canProceed && !submitting
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'text-white hover:opacity-90'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
+            style={{
+              backgroundColor: canProceed && !submitting ? (primaryColor || '#3B82F6') : undefined
+            }}
           >
             {submitting ? 'Submitting...' : 'Submit'}
           </button>
@@ -165,9 +173,12 @@ const StepNavigation = ({
             disabled={!canProceed}
             className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
               canProceed
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'text-white hover:opacity-90'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
+            style={{
+              backgroundColor: canProceed ? (primaryColor || '#3B82F6') : undefined
+            }}
           >
             Next
             <ChevronRightIcon className="w-5 h-5 ml-1" />
@@ -184,13 +195,15 @@ const FieldRenderer = ({
   value, 
   onChange, 
   onFileChange,
-  uploadProgress 
+  uploadProgress,
+  primaryColor
 }: { 
   field: ConsultationFormField; 
   value: string | string[] | File[]; 
   onChange: (value: string | string[]) => void;
   onFileChange?: (files: FileList | null) => void;
   uploadProgress?: number;
+  primaryColor?: string;
 }) => {
   const renderField = () => {
     switch (field.type) {
@@ -203,7 +216,10 @@ const FieldRenderer = ({
             value={value as string}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:border-transparent"
+            style={{
+              '--tw-ring-color': primaryColor || '#3B82F6'
+            } as React.CSSProperties}
           />
         )
       
@@ -214,7 +230,10 @@ const FieldRenderer = ({
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:border-transparent resize-none"
+            style={{
+              '--tw-ring-color': primaryColor || '#3B82F6'
+            } as React.CSSProperties}
           />
         )
       
@@ -223,7 +242,10 @@ const FieldRenderer = ({
           <select
             value={value as string}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:border-transparent"
+            style={{
+              '--tw-ring-color': primaryColor || '#3B82F6'
+            } as React.CSSProperties}
           >
             <option value="">Select an option</option>
             {field.options?.map((option) => (
@@ -277,13 +299,19 @@ const FieldRenderer = ({
               type="file"
               accept={field.accept}
               onChange={(e) => onFileChange?.(e.target.files)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{
+                '--tw-ring-color': primaryColor || '#3B82F6'
+              } as React.CSSProperties}
             />
             {uploadProgress !== undefined && uploadProgress < 100 && (
               <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${uploadProgress}%` }}
+                  className="h-2 rounded-full transition-all duration-300" 
+                  style={{ 
+                    width: `${uploadProgress}%`,
+                    backgroundColor: primaryColor || '#3B82F6'
+                  }}
                 />
               </div>
             )}
@@ -436,6 +464,8 @@ function ConsultationContent({ slug }: { slug: string }) {
       throw new Error(`Failed to upload ${file.name}: ${error}`)
     }
   }
+
+
 
   const handleSubmit = async () => {
     if (!salon) return
@@ -606,6 +636,34 @@ function ConsultationContent({ slug }: { slug: string }) {
     }
   }
 
+  // Handle Enter key press for better UX
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        
+        // Only proceed if we can actually move to next step
+        if (canProceedToNext()) {
+          if (currentStep === (salon?.consultationForm?.fields?.length || createDefaultFields().length) - 1) {
+            // Last step - submit
+            handleSubmit()
+          } else {
+            // Not last step - go to next
+            handleNext()
+          }
+        }
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyPress)
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [currentStep, salon, handleNext, handleSubmit, canProceedToNext])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -653,22 +711,76 @@ function ConsultationContent({ slug }: { slug: string }) {
   // Use default fields if no custom fields are configured
   const hasCustomFields = salon.consultationForm?.fields && salon.consultationForm.fields.length > 0
   const formFields = hasCustomFields ? salon.consultationForm!.fields : createDefaultFields()
-  const sortedFields = [...formFields].sort((a, b) => a.order - b.order)
-  const currentField = sortedFields[currentStep]
+  
+  // Filter fields based on conditional logic and reorder for logical flow
+  const getVisibleFields = () => {
+    const visibleFields: ConsultationFormField[] = []
+    const processedFields = new Set<string>()
+    
+    for (const field of formFields) {
+      if (processedFields.has(field.id)) continue
+      
+      // Add non-conditional field
+      if (!field.isConditional) {
+        visibleFields.push(field)
+        processedFields.add(field.id)
+        
+        // Immediately add any conditional fields that depend on this field
+        const dependentFields = formFields.filter(f => 
+          f.isConditional && 
+          f.parentFieldId === field.id &&
+          !processedFields.has(f.id)
+        )
+        
+                 // Check if conditional fields should be shown
+         for (const dependentField of dependentFields) {
+           if (field.type === 'select' && field.conditionalRules && dependentField.parentFieldId) {
+             const selectedValue = formData[dependentField.parentFieldId]
+             if (selectedValue) {
+               const rule = field.conditionalRules.find(r => r.triggerValue === selectedValue)
+               if (rule && rule.showFields.includes(dependentField.id)) {
+                 visibleFields.push(dependentField)
+                 processedFields.add(dependentField.id)
+               }
+             }
+           }
+         }
+      }
+    }
+    
+    return visibleFields
+  }
+  
+  const visibleFields = getVisibleFields()
+  const currentField = visibleFields[currentStep]
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="px-6 py-8 border-b border-gray-200 bg-white">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Virtual Consultation
-          </h1>
-          <p className="text-gray-600">
-            Please fill out this form so we can provide you with the best service.
-          </p>
-          <div className="mt-4 text-sm text-gray-500">
-            <strong>{salon.name}</strong>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start max-w-7xl mx-auto">
+          {/* Logo - Left column, only on large screens */}
+          {salon.branding?.logoUrl && (
+            <div className="lg:col-span-2 flex justify-center lg:justify-start">
+              <img 
+                src={salon.branding.logoUrl}
+                alt={`${salon.name} logo`}
+                className="h-24 w-24 object-contain"
+              />
+            </div>
+          )}
+          
+          {/* Content - Centered column, takes remaining space */}
+          <div className={`text-center lg:text-left ${salon.branding?.logoUrl ? 'lg:col-span-10' : 'lg:col-span-12'}`}>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Virtual Consultation
+            </h1>
+            <p className="text-gray-600">
+              Please fill out this form so we can provide you with the best service.
+            </p>
+            <div className="mt-4 text-sm text-gray-500">
+              <strong>{salon.name}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -676,12 +788,21 @@ function ConsultationContent({ slug }: { slug: string }) {
       {/* Progress Bar */}
       <div className="px-6 py-4 bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto">
-          <ProgressBar current={currentStep} total={sortedFields.length} />
+          <ProgressBar 
+            current={currentStep} 
+            total={visibleFields.length} 
+            primaryColor={salon.branding?.primaryColor}
+          />
         </div>
       </div>
 
       {/* Question Container - Full Height Centered */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
+      <div 
+        className="flex-1 flex items-center justify-center px-4 py-8"
+        style={{ 
+          backgroundColor: salon.branding?.primaryColor || '#F9FAFB' 
+        }}
+      >
         <div className="w-full max-w-2xl">
           <FieldRenderer
             field={currentField}
@@ -689,6 +810,7 @@ function ConsultationContent({ slug }: { slug: string }) {
             onChange={(value) => handleFieldChange(currentField.id, value)}
             onFileChange={(files) => handleFileChange(currentField.id, files)}
             uploadProgress={uploadProgress[currentField.id]}
+            primaryColor={salon.branding?.primaryColor}
           />
         </div>
       </div>
@@ -696,15 +818,16 @@ function ConsultationContent({ slug }: { slug: string }) {
       {/* Navigation */}
       <div className="bg-white border-t border-gray-200">
         <div className="max-w-2xl mx-auto">
-          <StepNavigation
-            currentStep={currentStep}
-            totalSteps={sortedFields.length}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onSubmit={handleSubmit}
-            canProceed={canProceedToNext()}
-            submitting={submitting}
-          />
+                  <StepNavigation
+          currentStep={currentStep}
+          totalSteps={visibleFields.length}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onSubmit={handleSubmit}
+          canProceed={canProceedToNext()}
+          submitting={submitting}
+          primaryColor={salon.branding?.primaryColor}
+        />
         </div>
       </div>
     </div>

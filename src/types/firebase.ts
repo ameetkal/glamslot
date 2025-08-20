@@ -43,6 +43,11 @@ export interface ProviderService {
   requiresConsultation: boolean;
 }
 
+export interface ConditionalRule {
+  triggerValue: string;
+  showFields: string[];
+}
+
 export interface ConsultationFormField {
   id: string;
   type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'file';
@@ -52,6 +57,9 @@ export interface ConsultationFormField {
   options?: string[]; // for select fields
   accept?: string; // for file fields (image/*, video/*)
   order: number;
+  conditionalRules?: ConditionalRule[];
+  isConditional?: boolean;
+  parentFieldId?: string;
 }
 
 export interface ConsultationSubmission {
@@ -98,6 +106,10 @@ export interface Salon {
   ownerEmail?: string;
   ownerPhone?: string;
   businessType?: string;
+  branding?: {
+    logoUrl?: string;
+    primaryColor?: string; // hex color like "#3B82F6"
+  };
   externalLinks?: {
     bookNow?: string;
     shop?: string;

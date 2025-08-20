@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/auth'
 import { useSalonContext } from '@/lib/hooks/useSalonContext'
 import { salonService } from '@/lib/firebase/services'
 import { Salon } from '@/types/firebase'
+import LogoUpload from '@/components/ui/LogoUpload'
+import ColorPicker from '@/components/ui/ColorPicker'
 import { 
   UserIcon,
   BuildingStorefrontIcon,
@@ -28,7 +30,9 @@ export default function ProfilePage() {
     ownerName: '',
     ownerEmail: '',
     ownerPhone: '',
-    businessType: 'salon'
+    businessType: 'salon',
+    logoUrl: '',
+    primaryColor: '#3B82F6'
   })
 
   useEffect(() => {
@@ -47,7 +51,9 @@ export default function ProfilePage() {
             ownerName: salonData.ownerName || '',
             ownerEmail: salonData.ownerEmail || '',
             ownerPhone: salonData.ownerPhone || '',
-            businessType: salonData.businessType || 'salon'
+            businessType: salonData.businessType || 'salon',
+            logoUrl: salonData.branding?.logoUrl || '',
+            primaryColor: salonData.branding?.primaryColor || '#3B82F6'
           })
           console.log('✅ Salon profile fetched:', salonData.name)
         }
@@ -85,13 +91,21 @@ export default function ProfilePage() {
         ownerName: formData.ownerName,
         ownerEmail: formData.ownerEmail,
         ownerPhone: formData.ownerPhone,
-        businessType: formData.businessType
+        businessType: formData.businessType,
+        branding: {
+          logoUrl: formData.logoUrl,
+          primaryColor: formData.primaryColor
+        }
       })
 
       // Update local state
       setSalon(prev => prev ? {
         ...prev,
-        ...formData
+        ...formData,
+        branding: {
+          logoUrl: formData.logoUrl,
+          primaryColor: formData.primaryColor
+        }
       } : null)
 
       setSuccess('Profile updated successfully!')
@@ -270,7 +284,21 @@ export default function ProfilePage() {
               </div>
             </div>
 
-
+            {/* Branding Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Branding</h3>
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <LogoUpload
+                  currentLogoUrl={formData.logoUrl}
+                  salonId={salon?.id || ''}
+                  onLogoUpdate={(logoUrl) => setFormData(prev => ({ ...prev, logoUrl: logoUrl || '' }))}
+                />
+                <ColorPicker
+                  currentColor={formData.primaryColor}
+                  onColorChange={(color) => setFormData(prev => ({ ...prev, primaryColor: color }))}
+                />
+              </div>
+            </div>
 
             {/* Submit Button */}
             <div className="flex justify-end">
