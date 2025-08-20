@@ -570,7 +570,11 @@ function ConsultationContent({ slug }: { slug: string }) {
 
       // Send notification (same system as booking requests)
       try {
-        await fetch('/api/booking', {
+        // Use absolute URL for consistency with server-side approach
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://glamslot.vercel.app'
+        const apiUrl = `${baseUrl}/api/booking`
+        
+        await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

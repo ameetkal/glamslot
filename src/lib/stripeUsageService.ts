@@ -18,8 +18,19 @@ export class StripeUsageService {
       console.log('Quantity:', quantity)
       console.log('Timestamp:', timestamp || 'now')
       
+      // Determine if we're on server-side or client-side
+      const isServerSide = typeof window === 'undefined'
+      
+      // Use absolute URL for server-side calls, relative for client-side
+      const baseUrl = isServerSide 
+        ? (process.env.NEXT_PUBLIC_APP_URL || 'https://glamslot.vercel.app')
+        : ''
+      
+      const apiUrl = `${baseUrl}/api/stripe/record-usage`
+      console.log('🌐 API URL:', apiUrl)
+      
       // Call the server API to record usage (since we can't access Stripe secret key on client)
-      const response = await fetch('/api/stripe/record-usage', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,8 +70,19 @@ export class StripeUsageService {
       console.log('Quantity:', quantity)
       console.log('Timestamp:', timestamp || 'now')
       
+      // Determine if we're on server-side or client-side
+      const isServerSide = typeof window === 'undefined'
+      
+      // Use absolute URL for server-side calls, relative for client-side
+      const baseUrl = isServerSide 
+        ? (process.env.NEXT_PUBLIC_APP_URL || 'https://glamslot.vercel.app')
+        : ''
+      
+      const apiUrl = `${baseUrl}/api/stripe/record-usage-direct`
+      console.log('🌐 API URL:', apiUrl)
+      
       // Call the server API to record usage directly
-      const response = await fetch('/api/stripe/record-usage-direct', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
