@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDownIcon, ChevronUpIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { Salon } from '@/types/firebase'
 import { salonService } from '@/lib/firebase/services'
 
@@ -90,14 +90,11 @@ export default function GlampageCard({
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Glampage</h3>
+        <h3 className="text-lg font-semibold text-gray-900">GlamPage URL</h3>
       </div>
 
       {/* Glampage URL */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Public Glampage URL
-        </label>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
           <input
             type="text"
@@ -110,7 +107,9 @@ export default function GlampageCard({
             disabled={!glampageUrl}
             className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-md whitespace-nowrap"
           >
-            <GlobeAltIcon className="w-4 h-4 mr-1" />
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
             Visit
           </button>
         </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { GlobeAltIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon, Bars3Icon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { Salon, ConsultationFormField } from '@/types/firebase'
 import { salonService } from '@/lib/firebase/services'
 
@@ -198,7 +198,7 @@ export default function VirtualConsultationCard({
   if (!consultationUrl) {
     return (
       <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Virtual Consultation URL</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Virtual Consultation URL</h3>
         <div className="text-sm text-gray-500">Loading consultation URL...</div>
       </div>
     )
@@ -206,13 +206,10 @@ export default function VirtualConsultationCard({
 
   return (
     <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Virtual Consultation URL</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Virtual Consultation URL</h3>
       
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Your Public Consultation Link
-          </label>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="text"
@@ -225,7 +222,9 @@ export default function VirtualConsultationCard({
               onClick={handleVisit}
               className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors rounded-md whitespace-nowrap"
             >
-              <GlobeAltIcon className="h-4 w-4 mr-1" />
+              <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
               Visit
             </button>
           </div>

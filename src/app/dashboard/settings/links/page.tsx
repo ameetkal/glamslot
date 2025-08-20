@@ -150,6 +150,43 @@ export default function LinksPage() {
         </p>
       </div>
 
+      {/* Virtual Consultation Card - Full Width */}
+      <div className="mb-8">
+        <VirtualConsultationCard
+          consultationUrl={`https://glamslot.vercel.app/consultation/${salonData.slug}`}
+          salonData={salonData}
+          onSalonUpdate={(updatedSalon) => setSalonData(updatedSalon)}
+        />
+      </div>
+
+      {/* Appointment Booking Card - Full Width */}
+      <div className="mb-8">
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Appointment Booking Request URL</h3>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <input
+              type="text"
+              readOnly
+              value={salonData.bookingUrl}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
+            <a
+              href={salonData.bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 transition-colors rounded-md whitespace-nowrap"
+            >
+              <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Visit
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Glampage Card - Full Width */}
       <div className="mb-8">
         <GlampageCard
@@ -159,65 +196,7 @@ export default function LinksPage() {
         />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Booking Link */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center mb-4">
-            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-              <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Appointment Booking</h3>
-              <p className="text-sm text-gray-500">Direct booking link</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded border">
-              <p className="text-sm text-gray-600 break-all">{salonData.bookingUrl}</p>
-            </div>
-            <button
-              onClick={() => navigator.clipboard.writeText(salonData.bookingUrl)}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              Copy Link
-            </button>
-          </div>
-        </div>
 
-        {/* Virtual Consultation Card - Full Width */}
-        <div className="md:col-span-2 lg:col-span-3">
-          <VirtualConsultationCard
-            consultationUrl={`https://glamslot.vercel.app/consultation/${salonData.slug}`}
-            salonData={salonData}
-            onSalonUpdate={(updatedSalon) => setSalonData(updatedSalon)}
-          />
-        </div>
-      </div>
-
-      {/* Setup Instructions */}
-      <div className="mt-12 bg-gray-50 p-6 rounded-lg border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">How to Use These Links</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">For Clients</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Share the booking link for direct appointments</li>
-              <li>• Use the consultation link for virtual meetings</li>
-              <li>• Include shop link in your marketing materials</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">For Your Business</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Add links to your social media profiles</li>
-              <li>• Include in email signatures</li>
-              <li>• Print on business cards and flyers</li>
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   )
 } 
